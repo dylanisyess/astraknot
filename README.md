@@ -95,8 +95,10 @@ python pipeline/crosscheck_metrics.py --site im2-athena 2026-12-05T00:00:00Z 14 
 Fetch, export and validation default to all configured sites. The other commands
 use the sole configured site by default; with multiple sites, specify `--site`.
 IDs must be unique lowercase letters/digits separated by hyphens. Unknown IDs
-are errors. Two sites are configured, but only Athena has app data; the frontend still
-displays Athena. Use explicit IDs while CR1 is awaiting position retrieval.
+are errors. Two sites are configured and both have exported app data (CR1 since
+milestone 4C), but the frontend still displays only Athena. CR1's terrain horizon
+is set by relief within ~500 m and is highly position-sensitive; see
+`docs/STATUS.md`, "Milestone 4C".
 
 Repeat CR1 preparation without network access:
 

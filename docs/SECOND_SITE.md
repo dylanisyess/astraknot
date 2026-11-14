@@ -121,14 +121,29 @@ absolute elevation accuracy. Boulders and other subpixel relief are unresolved.
 
 Full evidence: `data/terrain/connecting-ridge-cr1_site_elevation_report.json`.
 
-## Checkpoint and next task
+## 4B checkpoint (superseded by 4C below)
 
-The point is configured for preparation, with its source, assumptions and
-planned altitude. Athena's configuration, source caches, evidence and exported
-data remain unchanged. The app manifest still contains Athena alone.
+At 4B the point was configured for preparation only; the altitude above was
+planned, not yet submitted.
 
-Next is separately authorized Milestone 4C: fetch positions for this ID only,
-export the initial smooth samples, verify them, then compute and cross-check
-the full terrain horizon using the configured altitude and existing products.
-See `STATUS.md` for the exact commands. Do not interpret this preparation as
-an integrated second site or a validated terrain visibility result.
+## Milestone 4C: positions and terrain horizon (2026-11-14)
+
+The planned 1.9428 km altitude was submitted to Horizons (12 sequential
+requests, raw responses in `data/horizons/connecting-ridge-cr1__*`). Horizons
+echoed the geodetic site exactly. Its cylindric echo matches the submitted
+radius only to its printed precision (about ±0.5 m near the pole). The eye
+sits **0.979 m** above the bilinear DEM, not 1 m, because of the 0.1 m surface
+rounding. Its measured skyline effect is ≤ 0.024° (13 Sun / 3 Earth 10-minute
+steps in 60 days).
+
+The full 0.1° terrain horizon has no unknown sectors and is converged in its
+numerical settings. An independently written near-field check reproduces it
+to 2e-9°. But the skyline is set entirely by DEM relief **50–480 m** from
+the point, where the Sun's center is never more than 1.98° above the horizontal.
+Ignoring terrain within 300 m, using the 60 m product or moving the observer
+100 m changes the skyline by 2.7–4.2° and flips thousands of Sun steps. CR1's
+terrain visibility is therefore **not robust**. It is a DEM result for this exact
+published coordinate, whose accuracy is unknown. It is not a prediction for a
+real lander, whose height and surroundings would matter at this scale.
+Numbers and the full sensitivity table: `STATUS.md`, "Milestone 4C".
+Exported to `app/public/data/connecting-ridge-cr1.json`; not shown in the app yet.

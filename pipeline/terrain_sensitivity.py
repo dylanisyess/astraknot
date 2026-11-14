@@ -220,7 +220,8 @@ def run_all(obs: th.Observer, products, h_max: float, base_rays: list[dict], cfg
                                  th.profile(obs, az01, products, h_max, limits=[km * 1000.0, None])))
 
     # 7. site-position sensitivity SCENARIOS (not a measured coordinate uncertainty): observer moved
-    #    100 m due N/E/S/W of the published point (eye kept 1.02 m above the DEM); deltas vs the nominal point
+    #    100 m due N/E/S/W of the published point (eye kept at the nominal point's height above the DEM,
+    #    e.g. 1.02 m for Athena, 0.98 m for CR1); deltas vs the nominal point
     near = th.Raster.from_files(*products[0])
     foot = near.height_bilinear(*near.pixel_of(*th.stereo_xy(obs.u)))
     eye = obs.r_obs - th.R - foot
@@ -251,7 +252,7 @@ def run_all(obs: th.Observer, products, h_max: float, base_rays: list[dict], cfg
             "seam": seam, "smooth_vs_terrain": smooth_vs, "runtime_s": round(time.time() - t0)}
 
 
-def seam_check(obs: th.Observer, products, base_rays: list[dict], cfg: dict, site: dict) -> dict:
+def seam_check(obs: th.Observer, products, base_rays: list[dict]) -> dict:
     """Height step between the two products where a ray leaves the near product,
     and how far below the running horizon that seam point lies."""
     near = th.Raster.from_files(*products[0])

@@ -251,6 +251,31 @@ def terrain_block(cfg: dict, site: dict, samples: list[dict]) -> tuple[dict | No
             "earth_steps_changed_60d": v["visibility"]["earth_steps_changed"],
         })
     earth_worst = min((min(r["earth_pct_change_pp"]) for r in shift_rows), default=0)
+    sun_worst = max((x for r in shift_rows for x in r["sun_pct_change_pp"] if x is not None), key=abs, default=0)
+    dark_worst = max((x for r in shift_rows for x in r["longest_dark_change_h"] if x is not None), key=abs, default=0)
+    # Sun changes are summarised only where they are material (> 1 pp); Athena's are <= 0.05 pp.
+    sun_txt = (f"; Sun-visible share up to {sun_worst:+.1f} percentage points and longest darkness up to "
+               f"{dark_worst:+.1f} h" if abs(sun_worst) > 1 else "")
+    ge2 = ps["diff_deg_maxabs_where_ray_setting_ge_2km"]
+    same = ps["same_direction_ray_minus_pixel_deg_min_max"]
+    sweep_txt = (f"agrees within {ge2:.3f} deg where the horizon is set >= 2 km away" if ge2 is not None else
+                 f"has no comparison bin where the horizon is set >= 2 km away (the skyline is set within "
+                 f"{setd[2] * 1000:.0f} m, where a 0.25 deg bin holds few pixel centres); its same-direction "
+                 f"check (ray at the azimuth of the highest pixel minus that pixel) gives {same[0]:+.3f} to "
+                 f"{same[1]:+.3f} deg")
+    nfb = xc.get("near_field_bilinear")
+    if nfb and nfb["diff_deg_maxabs_where_set_within_near_km"] is not None:
+        sweep_txt += (f"; a separately written near-field check (bilinear surface within 1 km, spherical-trig "
+                      f"positions, vector geometry) reproduces the {nfb['n_azimuths_set_within_near_km']} azimuths "
+                      f"set there within {nfb['diff_deg_maxabs_where_set_within_near_km']:.1e} deg. That checks "
+                      f"the implementation, not the DEM")
+    eye = rep["site"]["eye_above_dem_surface_m"]
+    pre = xc["lola_rdr_shots"].get("pct_shots_on_or_before_dem_cutoff_min_max")
+    # Reports written before this field existed (Athena, milestone 3) were measured at 96.7-99.5 %
+    # from the same cached RDR files; the rounded wording below is unchanged for them.
+    lo_hi = None if pre is None else (math.floor(pre[0]), math.ceil(pre[1]))
+    pre_txt = ("96-100 %" if lo_hi is None else f"{lo_hi[0]} %" if lo_hi[0] == lo_hi[1]
+               else f"{lo_hi[0]}-{lo_hi[1]} %")
     notes = (
         f"Terrain horizon (Stage 2) from LOLA {m['products_priority'][0]} (pixel spacing 20 m at the pole, "
         f"{near_pix:.2f} m at the site) and {m['products_priority'][1]} (60 m pixels, used only where a ray leaves the "
@@ -263,7 +288,7 @@ def terrain_block(cfg: dict, site: dict, samples: list[dict]) -> tuple[dict | No
         f"(distinct from the DEM pixel spacing): the DEM is bilinearly interpolated at points every "
         f"{rs['near_step_m']:g} m along the ray to {rs['near_limit_m'] / 1000:g} km, then every {rs['far_step_m']:g} m; "
         f"sampling finer than a pixel follows the interpolated surface and adds no terrain detail. Observer cell: the "
-        f"observer's foot is the same bilinear surface that is sampled (eye 1.02 m above it) and the first sample is "
+        f"observer's foot is the same bilinear surface that is sampled (eye {eye:.2f} m above it) and the first sample is "
         f"at {rs['d_min_m']:g} m; no skyline point was found closer than {setd[0] * 1000:.0f} m, and ignoring terrain "
         f"within 20-300 m changed the skyline by at most {dmin_max:.3f} deg. This is a statement about the DEM surface "
         f"only: ground relief smaller than the DEM resolves, rocks and the lander are not represented. Search "
@@ -275,9 +300,12 @@ def terrain_block(cfg: dict, site: dict, samples: list[dict]) -> tuple[dict | No
         f"{vmax('radial_2.5m_5m')} deg; 60 m product everywhere {vmax('far_product_only')} deg. Site-position "
         f"sensitivity scenarios (observer moved 100 m due north, east, south and west of the published point; "
         f"scenarios, not a measured coordinate uncertainty or confidence interval): skyline change up to {shift} deg "
-        f"in one direction; demo-window Earth-visible share up to {earth_worst:+.1f} percentage points relative to "
-        f"the nominal point. An independently implemented pixel-sweep check on the same DEM agrees within "
-        f"{ps['diff_deg_maxabs_where_ray_setting_ge_2km']:.3f} deg where the horizon is set >= 2 km away. "
+        f"in one direction; demo-window Earth-visible share up to {earth_worst:+.1f} percentage points{sun_txt} relative to "
+        f"the nominal point. An independently implemented pixel-sweep check on the same DEM {sweep_txt}. "
+        + (f"Every azimuth's skyline is set by DEM relief within {setd[2] * 1000:.0f} m of the point (a few "
+           f"{near_pix:.0f} m pixels), so this horizon is NOT robust: it depends strongly on the DEM resolution, "
+           f"on interpolated pixels and on the exact position (see the scenarios above). "
+           if setd[2] < 2.0 else "") +
         f"Comparisons with LOLA laser shots are consistency checks against the DEM's own source data, not "
         f"independent terrain validation. Shot counts (LDEC) are quality indicators, not accuracy guarantees. "
         f"Regional DEM-based visibility for the published coordinate, not actual lander operating conditions. "
@@ -327,7 +355,7 @@ def terrain_block(cfg: dict, site: dict, samples: list[dict]) -> tuple[dict | No
             "pixel_sweep_max_abs_diff_deg_setting_ge_2km": _r(ps["diff_deg_maxabs_where_ray_setting_ge_2km"], 4),
             "pixel_sweep_same_direction_min_deg": _r(ps["same_direction_ray_minus_pixel_deg_min_max"][0], 4),
             "lola_shots_note": ("Consistency check: the LDEM was gridded from LOLA RDR shots through 2017-02-02, "
-                                "and 96-100 % of these shots predate that cutoff, so this is not independent "
+                                f"and {pre_txt} of these shots predate that cutoff, so this is not independent "
                                 "terrain validation."),
             "lola_shots": [{"azimuth_deg": r["azimuth_deg"], "shots_in_window": r["shots_within_az_window"],
                             "shot_minus_dem_deg": _r(r["shot_minus_dem_deg"], 4)}
@@ -343,7 +371,7 @@ def terrain_block(cfg: dict, site: dict, samples: list[dict]) -> tuple[dict | No
             "site_shift_scenarios": {
                 "note": ("Sensitivity scenarios, not a measured coordinate uncertainty or confidence interval: the "
                          "observer moved 100 m due north, east, south and west of the published point (eye kept "
-                         "1.02 m above the DEM at the new point). Changes are relative to the nominal point, for "
+                         f"{eye:.2f} m above the DEM at the new point). Changes are relative to the nominal point, for "
                          "the fixed demo windows (14 days from 2026-12-05 + 0/1/3/7 d), terrain mode."),
                 "rows": shift_rows,
             },

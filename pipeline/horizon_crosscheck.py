@@ -9,8 +9,9 @@
    theta-based elevation formula, no bilinear interpolation. The wedge maximum
    is compared with the ray-march maximum over the same wedge (0.01 deg rays).
 2. LOLA RDR laser shots: a CONSISTENCY check, not independent terrain
-   validation. The LDEM was gridded from LOLA RDR shots through 2017-02-02 and
-   96-100 % of the shots used here predate that cutoff. Shots within +/-250 m
+   validation. The LDEM was gridded from LOLA RDR shots through 2017-02-02; the
+   share of shots acquired by that cutoff is recorded per box (Athena: 96-100 %).
+   Shots within +/-250 m
    of the point that sets the horizon in a few directions are positioned from
    their own lat/lon/radius with the vector geometry of (1). Reported: the
    highest shot elevation in the azimuth window vs the DEM horizon there, and
@@ -57,6 +58,7 @@ import terrain_horizon as th  # noqa: E402  (only: Raster file access, profile()
 R = lola.R_REF_M
 SWEEP_KM = 200.0
 WEDGE_DEG = 1.0
+DEM_DATA_CUTOFF = "2017-02-02"  # LOLA polar GDR V2.0: data through this date (config terrain.source)
 
 
 # ---------------------------------------------------------- independent geometry
@@ -148,6 +150,39 @@ def sweep(frame: LocalFrame, lat, lon, a0, a1, near: th.Raster, far: th.Raster, 
     return best, n_px
 
 
+# ---------------------------------------------------------- 1b. near-field bilinear sweep
+
+NEAR_KM = 1.0
+NEAR_STEP_M = 5.0
+
+
+def near_field_bilinear(frame: LocalFrame, lat, lon, near: th.Raster, near_lbl, azimuths) -> list[dict]:
+    """Max elevation of the bilinear DEM surface within NEAR_KM along each azimuth, by separately
+    written routes: spherical-trig destination points (terrain_check.destination), the documented
+    projection formula (lola.polar_inverse), own bilinear interpolation, and az/el from 3D vectors
+    in the numerically differentiated local frame. Samples at the ray march's own 5 m distances,
+    so a difference reflects implementation, not sampling. Shares the DEM file and its reader."""
+    out = []
+    n = round(NEAR_KM * 1000 / NEAR_STEP_M)
+    for a in azimuths:
+        best, best_d, az_err = -90.0, None, 0.0
+        for k in range(1, n + 1):
+            d = k * NEAR_STEP_M
+            plat, plon = terrain_check.destination(lat, lon, a, d)
+            fi, fj = lola.polar_inverse(near_lbl, plat, plon)
+            i0, j0 = math.floor(fi), math.floor(fj)
+            q = [near.dn_at(i0, j0), near.dn_at(i0 + 1, j0), near.dn_at(i0, j0 + 1), near.dn_at(i0 + 1, j0 + 1)]
+            u, v = fi - i0, fj - j0
+            dn = q[0] * (1 - u) * (1 - v) + q[1] * u * (1 - v) + q[2] * (1 - u) * v + q[3] * u * v
+            paz, pel, _ = frame.az_el_dist(xyz(plat, plon, R + dn * near_lbl.scaling))
+            az_err = max(az_err, abs(((paz - a + 180) % 360) - 180))
+            if pel > best:
+                best, best_d = pel, d
+        out.append({"azimuth_deg": a, "max_elevation_deg": best, "at_distance_m": best_d,
+                    "max_azimuth_error_deg": az_err})
+    return out
+
+
 # ---------------------------------------------------------- main
 
 def main() -> int:
@@ -237,10 +272,45 @@ def main() -> int:
                  "covers those bins."),
         "bins": rows,
     }
+    ge2 = out["pixel_sweep"]["diff_deg_maxabs_where_ray_setting_ge_2km"]
+    out["pixel_sweep"]["n_bins_ray_setting_ge_2km"] = len(far_rows)
+    out["pixel_sweep"]["max_pixel_minus_ray_deg"] = max(diffs)
     print(f"pixel sweep: {len(rows)} bins, pixel - ray mean {statistics.fmean(diffs):+.4f} deg, "
-          f"max |diff| {max(map(abs, diffs)):.4f} deg (setting >= 2 km: "
-          f"{out['pixel_sweep']['diff_deg_maxabs_where_ray_setting_ge_2km']:.4f} deg); same-direction "
+          f"max |diff| {max(map(abs, diffs)):.4f} deg, max pixel - ray {max(diffs):+.4f} deg (setting >= 2 km: "
+          + (f"{ge2:.4f} deg" if ge2 is not None else "no bins") + "); same-direction "
           f"ray - pixel {out['pixel_sweep']['same_direction_ray_minus_pixel_deg_min_max']}", flush=True)
+
+    # 1b. near field, every azimuth: needed where the skyline is set within ~1 km, because
+    # a 0.25-degree bin there is too narrow for the pixel sweep to hold the crest.
+    near_rows = near_field_bilinear(frame, lat, lon, near, near_lbl, [r["azimuth_deg"] for r in rays])
+    nd = []
+    for r, q in zip(rays, near_rows):
+        if r["elevation_deg"] is None:
+            continue
+        set_near = r["distance_m"] <= NEAR_KM * 1000
+        nd.append((q["max_elevation_deg"] - r["elevation_deg"], set_near, r["azimuth_deg"],
+                   q["at_distance_m"], r["distance_m"]))
+    inside_ = [x for x in nd if x[1]]
+    beyond = [x for x in nd if not x[1]]
+    worst = max(inside_, key=lambda x: abs(x[0])) if inside_ else None
+    out["near_field_bilinear"] = {
+        "method": (f"bilinear LDEM surface within {NEAR_KM:g} km at the ray march's {NEAR_STEP_M:g} m distances, "
+                   "every profile azimuth; destination points by spherical trigonometry, documented projection "
+                   "formula, own bilinear code, az/el from 3D vectors in the numerical local frame"),
+        "shared_with_main_method": "same DEM file and reader, same sample distances, same observer point",
+        "n_azimuths_set_within_near_km": len(inside_),
+        "diff_deg_maxabs_where_set_within_near_km": abs(worst[0]) if worst else None,
+        "at": ({"azimuth_deg": worst[2], "near_check_distance_m": worst[3], "ray_setting_distance_m": worst[4]}
+               if worst else None),
+        "n_same_setting_distance": sum(x[3] == x[4] for x in inside_),
+        "max_near_minus_ray_where_set_beyond_deg": max((x[0] for x in beyond), default=None),
+        "max_azimuth_error_deg": max(q["max_azimuth_error_deg"] for q in near_rows),
+    }
+    nf = out["near_field_bilinear"]
+    print(f"near-field bilinear check: {nf['n_azimuths_set_within_near_km']} azimuths set within {NEAR_KM:g} km, "
+          f"max |near - ray| {nf['diff_deg_maxabs_where_set_within_near_km']} deg, same setting distance "
+          f"{nf['n_same_setting_distance']}; set beyond: max near - ray {nf['max_near_minus_ray_where_set_beyond_deg']}; "
+          f"azimuth error {nf['max_azimuth_error_deg']:.2e} deg", flush=True)
 
     # 2. LOLA RDR shots near the setting points ---------------------------------
     by_az = {round(r["azimuth_deg"], 1): r for r in rays}
@@ -256,6 +326,8 @@ def main() -> int:
         pts, meta = site_elevation.gds_points(name, r["lat_deg"] - dlat, r["lat_deg"] + dlat,
                                               r["lon_deg"] - dlon, r["lon_deg"] + dlon, site_id=site["id"])
         valid = [p for p in pts if p["flag"] == 0]
+        # shots acquired on or before the LDEM data cutoff (2017-02-02) were available to build the DEM
+        n_pre = sum(p["utc"][:10] <= DEM_DATA_CUTOFF for p in valid)
         win = 0.1
         ray_az = [round((a - win + k * 0.01) % 360, 6) for k in range(round(2 * win / 0.01) + 1)]
         rr = th.profile(obs, ray_az, products, h_max, workers=4)
@@ -273,6 +345,7 @@ def main() -> int:
         row = {"azimuth_deg": a, "setting_point": {k: r[k] for k in ("distance_m", "lat_deg", "lon_deg", "height_m",
                                                                      "shot_count_nearest")},
                "query": meta.get("request_url"), "valid_shots_in_box": len(valid),
+               "pct_shots_on_or_before_dem_cutoff": 100.0 * n_pre / len(valid) if valid else None,
                "shots_within_az_window": len(shots_in), "az_window_deg": win,
                "dem_horizon_max_in_window_deg": dem_max,
                "max_shot_elevation_deg": top[0] if top else None,
@@ -290,6 +363,11 @@ def main() -> int:
                              "interpretation": ("Consistency check against the DEM's source data (LDEM gridded from "
                                                 "RDR shots through 2017-02-02), not independent validation; "
                                                 "windows with few shots give only lower bounds."),
+                             "dem_data_cutoff_utc_date": DEM_DATA_CUTOFF,
+                             "pct_shots_on_or_before_dem_cutoff_min_max": (
+                                 [min(pre), max(pre)] if (pre := [r["pct_shots_on_or_before_dem_cutoff"] for r in shot_rows
+                                                                  if r["pct_shots_on_or_before_dem_cutoff"] is not None])
+                                 else None),
                              "rows": shot_rows}
 
     # 3. azimuth convention vs Horizons -------------------------------------------
@@ -308,7 +386,8 @@ def main() -> int:
         "note": ("Sanity check only. Libration moves Earth by several degrees, so the 60-day mean need not equal "
                  "the +X direction; one direction is tested; the elevation difference (parallax, residual "
                  "libration) is not analysed. Agreement within ~2 deg rules out a mirrored (counter-clockwise, "
-                 "~60 deg off here) or grossly rotated azimuth, not sub-degree offsets."),
+                 f"~{abs(((maz - paz + 180) % 360) - 180):.0f} deg off here) or grossly rotated azimuth, not "
+                 "sub-degree offsets."),
     }
     print(f"azimuth convention: ME +X predicted az {paz:.2f} el {pel:.2f}; Horizons mean az {mean_az:.2f} "
           f"el {mean_el:.2f}; mirrored would be {maz:.2f}", flush=True)

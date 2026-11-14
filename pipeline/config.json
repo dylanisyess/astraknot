@@ -39,10 +39,10 @@
       "surface_elevation_m": 1941.8,
       "surface_elevation_reference": "Height above the 1737.4 km LOLA reference sphere, LDEM_80S_20M V2.0, bilinear at the published point interpreted in ME. Rounded to 0.1 m. Absolute vertical accuracy and source-frame equivalence are not established. No local RDR shot consistency check performed. See data/terrain/connecting-ridge-cr1_site_elevation_report.json.",
       "horizons_site_altitude_km": 1.9428,
-      "horizons_altitude_reference": "PLANNED, NOT SUBMITTED: height above the 1737.4 km lunar reference sphere, the same sphere as cached LOLA heights. Horizons echo remains to be checked in a later milestone.",
-      "altitude_conversion_note": "Planned altitude = (rounded surface 1941.8 m + nominal 1 m observer) / 1000 = 1.9428 km. Bilinear surface 1941.820558101 m; rounding gives an effective eye height 0.979441899 m above this DEM. No Horizons request or full horizon computation has been made.",
+      "horizons_altitude_reference": "Height above the Horizons reference body for the Moon: a 1737.4 km sphere (response header 'Center radii'), the same reference as LOLA heights. Submitted 2026-11-14 (milestone 4C).",
+      "altitude_conversion_note": "horizons_site_altitude_km = (surface_elevation_m + observer_height_above_surface_m) / 1000 = (1941.8 m + 1 m) / 1000 = 1.9428 km. Both heights are relative to the same 1737.4 km sphere, so no datum conversion is needed. Rounding: the bilinear LDEM_80S_20M surface is 1941.8206 m; it was rounded to 0.1 m (1941.8 m) before forming the Horizons altitude, so the submitted point is 0.9794 m above the interpolated surface (nominal 1 m, 0.0206 m lower). The terrain horizon uses the same submitted point (r = 1737.4 km + 1942.8 m), so Sun/Earth directions and skyline refer to one observer. No absolute vertical accuracy of the surface value is claimed; no local LOLA RDR shot consistency check was made at the site point; the nearest 20 m DEM pixel has no LOLA shot (interpolated height). Horizons echo (all 12 responses): Center geodetic 222.6, -89.468, 1.9428 exactly; Center cylindric Dxy 16.14983 km and Dz -1739.268 km equal the submitted point rounded to the printed 5 and 3 decimals, so |r| (177 mm above 1737.4 + 1.9428 km as printed) confirms the radius only to about +/-0.5 m, the printed precision of Dz near the pole.",
       "horizon_model": "smooth",
-      "preparation_status": "terrain_preparation_only; no positions or final terrain horizon"
+      "preparation_status": "positions fetched and terrain horizon computed in milestone 4C; frontend still single-site"
     }
   ],
   "terrain": {

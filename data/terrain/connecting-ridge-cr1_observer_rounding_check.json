@@ -1,0 +1,153 @@
+{
+ "generated_at_utc": "2026-11-14T22:27:30Z",
+ "site": {
+  "id": "connecting-ridge-cr1",
+  "latitude_deg": -89.468,
+  "longitude_deg_east": 222.6,
+  "horizons_site_altitude_km": 1.9428,
+  "observer_height_above_surface_m": 1
+ },
+ "terrain_report_sha256": "245e4f78da99da915b4e6f28c05537253534619a770389566f05a965f547f1af",
+ "eye_above_dem_submitted_m": 0.9794418987653444,
+ "eye_above_dem_exact_m": 1,
+ "note": "Exact-eye profile minus the exported (submitted-altitude) profile. Sun/Earth directions are not recomputed (their altitude parallax at this scale is ~1e-9 deg). Demo windows: 14 days from 2026-12-05T00:00:00Z + 0/1/3/7 d, terrain mode.",
+ "skyline_change_deg": {
+  "max_abs": 0.023528531977802136,
+  "signed_at_max": -0.023528531977802136,
+  "at_azimuth_deg": 286.7,
+  "setting_distance_m_at_max": 50.0,
+  "mean_abs": 0.013918239320470503
+ },
+ "unknown_azimuths_submitted_exact": [
+  0,
+  0
+ ],
+ "steps_changed": {
+  "sun": 13,
+  "earth": 3,
+  "rows": [
+   {
+    "step_start_utc": "2026-12-06T06:40:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2026-12-15T10:20:00Z",
+    "body": "earth",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2026-12-16T09:10:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2026-12-16T09:20:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2026-12-16T09:30:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2026-12-16T09:40:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2026-12-23T23:50:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2026-12-27T08:00:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2026-12-27T08:10:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2027-01-05T03:20:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2027-01-11T13:10:00Z",
+    "body": "earth",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2027-01-13T05:00:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2027-01-13T05:10:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2027-01-13T05:20:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2027-01-13T05:30:00Z",
+    "body": "sun",
+    "submitted": false,
+    "exact": true
+   },
+   {
+    "step_start_utc": "2027-01-22T19:40:00Z",
+    "body": "earth",
+    "submitted": false,
+    "exact": true
+   }
+  ]
+ },
+ "demo_metric_change_exact_minus_submitted": {
+  "+0d": {
+   "sun_pct": 0.24801587301587347,
+   "earth_pct": 0.04960317460317398,
+   "both_pct": 0.24801587301587258,
+   "longest_dark_h": -0.6666666666666714
+  },
+  "+1d": {
+   "sun_pct": 0.24801587301587347,
+   "earth_pct": 0.04960317460317043,
+   "both_pct": 0.24801587301587258,
+   "longest_dark_h": -0.6666666666666572
+  },
+  "+3d": {
+   "sun_pct": 0.19841269841269593,
+   "earth_pct": 0.049603174603177536,
+   "both_pct": 0.24801587301587258,
+   "longest_dark_h": -0.6666666666666856
+  },
+  "+7d": {
+   "sun_pct": 0.24801587301587347,
+   "earth_pct": 0.049603174603177536,
+   "both_pct": 0.29761904761904745,
+   "longest_dark_h": -0.8333333333333428
+  }
+ }
+}

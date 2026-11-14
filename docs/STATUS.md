@@ -5,23 +5,27 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
-## Start here (handoff for a new session, updated 2026-11-14 after milestone 4B)
+## Start here (handoff for a new session, updated 2026-11-14 after milestone 4C)
 Read this section first, then `docs/SPEC.md` and `docs/DATA_CONTRACT.md`.
 The rest of this file is the detailed record behind it.
 
-**Current checkpoint:** Milestone 4B complete on `milestone-4-site-comparison`,
-starting from verified `61a0a18` with a clean tree. Selected
-`connecting-ridge-cr1`: NASA's notional study/assumed landing point at
-89.468 S, 222.6 E. Source, candidate decision and limits: [SECOND_SITE.md](SECOND_SITE.md).
-Cached coarse coverage planning and DEM elevation checks support preparation;
-no second-site Horizons request, full terrain horizon, export or frontend change.
-Athena configuration and every existing app/source/evidence file are preserved.
-The app manifest still contains Athena alone; config now contains two sites.
-**Exact next task (4C):** explicitly fetch CR1 positions at the planned
-1.9428 km altitude, export/check smooth samples, then calculate and cross-check
-its full terrain horizon. Exact commands are below; none were run in 4B.
-Always use `--site`: single-site commands now require it; unscoped batch
-fetch/export/validation would include the unprepared second site.
+**Current checkpoint:** Milestone 4C complete on `milestone-4-site-comparison`,
+starting from verified `94cf13f` with a clean tree; **changes are uncommitted
+for review**. `connecting-ridge-cr1` (NASA notional study point, 89.468 S,
+222.6 E; [SECOND_SITE.md](SECOND_SITE.md)) now has real 60-day Horizons
+positions (12 sequential live requests at 1.9428 km, raw responses cached), a
+full 0.1° terrain horizon with sensitivity, cross-checks and an exported
+`app/public/data/connecting-ridge-cr1.json` (smooth + terrain). Validation
+68/68 for each site (136/136 batch). Athena's outputs are byte-identical.
+**Key finding:** CR1's terrain skyline is set entirely by DEM relief
+50–480 m from the point (median 90 m), while the Sun's center stays only
+0.07–1.98° above the horizontal plane. The terrain result is implementation-
+checked and numerically converged, but **not robust**. Ignoring terrain within
+300 m, using the 60 m DEM, or moving the observer 100 m each flips thousands of
+the 8 640 Sun steps. Treat CR1 terrain percentages as highly position- and
+resolution-dependent; see "Milestone 4C" below. The manifest now lists both
+sites (Athena first); the frontend is unchanged and still displays only
+`manifest.sites[0]` (Athena). Unscoped batch commands now cover both prepared sites.
 
 ### What works (verified)
 - **Data:** 60 days of real JPL Horizons Sun/Earth airless apparent az/el of
@@ -42,11 +46,17 @@ fetch/export/validation would include the unprepared second site.
   elevation chart with the skyline under each body (terrain mode); one shared
   cursor; boundary flags (short, expandable); unknown handling; URL state
   including `horizon=`.
+- **Second site data (milestone 4C, pipeline only):** CR1 60 days of real
+  Horizons Sun/Earth positions (8 641 samples, same coverage/step/conventions as
+  Athena), smooth and terrain horizons, intervals, sources and checks in
+  `app/public/data/connecting-ridge-cr1.json`. Not shown in the app yet.
 
 ### Key files
 Pipeline (`pipeline/`, Python standard library only; run from the repo root):
-- `connecting-ridge-cr1` is configured for terrain preparation only; see
-  `data/terrain/connecting-ridge-cr1_{site_selection,lola_coverage_report,site_elevation_report}.json`.
+- `connecting-ridge-cr1` evidence: `data/terrain/connecting-ridge-cr1_{site_selection,lola_coverage_report,site_elevation_report}.json`
+  (4B preparation) and `_{terrain_horizon,horizon_crosscheck,observer_rounding_check}.json` (4C).
+- `observer_rounding_check.py` (4C): recomputes a site's profile with the eye at
+  exactly the nominal height and reports skyline/step/demo-metric changes.
 - `config.json`: sites, altitude, coverage, chunking, shared terrain product choice (single source of truth).
 - `sites.py`: site selection, canonical report paths, identity and report fingerprint checks.
   Every pipeline entry point accepts `--site ID`; batch fetch/export/validate
@@ -123,8 +133,16 @@ App (`app/src/`):
   printed precision). Cause: output rounding of the echo. The echo is therefore
   consistent with the submitted radius only to its printed precision (about
   ±5 cm on |r|); it does not show exact agreement. `Center geodetic` echoes
-  5.3229 km to the digits submitted. `validate.py` now reports this difference
-  and uses a 0.1 m tolerance (was 1 m).
+  5.3229 km to the digits submitted.
+- **CR1 echo (4C):** all 12 responses echo `Center geodetic 222.6, -89.468,
+  1.9428` exactly and `Center cylindric 222.6, 16.14983, -1739.268 km`. Near the
+  pole Dz is printed with only **3** decimals, so |r| as printed is 177 mm above
+  1737.4 + 1.9428 km, while the exact Dxy/Dz (16.1498296, −1739.2678227 km) round to
+  exactly the printed digits (residuals +0.4 / −177.3 mm). The echo confirms the
+  radius only to ±0.5 m there. `validate.py`'s check (changed in 4C) now
+  recomputes Dxy/Dz from the submitted lat/alt and requires equality at the
+  echo's printed decimals. The former fixed 0.1 m |r| tolerance would have
+  failed CR1 for a print-precision reason. Athena still passes (stricter test).
 - **Terrain horizon geometry:** ME frame; observer at r_o = 1737.4 km +
   Horizons altitude; local zenith = radial (sphere); north/east from d/dlat,
   d/dlon; azimuth clockwise from north. Great-circle ray at azimuth A; point at
@@ -151,6 +169,19 @@ App (`app/src/`):
   indicators, not accuracy guarantees.
 - The smooth horizon is still the 0° plane (ignores the ~0.06° dip); it is
   kept only as the comparison mode.
+- **CR1 (4C):** frame ME/DE421 planetocentric is assumed (source silent);
+  coordinate accuracy unknown. The skyline is set within 50–480 m by a DEM whose
+  nearest pixel to the point has no LOLA shot (881 of 3 600 setting points sit in
+  zero-shot pixels). Ignoring terrain within 300 m changes it up to 4.05°.
+  The 60 m product changes it up to 2.72°, and the 100 m scenarios up to 4.15°.
+  Those scenarios change the demo Sun share by up to +42.2 pp and the longest
+  darkness by up to −141.7 h. They are scenarios, not an uncertainty. Eye
+  rounding (0.979 m vs 1 m) moves the skyline by ≤ 0.024° and flips 13 Sun /
+  3 Earth steps (≤ 0.25 pp, ≤ 0.83 h). No independent terrain data or published
+  skyline for CR1 was used.
+- `manifest.dataset_id` is still `m2-athena-2026-12-01-60d` although the
+  manifest now lists two sites. Renaming requires a full re-export of both
+  sites; left for the frontend milestone.
 - Horizons API signature 1.2 vs doc page 1.3; future leap seconds unknown.
 - Not tested: screen readers, Firefox/Safari, touch devices, keyboard use of
   the timeline itself, keyboard hover on the panorama.
@@ -158,7 +189,13 @@ App (`app/src/`):
 ### Validation commands (expected results on 2026-11-14)
 ```sh
 python pipeline/validate.py --site im2-athena                        # 68/68 checks passed
-python -m unittest discover -s pipeline/tests      # Ran 53 tests ... OK
+python pipeline/validate.py --site connecting-ridge-cr1              # 68/68 checks passed
+python pipeline/validate.py                                          # 136/136 (both sites)
+python pipeline/fetch.py --site connecting-ridge-cr1                 # "0 live request(s) made"
+python pipeline/crosscheck_metrics.py --site connecting-ridge-cr1 --terrain  # 12-05 +0 d: sun 72.123..., earth 25.446..., dark 62.833 h (touches end)
+python pipeline/crosscheck_metrics.py --site connecting-ridge-cr1    # 12-05 +0 d: sun 100.0, earth 28.373..., dark 0.0 h
+python pipeline/observer_rounding_check.py --site connecting-ridge-cr1  # max 0.0235 deg; sun 13, earth 3 steps
+python -m unittest discover -s pipeline/tests      # Ran 55 tests ... OK
 python pipeline/fetch.py --site im2-athena                           # "0 live request(s) made" (all cached)
 python pipeline/crosscheck_metrics.py --site im2-athena              # 12-05 +0 d: sun 43.353..., dark 190.333 h
 python pipeline/crosscheck_metrics.py --site im2-athena --terrain    # 12-05 +0 d: sun 27.232..., earth 67.262..., dark 244.5 h
@@ -192,31 +229,176 @@ Environment notes (Windows):
 - `numpy` happens to be installed globally but is deliberately **not** used:
   the pipeline stays standard-library only.
 
-### Next steps: Milestone 4C, positions then verified terrain for CR1
+### Next steps (after review of 4C)
 
-These are the next commands for a separately authorized milestone, **not run
-in 4B**. The first contacts Horizons; the full terrain and cross-check steps
-are deliberately deferred. Initial export creates the samples needed by
-sensitivity and the azimuth check. Keep Athena first and preserve its outputs.
+1. Review and commit the 4C changes (nothing was committed, pushed or merged).
+2. Decide how to present CR1's terrain result given its near-field
+   sensitivity, e.g. show it only with a prominent robustness caveat and its
+   scenario table, or present smooth and terrain side by side. This is a
+   product/communication decision, not a pipeline fix. No higher-resolution
+   DEM was evaluated, and whether one covers CR1 was not checked (out of scope).
+3. Then the two-site frontend (milestone 5): load both manifest entries;
+   comparison cards; shared timeline. Rename `dataset_id` with a full re-export.
 
-```sh
-python pipeline/fetch.py --site connecting-ridge-cr1
-python pipeline/export.py --site connecting-ridge-cr1
-python pipeline/validate.py --site connecting-ridge-cr1
-python pipeline/terrain_horizon.py --site connecting-ridge-cr1
-python pipeline/horizon_crosscheck.py --site connecting-ridge-cr1
-python pipeline/export.py --site connecting-ridge-cr1
-python pipeline/validate.py --site connecting-ridge-cr1
-python pipeline/validate.py --site im2-athena
-python pipeline/crosscheck_metrics.py --site connecting-ridge-cr1 --terrain
-```
+To regenerate CR1 from the caches (order matters; all inputs cached, no network):
+`export.py` → `validate.py` → `terrain_horizon.py` (~5 min) →
+`horizon_crosscheck.py` (~5 min; RDR boxes cached) → `export.py` →
+`validate.py` → `observer_rounding_check.py`, all with `--site connecting-ridge-cr1`.
 
-Verify the returned geodetic site and altitude rather than assuming agreement.
-Review fine-ray coverage, stopping distances, null sectors, source/frame
-assumptions and sensitivity before claiming a second verified terrain horizon.
-No new large terrain products are required by the coarse preparation evidence;
-keep the existing 75S far-field fallback, since fine-ray coverage is unverified.
-The frontend remains single-site. Two-site UI is later work.
+## Milestone 4C: CR1 positions, terrain horizon and validation (2026-11-14)
+
+Started from verified branch `milestone-4-site-comparison`, commit `94cf13f`,
+clean tree. Left **uncommitted** for review; no push or merge. No frontend,
+site-list, custom-coordinate or 3D change.
+
+Commands run (in order, all `--site connecting-ridge-cr1` unless noted):
+`fetch.py --print-urls` (dry run) → `fetch.py` → `export.py` → `validate.py`
+→ `terrain_horizon.py` → `horizon_crosscheck.py` (first attempt crashed, see
+code changes; re-run) → `export.py` → `validate.py` → `validate.py --site
+im2-athena` → `crosscheck_metrics.py [--terrain]` (both sites) →
+`observer_rounding_check.py` → `fetch.py` (cache re-run) → `validate.py` (batch)
+→ unit tests, `npm test`, `npm run build`. `compare_altitude.py` was **not**
+run for CR1: it needs extra 0 km Horizons queries that were not part of this task.
+
+### Positions
+- 12 live requests (Sun `10`, Earth `399`; six 10-day chunks each), made
+  sequentially with the 2 s pause, 2026-11-14T22:18:08Z–22:18:37Z, all HTTP 200,
+  API signature 1.2. Bodies cached byte-for-byte with query, headers and sha256
+  in `data/horizons/connecting-ridge-cr1__*`; no failed responses. Re-run: 0 live.
+- Query `SITE_COORD='222.6,-89.468,1.9428'` (E-lon, lat, alt km), `coord@301`,
+  `GEODETIC`, quantity 4, `AIRLESS`, `UT`. Echo checked rather than assumed:
+  geodetic exact; frame `MEAN_ME (high precision) {East-longitude positive}`;
+  radii 1737.4 km sphere; cylindric consistent only to its printed precision
+  (±0.5 m, see "CR1 echo" in Verified conventions).
+- Smooth export: 8 641 samples, 0 nulls, export = raw 17 282/17 282, 5 boundary
+  samples identical per target. Sun elevation **0.065° to 1.984°** for all
+  60 days, Earth −7.50° to +6.16°. Smooth 0° model: Sun center visible 100 %, Earth 40.19 %.
+
+### Observer and frame (explicit)
+- ME/DE421 planetocentric, east-positive frame **assumed** for the source
+  coordinate (unchanged from 4B). Horizons interprets it in MOON_ME.
+- Nominal eye 1 m. Submitted altitude (1941.8 + 1) m = 1.9428 km uses the
+  0.1 m-rounded surface. The terrain run reads the bilinear foot as 1941.8205581 m
+  (same as 4B to 1e-12 m), so the eye is **0.979442 m** above the DEM.
+  Sun/Earth and skyline share r = 1 739 342.8 m.
+- Rounding effect, measured (`observer_rounding_check.py`, profile with the eye
+  at exactly 1.000 m): skyline lower by up to **0.0235°** (az 286.7°, set 50 m
+  away; mean 0.0139°). That flips **13 Sun / 3 Earth** steps of 8 640. Demo-window
+  changes are Sun ≤ +0.25 pp, Earth ≤ +0.05 pp and longest darkness −0.67 to
+  −0.83 h. Larger than Athena's (≤ 0.0034°, 1 step) because CR1's skyline is
+  ~50–100 m away. Kept, consistent with the established convention, and
+  documented in `site.altitude_conversion_note`.
+
+### Terrain horizon (`data/terrain/connecting-ridge-cr1_terrain_horizon.json`)
+- 3 600/3 600 rays met the stopping rule (91–203 km, median 142 km); **0
+  unknown**. Horizon −0.83° to +4.11° (median 1.26°), 624 negative azimuths.
+- **Every setting point lies 50–480 m from the point (median 90 m), 3 574
+  within 200 m**, all in LDEM_80S_20M. 881 setting points have 0 LOLA shots in
+  the nearest pixel. Cardinal directions: N 3.207° (75 m), E 1.734° (65 m),
+  S 2.273° (140 m), W 0.133° (85 m). The 100 m N/E/S/W points are 4.6/2.7/3.7/0.8 m
+  higher than the point: in this DEM it sits in a shallow local low.
+- No ray crossed the 80S edge before stopping, so there are no seam
+  statistics (`n_rays_crossing: 0`).
+
+Sensitivity (full recomputations; steps of 8 640; demo = largest change over
+the four 14-day windows from 2026-12-05):
+
+variant | max \|Δ\| (p99) | Sun / Earth steps | demo change (Sun pp, Earth pp, dark h)
+---|---|---|---
+azimuth 0.05° / 0.02° | 0.004° / 0.004° | 0 / 0 | 0
+0.005° within ±0.3° of 10 crossings | 0.0004° | 0 / 0 | 0
+radial 2.5 / 5 m | 0.087° (0.064°) | 2 / 0 | 0.05, 0, 0.17
+radial 10 / 20 m | 0.330° (0.161°) | 13 / 17 | 0.25, 0.15, 0.83
+radial 20 / 40 m and 20 / 60 m | 0.330° (0.189°) | 45 / 27 | 1.29, 0.20, 4.33
+ignore terrain < 20 m / < 50 m | 0 | 0 / 0 | 0
+ignore terrain < 100 m | 1.14° | 161 / 0 | 3.62, 0, 0
+ignore terrain < 300 m | **4.05°** | **5 334 / 816** | 54.4, 12.6, 182.8
+truncate at 10 / 25 / 50 / 100 km | 0 | 0 / 0 | 0
+height bound = products' maximum | 0 | 0 / 0 | 0
+60 m product everywhere | **2.72°** (2.72°) | **2 340 / 544** | 28.5, 11.1, 74.2
+switch to 60 m at 5 / 25 / 100 km | 0 | 0 / 0 | 0
+scenario: observer 100 m N | 3.10° (median 1.87°) | 3 594 / 198 | 40.1, 4.6, 134.8
+scenario: observer 100 m E | 2.71° (median 1.11°) | 3 770 / 648 | 42.2, 8.0, 141.7
+scenario: observer 100 m S | 4.15° (median 1.06°) | 3 627 / 331 | 20.6, 6.0, 38.3
+scenario: observer 100 m W | 3.08° (median 1.68°) | 2 751 / 198 | 27.9, 2.9, 66.8
+
+Interpretation: azimuth spacing, search extent, height bound and far-field
+handoff are converged. Sub-pixel ray sampling matters at the 0.1–0.3° level
+because the skyline is only a few pixels away. **The result is dominated by
+20 m DEM relief within ~300 m** and is not robust to DEM resolution or to a
+100 m position change. The scenarios are not a coordinate uncertainty (it is
+unknown). Since the Sun is never more than 1.98° up, small skyline changes
+decide whole sunlit periods.
+
+### Checks by other routes (`data/terrain/connecting-ridge-cr1_horizon_crosscheck.json`)
+- **Near-field bilinear check (new in 4C):** separately written positions
+  (spherical-trig destination), projection (documented `polar_inverse`),
+  bilinear code and vector geometry with a numerical local frame. Evaluated at
+  the ray march's 5 m distances to 1 km, every azimuth. It reproduces all 3 600
+  azimuths within **2.2 × 10⁻⁹ °** at identical setting distances; azimuth error
+  ≤ 1.9 × 10⁻⁷ °. This confirms the implementation; it shares the DEM, reader,
+  sample distances and observer, so it says nothing about terrain accuracy.
+- Pixel sweep (16 wedges, 64 bins): **no bin has the skyline set ≥ 2 km away**,
+  so the Athena-style statistic is `null`. Pixel − ray is ≤ +0.049° in every bin,
+  so the upper-bound consistency holds. Bins are mostly −0.5° to −6° because a
+  0.25° bin at 50–500 m holds few pixel centres. Same-direction check −0.051°
+  to +6.0°. `all_sweeps_extent_sufficient` is false for that same near-field
+  reason, not because of the search extent. Not informative for CR1's values.
+- LOLA RDR shots (8 boxes, ±250 m, cached in `data/terrain/lola_rdr/connecting-ridge-cr1__*`,
+  queried sequentially from ODE GDS): **100 %** of shots predate the DEM cutoff,
+  so this is a consistency check only. The ±0.1° windows at 65–165 m contain 0–2
+  shots, so **the skyline-vs-shot comparison is uninformative** (lower bounds).
+  The boxes overlap the site neighbourhood (836–931 shots each). There, DEM − shot
+  heights are mean −0.32 to −0.36 m, sd 0.74–1.00 m, max |5.42| m.
+- Azimuth convention (sanity check): ME +X at az 137.40°; Horizons 60-day mean
+  Earth az 137.81° (Δ 0.41°). A mirrored convention would give 222.60° (~85° off).
+- Metrics: `crosscheck_metrics.py` (independent of `visibility.classify`)
+  equals the sensitivity module's demo metrics exactly. `validate.py`
+  re-classifies the exported profile with identical intervals.
+
+### Demonstration windows (14 days from 2026-12-05; no rankings implied)
+window | smooth Sun / Earth / both / dark | terrain Sun / Earth / both / dark
+---|---|---|---
++0 d | 100 / 28.37 / 28.37 % / 0 h | 72.12 / 25.45 / 6.75 % / 62.8 h ⚠ end
++1 d | 100 / 35.52 / 35.52 % / 0 h | 72.12 / 32.59 / 6.75 % / 86.8 h ⚠ end
++3 d | 100 / 49.80 / 49.80 % / 0 h | 59.87 / 46.88 / 6.75 % / 134.8 h ⚠ end
++7 d | 100 / 78.37 / 78.37 % / 0 h | 45.59 / 75.45 / 21.03 % / 182.8 h
+
+60 days, terrain: Sun center visible 35.82 %, Earth 36.90 %, 11 intervals, no
+unknown state. Given the sensitivity above, these terrain numbers describe this
+DEM at this exact point only.
+
+### Code changes
+- `terrain_sensitivity.py`: **bug fix**. 4A added unused `cfg, site` parameters
+  to `seam_check` but not to its call, so any full sensitivity run raised
+  `TypeError` after ~5 min. Athena's report predates 4A and was never re-run.
+  Restored the original signature; no calculation changed.
+- `validate.py`: the cylindric-echo check compares at the echo's printed
+  decimals (see Verified conventions); 2 new unit tests use the real Athena and CR1 echoes.
+- `horizon_crosscheck.py`: crashed formatting the `null` ≥ 2 km statistic
+  (fixed). Adds the near-field bilinear check, `n_bins_ray_setting_ge_2km`,
+  `max_pixel_minus_ray_deg`, the per-box share of shots by the DEM cutoff, and
+  a computed mirrored-azimuth offset in the note (was the Athena-specific "~60 deg").
+- `export.py`: replaced Athena-specific note text (eye "1.02 m", "96-100 %")
+  with each site's values. When the pixel sweep has no ≥ 2 km bins it says so
+  and cites the same-direction and near-field checks. It adds Sun share/darkness
+  scenario changes when > 1 pp, plus a "NOT robust" sentence when every skyline
+  point is within 2 km. Athena's export is **byte-identical** (content compared in
+  memory; on-disk files unchanged).
+- New `observer_rounding_check.py`; config CR1 text fields updated from
+  "planned, not submitted" to the submitted/echoed facts (identity fields unchanged).
+
+### Checks observed
+- `validate.py --site connecting-ridge-cr1`: **53/53** after the smooth export,
+  **68/68** after the terrain export; `--site im2-athena` **68/68**; batch **136/136**.
+- `python -m unittest discover -s pipeline/tests`: **55 passed** (53 + 2 new).
+- `npm test` **43 passed**; `npm run build` passed (JS 275 kB, 86 kB gzip).
+- Athena: all 74 tracked files whose names contain "athena" (export, caches,
+  reports, RDR boxes) are byte-identical to `94cf13f` (sha256). Demo metrics are
+  unchanged (terrain 27.232 % / 67.262 % / 244.5 h; smooth 43.353 % / 55.655 % / 190.333 h).
+- Manifest now lists Athena then CR1, with a new `generated_at_utc`. The app
+  still loads only `sites[0]` (Athena); not browser-rechecked, since no
+  frontend code changed.
 
 ## Milestone 4B: second-site selection and cached terrain preparation (2026-11-14)
 
@@ -798,6 +980,20 @@ date | check | inputs | expected behavior | observed result | pass/fail
 2026-11-14 | Browser checks (M3) | headless Chrome, DevTools protocol | 34 checks: terrain default, metrics both modes, scenario preserved on switch and back, hidden Sun drawn, Earth visible below 0°, slider/timeline drive the panorama, hover tooltip, usability items, labels inside the plot, no overflow at 1280/390 px light/dark, no console errors | **34/34** | pass
 2026-11-14 | Review corrections (M3) | wording/metadata only; recomputed reports | numbers unchanged | `terrain_horizon.py` + `horizon_crosscheck.py` re-run: every ray, sensitivity value, bin and shot row identical (only timestamps, run time, text); export: samples, both horizons, setting points and intervals identical; 66/66, 34 pipeline tests, 43 vitest, build OK | pass
 2026-11-14 | Browser checks after review (M3) | headless Chrome | 34 earlier checks + site-shift note (scenarios wording, 4 rows, collapsed, hidden in Smooth) + facts wording (pixels vs sampling, shot consistency, gross-error azimuth check) | **37/37** | pass
+2026-11-14 | CR1 retrieval (4C) | 12 chunked requests | sequential, cached raw, complete | 12 live, re-run 0 live; 6 × 1 441 rows per target; HTTP 200 | pass
+2026-11-14 | CR1 Horizons conventions (4C) | 12 responses | geodetic echo = 222.6, −89.468, 1.9428; MEAN_ME east-positive; 1737.4 km sphere; airless; UT | as expected; cylindric = submitted point at printed 5/3 decimals (|r| +177 mm as printed, ±0.5 m precision) | pass
+2026-11-14 | CR1 `validate.py` smooth (4C) | raw + export | contract + raw checks | **53/53**; export = raw 17 282/17 282 | pass
+2026-11-14 | CR1 terrain profile (4C) | 3 600 rays | stopping rule met; no unknown | 3 600 stopped (91–203 km); −0.83…4.11°; set 50–480 m | pass
+2026-11-14 | CR1 terrain sensitivity (4C) | 22 variants | numerical convergence; report robustness | az/extent/height bound converged; ray step ≤ 0.33°; **near field < 300 m 4.05°, 60 m DEM 2.72°, 100 m scenarios ≤ 4.15° (up to 3 770 Sun steps)** | numerics pass; robustness **not met** (reported)
+2026-11-14 | CR1 near-field bilinear check, independent implementation, same DEM (4C) | 3 600 azimuths, ≤ 1 km | equal to ray march | ≤ 2.2e-9°, same setting distance 3 600/3 600 | pass
+2026-11-14 | CR1 pixel sweep (4C) | 16 wedges, 64 bins | pixel ≤ ray; ≥ 2 km agreement | pixel − ray ≤ +0.049°; no ≥ 2 km bins (statistic null) | pass (upper bound only)
+2026-11-14 | CR1 LOLA RDR shots, consistency (4C) | 8 boxes | skyline vs shots | 0–2 shots per ±0.1° window: uninformative; box DEM − shot mean −0.32…−0.36 m | inconclusive (reported)
+2026-11-14 | CR1 azimuth convention, sanity (4C) | ME +X vs mean Earth | gross errors only | 137.40° vs 137.81° (mirrored 222.60°) | pass
+2026-11-14 | CR1 observer rounding (4C) | eye 0.979 vs 1.000 m | small, documented | ≤ 0.0235°; 13 Sun / 3 Earth steps; ≤ 0.25 pp, ≤ 0.83 h | pass (kept, documented)
+2026-11-14 | CR1 `validate.py` with terrain (4C) | export incl. terrain | contract + re-classification | **68/68**; batch both sites **136/136** | pass
+2026-11-14 | CR1 metrics cross-check (4C) | demo windows, both models | independent Python = pipeline | exact (72.123 %, 25.446 %, 62.833 h terrain +0 d) | pass
+2026-11-14 | Athena preservation (4C) | 74 tracked Athena files; export recomputed in memory | identical | sha256 74/74; export content identical; 68/68; metrics unchanged | pass
+2026-11-14 | Tests and build (4C) | pipeline, vitest, build | pass | 55 OK; 43 passed; build OK | pass
 
 Not yet checked: screen readers, Firefox/Safari, real touch hardware,
 keyboard-only use of the timeline (the slider is keyboard-accessible; the
@@ -816,6 +1012,16 @@ timeline itself is pointer-only).
   changed by up to 2° in one direction; the coordinate's real accuracy is
   unknown. Features narrower than about one to two pixels (20 m; 60 m far
   field), rocks and the lander are not resolved.
+- **CR1 terrain robustness (4C, open):** skyline set 50–480 m away by 20 m DEM
+  relief at a point whose nearest pixel has no LOLA shot. Sun-visibility results
+  change by tens of percentage points under 100 m scenarios, the 60 m DEM, or
+  ignoring terrain < 300 m. Lander height, boulders and sub-pixel relief are
+  unmodeled and would matter here. How to present this is undecided.
+- CR1 eye is 0.979 m (rounded surface), skyline effect ≤ 0.024°, 13 Sun steps:
+  kept for consistency with the established convention.
+- CR1 RDR skyline comparison is uninformative (0–2 shots per window); no
+  independent terrain data for CR1 was used.
+- `manifest.dataset_id` still names Athena only (`m2-athena-…`).
 - Horizons API signature 1.2 vs doc page 1.3 (output format verified by hand).
 - Future UTC: Horizons applies the last known leap second (EOP predictions to
   2027-02-08 cover the dataset).
@@ -844,9 +1050,9 @@ timeline itself is pointer-only).
 - Keyboard interaction for the timeline itself.
 
 ## Next milestone
-Milestone 4C: CR1 sky positions and full terrain validation, using the explicit
-commands in Start here. Milestones 4A and 4B are complete; the second site is
-configured but not fetched/exported/integrated. Frontend comparison follows later.
+Review/commit 4C, decide how CR1's non-robust terrain result is presented, then
+the two-site frontend comparison. Milestones 4A–4C are complete; CR1 data is
+exported but not shown in the app.
 
 ## Milestone checklist
 - [x] Shared data contract accepted (v1.0 + clarifications).
@@ -856,7 +1062,8 @@ configured but not fetched/exported/integrated. Frontend comparison follows late
 - [x] First terrain horizon checked (synthetic tests, sensitivity, independently implemented pixel sweep, LOLA-shot consistency); reviewed in the browser 2026-11-14.
 - [x] Milestone 4A: explicit site selection and pipeline file isolation.
 - [x] Milestone 4B: second point cited, cached coverage planned, surface/observer altitude documented.
-- [ ] Second site integrated.
+- [x] Milestone 4C: CR1 positions fetched and validated; terrain horizon computed, implementation-checked, sensitivity reported (not robust).
+- [ ] Second site integrated (frontend).
 - [x] Date-slip comparison verified (smooth horizon).
 - [ ] Sources and limitations complete (terrain sources/limits added; second site pending).
 - [ ] Deployment tested.
@@ -901,6 +1108,13 @@ Record tool/model, task, affected files, and human verification.
   NASA CR1 selection, cached coarse coverage/surface elevation, offline tool
   support and five focused tests | pipeline/, new CR1 preparation reports,
   docs/SECOND_SITE.md, SPEC.md, STATUS.md, README.md | Human verification: **pending**.
+
+- 2026-11-14 | Claude Code (Claude Opus 5.5) | Milestone 4C: CR1 Horizons
+  retrieval, exports, terrain horizon, cross-checks, rounding check; fixes in
+  `terrain_sensitivity.py`, `validate.py`, `horizon_crosscheck.py`, `export.py`;
+  new `observer_rounding_check.py`; 2 tests | pipeline/, data/horizons,
+  data/terrain, app/public/data, docs | Human verification: **pending**
+  (uncommitted).
 
 ## Handoff template
 - Completed:

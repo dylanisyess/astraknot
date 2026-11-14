@@ -290,3 +290,23 @@ real lunar conditions.
   fields, not additions to app data. Athena's existing evidence was annotated
   without changing its calculations. LOLA shot caches include site/query keys;
   source raster/label caches remain shared by product.
+
+### 2026-11-14, milestone 4C (schema_version stays "1.0", no app field added)
+- Second site file `app/public/data/connecting-ridge-cr1.json` uses the same
+  layout; the manifest lists Athena first, then CR1. `dataset_id` is unchanged
+  (still Athena-named) pending a full two-site re-export.
+- `terrain_horizon.checks.pixel_sweep_max_abs_diff_deg_setting_ge_2km` may be
+  `null` when no comparison bin has its skyline set >= 2 km away (CR1: skyline
+  within 480 m). It is never 0 in that case. `processing_notes` then cite the
+  same-direction and near-field checks instead.
+- Note text that was Athena-specific (eye 1.02 m, "96-100 %" of shots) is now
+  formed from each site's reports. Athena's exported bytes are unchanged.
+- Pipeline evidence only (not app data): the cross-check report adds
+  `near_field_bilinear`, `pixel_sweep.n_bins_ray_setting_ge_2km`,
+  `pixel_sweep.max_pixel_minus_ray_deg`, and per-box/min-max
+  `pct_shots_on_or_before_dem_cutoff`. New report kind
+  `data/terrain/<site_id>_observer_rounding_check.json`
+  (`pipeline/observer_rounding_check.py`) with site identity and terrain report sha256.
+- Horizons altitude echo: validated by recomputing `Center cylindric` Dxy/Dz from
+  the submitted latitude/altitude and comparing at the printed decimals (precision
+  varies: Dz to 1e-3 km near the pole), not with a fixed |r| tolerance.

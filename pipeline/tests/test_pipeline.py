@@ -139,5 +139,28 @@ class Retry(unittest.TestCase):
         self.assertNotIn(400, hz.RETRY_STATUS)  # bad request is deterministic: never retried
 
 
+class CylindricEcho(unittest.TestCase):
+    """Echo strings copied from the cached Horizons responses (header text, not ephemeris data)."""
+
+    def test_echo_equals_submitted_point_at_printed_precision(self):
+        import validate
+        athena = {"latitude_deg": -84.7906, "horizons_site_altitude_km": 5.3229}
+        cr1 = {"latitude_deg": -89.468, "horizons_site_altitude_km": 1.9428}
+        ok, detail = validate.cylindric_echo_matches(
+            "29.1957, 158.23221, -1735.5246 {E-lon(deg),Dxy(km),Dz(km)}", athena)
+        self.assertTrue(ok, detail)
+        # near the pole Dz is printed to 1e-3 km: |r| is 177 mm off, yet the echo is exact to its digits
+        ok, detail = validate.cylindric_echo_matches(
+            "222.6, 16.14983, -1739.268      {E-lon(deg),Dxy(km),Dz(km)}", cr1)
+        self.assertTrue(ok, detail)
+
+    def test_wrong_altitude_detected(self):
+        import validate
+        ok, _ = validate.cylindric_echo_matches(
+            "222.6, 16.14983, -1739.268 {E-lon(deg),Dxy(km),Dz(km)}",
+            {"latitude_deg": -89.468, "horizons_site_altitude_km": 1.9418})  # 1 m lower
+        self.assertFalse(ok)
+
+
 if __name__ == "__main__":
     unittest.main()

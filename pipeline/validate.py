@@ -26,6 +26,30 @@ def check(ok: bool, name: str, detail: str = "") -> None:
     results.append((bool(ok), name, detail))
 
 
+def cylindric_echo_matches(cyl: str, site: dict) -> tuple[bool, str]:
+    """Is the echoed 'Center cylindric' (E-lon, Dxy, Dz in km) the submitted point on the 1737.4 km sphere?
+
+    Dxy and Dz are recomputed from the submitted latitude and altitude and rounded to the
+    number of decimals Horizons printed for each. The printed precision depends on the
+    magnitude (Athena: Dz to 1e-4 km; near the pole Dz ~ 1739 km is printed to 1e-3 km), so
+    a fixed |r| tolerance is not meaningful. Agreement holds only to that printed precision."""
+    parts = [x.strip() for x in cyl.split("{")[0].split(",")]
+    _, dxy_s, dz_s = parts
+    r_exp = 1737.4 + site["horizons_site_altitude_km"]
+    lat = math.radians(site["latitude_deg"])
+    exp = (r_exp * math.cos(lat), r_exp * math.sin(lat))
+    ok, resid, places = True, [], []
+    for s, e in zip((dxy_s, dz_s), exp):
+        nd = len(s.split(".")[1]) if "." in s else 0
+        ok &= round(e, nd) == float(s)
+        resid.append((float(s) - e) * 1e6)
+        places.append(nd)
+    r_site = math.hypot(float(dxy_s), float(dz_s))
+    return ok, (f"Dxy/Dz = submitted point rounded to {places[0]}/{places[1]} printed decimals "
+                f"(residuals {resid[0]:+.1f}/{resid[1]:+.1f} mm); |r| = {r_site:.7f} km, "
+                f"R + alt - |r| = {(r_exp - r_site) * 1e6:.1f} mm")
+
+
 def _header_checks(tag: str, site: dict, tgt: dict, r: hz.CachedResponse, chunk: tuple[str, str],
                    step_s: int) -> tuple[dict[str, tuple[bool, str]], list[hz.AzElRow]]:
     """Per-chunk checks: name -> (ok, detail)."""
@@ -49,15 +73,11 @@ def _header_checks(tag: str, site: dict, tgt: dict, r: hz.CachedResponse, chunk:
     out["site echoed as E-lon,Lat,Alt = config"] = (ok and "{E-lon(deg),Lat(deg),Alt(km)}" in geo, geo)
     cyl = h.get("Center cylindric", "")
     try:
-        _, dxy, dz = (float(x) for x in cyl.split("{")[0].split(","))
-        r_site = math.hypot(dxy, dz)
-        # Horizons prints Dxy to 1e-5 km and Dz to 1e-4 km, so |r| from the echo is only
-        # good to ~0.05 m; 0.1 m tolerance. This does not show agreement better than that.
-        ok = abs(r_site - (1737.4 + site["horizons_site_altitude_km"])) < 1e-4
+        ok, detail = cylindric_echo_matches(cyl, site)
     except ValueError:
-        r_site, ok = float("nan"), False
+        ok, detail = False, cyl
     out["altitude is height above 1737.4 km sphere (|cylindric| ~ R + alt, within printed precision)"] = (
-        ok, f"|r| = {r_site:.7f} km; R + alt - |r| = {(1737.4 + site['horizons_site_altitude_km'] - r_site) * 1e6:.1f} mm")
+        ok, detail)
     out["lunar frame MEAN_ME, east-longitude positive"] = (
         "MEAN_ME" in h.get("Center pole/equ", "") and "East-longitude positive" in h.get("Center pole/equ", ""),
         h.get("Center pole/equ", ""))
