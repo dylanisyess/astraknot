@@ -5,12 +5,168 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
+## Start here (handoff for a new session, 2026-11-14)
+Read this section first, then `docs/SPEC.md` and `docs/DATA_CONTRACT.md`.
+The rest of this file is the detailed record behind it.
+
+### What works (verified)
+- **Data:** 60 days of real JPL Horizons Sun/Earth airless apparent az/el of
+  body centers at 10 min (2026-12-01T00:00Z to 2027-01-30T00:00Z, 8 641
+  samples incl. final endpoint), for the IM-2 Athena site 84.7906° S,
+  29.1957° E. Observer: 5.3229 km above the 1737.4 km sphere (LOLA surface
+  5 321.9 m + 1 m). Raw responses with query, headers and sha256 are in
+  `data/horizons/`.
+- **App** (`app/`, React 19 + TS 7 + Vite 8): baseline arrival + duration,
+  +1/+3/+7 d slips from the baseline, comparison table (Sun/Earth/both %,
+  longest darkness, deltas in pp/h), Sun/Earth/both timelines, elevation
+  chart, one shared cursor, boundary flags, unknown handling, URL state.
+  **Smooth 0° horizon only; no terrain yet.**
+- **Terrain:** products selected and verified, but **not downloaded and not
+  used yet**.
+
+### Key files
+Pipeline (`pipeline/`, Python standard library only; run from the repo root):
+- `config.json`: site, altitude, coverage, chunking, terrain product choice (single source of truth).
+- `horizons.py`: query builder, 10-day chunking, retry/backoff, byte-exact cache, parser, chunk merge.
+- `fetch.py` → `data/horizons/`. `export.py` → `app/public/data/`. `validate.py`: contract and raw-vs-export checks.
+- `visibility.py`: horizon interpolation (`linear_periodic`) and midpoint classification.
+- `compare_altitude.py`: 0 km vs 5.3229 km angular differences.
+- `crosscheck_metrics.py`: independent reference for window metrics.
+
+Terrain scripts and files:
+- `pipeline/lola.py`: PDS3 label parsing, polar/cylindrical projection, HTTP
+  range reads (`read_window`, `Window`), full downloads (`download_full`), `Grid`.
+  Out-of-file pixels return `None`, never a default height.
+- `pipeline/terrain_check.py`: compares all south-polar LDEM products and their
+  actual bounds, checks orientation against LDEM_64, checks shot counts, runs
+  the horizon-search planning (stopping rule) and the seam check
+  → `data/terrain/lola_coverage_report.json`.
+- `pipeline/site_elevation.py`: surface elevation vs individual LOLA RDR laser
+  shots (ODE GDS) → `data/terrain/site_elevation_report.json`; cached query
+  results in `data/terrain/lola_rdr/`.
+- `data/terrain/labels/`: cached PDS labels (committed). `data/raw/lola/`:
+  downloads and range-read cache (git-ignored, about 67 MB locally:
+  LDEM_75S_240M, LDEC_75S_240M, windows). A fresh clone re-downloads these on
+  first run.
+- Products chosen for Stage 2: **LDEM_80S_20M** (near field) + **LDEM_75S_60M**
+  (far field), with LDEC_80S_20M / LDEC_75S_60M. These are 1.85 GB and 0.47 GB,
+  not yet downloaded. Source: PDS Geosciences Node, LRO-L-LOLA-4-GDR-V1.0
+  V2.0, `https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/`.
+
+App (`app/src/`):
+- `mission.ts`: pure window, delay and metric logic.
+- `axis.ts`: shared time scale and margins.
+- `Timeline.tsx`, `ElevationChart.tsx`, `App.tsx`, `data.ts` (loader checks).
+- Tests: `mission.test.ts`, `data.test.ts`.
+
+### Verified conventions (do not change without re-running the checks)
+- **Horizons:**
+  - `CENTER='coord@301'`, `COORD_TYPE='GEODETIC'`,
+    `SITE_COORD='E-lon,lat,alt_km'` = `29.1957,-84.7906,5.3229`.
+  - Longitude is east-positive (header `MEAN_ME (high precision) {East-longitude positive}`).
+  - Altitude is height above a 1737.4 km sphere: the header reports `Center radii`,
+    and |`Center cylindric`| = 1742.7229 km in all 12 responses.
+  - `QUANTITIES='4'` with `APPARENT='AIRLESS'` gives airless apparent az/el of the
+    target center. Azimuth is clockwise from north.
+  - `TIME_TYPE='UT'`, which is UTC after 1962.
+  - Targets are Sun `10` and Earth `399` (body center, not barycenter `3`).
+- **LOLA heights:** LSB int16, height = DN × 0.5 m relative to 1737.4 km (label
+  `SCALING_FACTOR`, `OFFSET`). There is no MISSING_CONSTANT: every pixel is
+  interpolated. LDEC (uint8) counts the LOLA shots per pixel; 0 means the value
+  is interpolated.
+- **LOLA frame:** "MEAN EARTH/POLAR AXIS OF DE421", planetocentric latitude,
+  east longitude. Same as Horizons MOON_ME.
+- **Polar stereographic (south), as implemented in `lola.py`:**
+  - Pixel coordinates: I = sample, 1-based, left → right; J = line, 1-based,
+    top → bottom. Pixel centres are at integer coordinates. N = LINES; s = MAP_SCALE (m).
+  - Forward: X = (I − N/2 − 0.5)·s, Y = −(J − N/2 − 0.5)·s;
+    LON = atan2(X, Y) (east); LAT = −90° + 2·atan(√(X²+Y²) / (2·1737400 m)).
+  - Inverse: r = 2·1737400·tan((90° − |LAT|)/2), X = r·sin LON, Y = r·cos LON;
+    I = X/s + N/2 + 0.5, J = −Y/s + N/2 + 0.5.
+  - Result: lon 0° is up, 90° E is to the right.
+  - Verified against the global LDEM_64 (RMS 30 m vs 2 507 m mirrored) and
+    against 1 131 LOLA RDR shots (DEM − shot mean −0.26 m vs −5 899 m mirrored).
+  - Read literally, the separately printed inverse in `dsmap_polar.cat` would
+    mirror east/west. Do not use it, and do not call the document wrong; it is
+    unresolved whether the text or our reading is at fault.
+- **Actual grid bounds:** label MAXIMUM_LATITUDE is only the latitude at the
+  edge midpoints; the square corners reach further (80S grid: 75.894° S at the
+  corners). Compute coverage from LINES × MAP_SCALE.
+- **Global cylindrical (LDEM_64):** line = LINE_PROJECTION_OFFSET − lat·res + 1,
+  sample = SAMPLE_PROJECTION_OFFSET + (lon − 180°)·res + 1.
+
+### Unresolved assumptions
+- The site coordinate frame is assumed to be ME. LROC states neither the frame
+  nor the coordinate's accuracy, so the surface height has about ±5 m
+  uncertainty if the point is up to 100 m off.
+- The smooth horizon is the 0° local plane, ignoring the ~0.06° dip for a 1 m
+  observer.
+- Horizons API signature 1.2 vs doc page 1.3 (output format verified by hand).
+- Future leap seconds are unknown; Horizons uses the last known one.
+- The horizon-search distances (62–190 km) come from a 240 m planning grid.
+  The real computation must apply the stopping rule itself.
+- Not tested: screen readers, Firefox/Safari, touch devices, keyboard use of
+  the timeline itself.
+
+### Validation commands (expected results on 2026-11-14)
+```sh
+python pipeline/validate.py                        # 50/50 checks passed
+python -m unittest discover -s pipeline/tests      # Ran 23 tests ... OK
+python pipeline/fetch.py                           # "0 live request(s) made" (all cached)
+python pipeline/crosscheck_metrics.py              # 12-05 +0 d: sun 43.353..., dark 190.333 h
+python pipeline/compare_altitude.py                # earth mean 8.041e-04 deg, sun 2.067e-06 deg
+cd app && npm test                                 # 32 passed
+cd app && npm run build                            # builds without errors
+# network-using (slow; re-download into data/raw/ on a fresh clone):
+python pipeline/site_elevation.py                  # DEM - shot mean -0.26 m, Horizons altitude 5.3229 km
+python pipeline/terrain_check.py                   # orientation OK; 30 azimuths need the 75S product
+```
+
+Environment notes (Windows):
+- Run `npm test`, not `npx vitest`. `app/scripts/run-vitest.mjs` works around a
+  Vitest failure when the drive letter is lowercase.
+- Set `PYTHONIOENCODING=utf-8` if a script fails printing Unicode to the console.
+- Stopping a background `vite preview` can leave a child `node` process holding
+  port 4173. Check with `netstat -ano | grep 4173`.
+- `.gitattributes` marks `data/horizons/**`, `data/terrain/labels/**` and
+  `data/terrain/lola_rdr/**` as `-text`. Keep it: CRLF conversion would break
+  the recorded sha256 of the raw files.
+
+### Next steps (Stage 2: terrain horizon for Athena)
+1. Download LDEM_80S_20M, LDEM_75S_60M, LDEC_80S_20M and LDEC_75S_60M into
+   `data/raw/lola/` (git-ignored). Check byte counts against the labels and
+   record sha256.
+   - **Do not use `lola.download_full` as written for these:** it holds the
+     whole body in memory. Add a streaming (chunked) download first.
+   - Alternatively, range-read only the rows around the site: the needed window
+     is about ±190 km.
+2. Write `pipeline/terrain_horizon.py`:
+   - March rays from the observer (radius 1737.4 km + 5.3229 km) at, e.g., 0.1°
+     azimuth steps.
+   - Use 80S_20M while the ray is inside it, then 75S_60M.
+   - Use exact sphere geometry, so curvature is counted once.
+   - Stop only when terrain at the global maximum (10 773 m + 100 m) could no
+     longer exceed the running horizon.
+   - If a ray leaves every file first, set that azimuth's elevation to `null`.
+   - Record the LDEC count and the distance of the horizon-setting pixel.
+   - Record the search extent and resolution in `processing_notes`.
+3. Unit-test the horizon code with synthetic terrain: a flat sphere (horizon =
+   −dip), a single wall at known distance and height, and a ray leaving the file
+   (null).
+4. Export `horizon.model = "terrain"` (contract) and re-run the midpoint
+   classification against it.
+5. App: show which horizon model is active. Keep the smooth result available
+   for comparison, and treat unknown sectors as unknown, never visible.
+6. Validate: horizon elevations at a few azimuths vs an independent check (for
+   example, a nearby LOLA RDR profile). Record the results here.
+Backlog, not next: second curated site, custom coordinates, deployment.
+
 ## Current state (2026-11-14, milestone 2)
 Milestone 2 is complete and verified locally: a smooth-horizon mission-window
 workflow for the IM-2 Athena site, using 60 days of real JPL Horizons data.
 
-- Branch `milestone-2-mission-window`; checkpoint commit `171b561` holds
-  milestone 1. Milestone 2 changes are in the working tree (not committed).
+- Milestone 1: commit `171b561`. Milestone 2: commit `ab4229c`, merged to
+  `main` as `7c45625` (PR #1).
 - Data: 2026-12-01T00:00:00Z (inclusive) to 2027-01-30T00:00:00Z, 8 641
   samples at 600 s, including the final endpoint. Fetched as 12 sequential
   Horizons requests (Sun and Earth, six 10-day chunks).
