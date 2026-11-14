@@ -48,37 +48,41 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def load_target(cfg: dict, site: dict, tgt: dict) -> tuple[hz.CachedResponse, list[hz.AzElRow]]:
-    params = hz.build_params(site, tgt["command"], cfg["coverage_start_utc"],
-                             cfg["coverage_end_utc"], cfg["sample_step_seconds"])
-    r = hz.fetch(site["id"], tgt["key"], params, offline=True)
-    return r, hz.parse_azel(r.payload["result"])
+def load_target(cfg: dict, site: dict, tgt: dict) -> tuple[list[hz.CachedResponse], list[hz.AzElRow]]:
+    """All cached chunks for one target, merged (boundary samples verified identical)."""
+    responses, chunks = [], []
+    for _, params in hz.site_queries(cfg, site, tgt):
+        r = hz.fetch(site["id"], tgt["key"], params, offline=True)
+        responses.append(r)
+        chunks.append(hz.parse_azel(r.payload["result"]))
+    return responses, hz.merge_chunks(chunks)
 
 
 def export_site(cfg: dict, site: dict) -> dict:
     by_key: dict[str, list[hz.AzElRow]] = {}
     sources = []
-    conventions = {}
     for tgt in cfg["targets"]:
-        r, rows = load_target(cfg, site, tgt)
+        responses, rows = load_target(cfg, site, tgt)
         by_key[tgt["key"]] = rows
-        hdr = hz.header_fields(r.payload["result"])
-        conventions[tgt["key"]] = hdr
-        sources.append({
-            "id": f"horizons-{tgt['key']}",
-            "title": f"JPL Horizons observer table: {tgt['name']} seen from {site['name']}",
-            "url": r.meta["request_url"],
-            "retrieved_at_utc": r.meta["retrieved_at_utc"],
-            "product_version_or_filename": (
-                f"data/horizons/{r.meta['response_file']} "
-                f"(API {r.payload['signature'].get('version')}, sha256 {r.meta['response_sha256'][:16]}...)"),
-            "notes": "Airless apparent AZ/EL of target center (quantity 4), UT=UTC, CSV.",
-            "horizons_query_params": r.meta["request_params"],
-            "http_status": r.meta["http_status"],
-            "http_response_headers": r.meta["response_headers"],
-            "api_signature": r.meta["api_signature"],
-            "ephemeris_header": hdr,
-        })
+        for n, r in enumerate(responses, 1):
+            hdr = hz.header_fields(r.payload["result"])
+            p = r.meta["request_params"]
+            sources.append({
+                "id": f"horizons-{tgt['key']}-{n}",
+                "title": (f"JPL Horizons observer table: {tgt['name']}, "
+                          f"{p['START_TIME'].strip(chr(39))} to {p['STOP_TIME'].strip(chr(39))} UTC"),
+                "url": r.meta["request_url"],
+                "retrieved_at_utc": r.meta["retrieved_at_utc"],
+                "product_version_or_filename": (
+                    f"data/horizons/{r.meta['response_file']} "
+                    f"(API {r.payload['signature'].get('version')}, sha256 {r.meta['response_sha256'][:16]}...)"),
+                "notes": "Airless apparent AZ/EL of target center (quantity 4), UT=UTC, CSV.",
+                "horizons_query_params": p,
+                "http_status": r.meta["http_status"],
+                "http_response_headers": r.meta["response_headers"],
+                "api_signature": r.meta["api_signature"],
+                "ephemeris_header": hdr,
+            })
 
     sun, earth = by_key["sun"], by_key["earth"]
     if [s.time_utc for s in sun] != [e.time_utc for e in earth]:
@@ -124,6 +128,8 @@ def export_site(cfg: dict, site: dict) -> dict:
             "apparent": "airless apparent direction of target body center (light-time, gravitational deflection, stellar aberration)",
             "time_scale": "UTC (Horizons UT; after 1962 UT means UTC)",
             "observer_body": "Moon (301), MEAN_ME frame, east-longitude positive, reference sphere radius 1737.4 km",
+            "observer_altitude": ("site altitude above the 1737.4 km sphere = LOLA surface elevation + observer "
+                                  "height above surface (see site.altitude_conversion_note)"),
             "horizons_quantity": "4 (Azimuth_(a-app), Elevation_(a-app))",
         },
         "samples": samples,
@@ -131,6 +137,16 @@ def export_site(cfg: dict, site: dict) -> dict:
         "visibility_method": vis.METHOD,
         "visibility_intervals": vis.classify(samples, horizon),
     }
+
+
+def dump_site(data: dict) -> str:
+    """JSON with one sample / interval per line: compact but still diffable."""
+    head = json.dumps({k: v for k, v in data.items() if k not in ("samples", "visibility_intervals")},
+                      indent=1, ensure_ascii=False)
+    def rows(key: str) -> str:
+        return ",\n".join("  " + json.dumps(x, separators=(",", ":")) for x in data[key])
+    return (head[:-2] + ',\n "samples": [\n' + rows("samples") + '\n ],\n "visibility_intervals": [\n'
+            + rows("visibility_intervals") + "\n ]\n}\n")
 
 
 def main() -> int:
@@ -144,7 +160,7 @@ def main() -> int:
             print(f"Cannot export {site['id']}: {e}", file=sys.stderr)
             return 1
         fname = f"{site['id']}.json"
-        (OUT_DIR / fname).write_text(json.dumps(data, indent=1) + "\n", "utf-8")
+        (OUT_DIR / fname).write_text(dump_site(data), "utf-8")
         manifest_sites.append({"id": site["id"], "name": site["name"], "file": fname})
         print(f"wrote app/public/data/{fname}: {len(data['samples'])} samples, "
               f"{len(data['visibility_intervals'])} visibility interval(s)")

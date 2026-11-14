@@ -98,5 +98,46 @@ class Parsing(unittest.TestCase):
             hz.parse_cal_time("2026-Dec-02 00:00:00.500")
 
 
+
+class Chunking(unittest.TestCase):
+    def test_chunks_tile_the_interval_with_shared_endpoints(self):
+        c = hz.chunk_ranges("2026-12-01T00:00:00Z", "2027-01-30T00:00:00Z", 10)
+        self.assertEqual(len(c), 6)
+        self.assertEqual(c[0][0], "2026-12-01T00:00:00Z")
+        self.assertEqual(c[-1][1], "2027-01-30T00:00:00Z")
+        for a, b in zip(c, c[1:]):
+            self.assertEqual(a[1], b[0])
+
+    def test_uneven_last_chunk(self):
+        c = hz.chunk_ranges("2030-01-01T00:00:00Z", "2030-01-25T00:00:00Z", 10)
+        self.assertEqual(c[-1], ("2030-01-21T00:00:00Z", "2030-01-25T00:00:00Z"))
+
+    def _rows(self, times, el):
+        return [hz.AzElRow(t, 10.0, e, f"{t},{e}") for t, e in zip(times, el)]
+
+    def test_merge_drops_identical_boundary_duplicate(self):
+        a = self._rows(["T0", "T1"], [1.0, 2.0])
+        b = self._rows(["T1", "T2"], [2.0, 3.0])
+        self.assertEqual([r.time_utc for r in hz.merge_chunks([a, b])], ["T0", "T1", "T2"])
+
+    def test_merge_refuses_conflicting_boundary(self):
+        a = self._rows(["T0", "T1"], [1.0, 2.0])
+        b = self._rows(["T1", "T2"], [2.5, 3.0])  # same time, different value
+        with self.assertRaises(hz.HorizonsError):
+            hz.merge_chunks([a, b])
+
+    def test_merge_refuses_gap(self):
+        a = self._rows(["T0", "T1"], [1.0, 2.0])
+        b = self._rows(["T2", "T3"], [3.0, 4.0])
+        with self.assertRaises(hz.HorizonsError):
+            hz.merge_chunks([a, b])
+
+
+class Retry(unittest.TestCase):
+    def test_retry_policy_only_for_transient_codes(self):
+        self.assertTrue({429, 503}.issubset(hz.RETRY_STATUS))
+        self.assertNotIn(400, hz.RETRY_STATUS)  # bad request is deterministic: never retried
+
+
 if __name__ == "__main__":
     unittest.main()

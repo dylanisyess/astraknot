@@ -1,0 +1,5 @@
+# Raw source responses and PDS labels must stay byte-for-byte identical to
+# what was downloaded (their sha256 is recorded). Never convert line endings.
+data/horizons/** -text
+data/terrain/labels/** -text
+data/terrain/lola_rdr/** -text

@@ -1,7 +1,10 @@
 """Retrieve Sun and Earth AZ/EL from JPL Horizons for every configured site.
 
+The coverage interval is split into chunks (config: horizons_chunk_days).
 Requests are made one at a time (never concurrently), each response is cached
-byte-for-byte under data/horizons/, and a re-run uses the cache.
+byte-for-byte under data/horizons/ keyed by its exact query parameters, and a
+re-run only downloads chunks that are missing. Transient service errors are
+retried with backoff; persistent failures stop the run and are reported.
 
     python pipeline/fetch.py              # fetch missing responses
     python pipeline/fetch.py --refresh    # re-download everything
@@ -28,31 +31,32 @@ def main() -> int:
     args = ap.parse_args()
 
     cfg = json.loads(CONFIG.read_text("utf-8"))
-    live_requests = 0
+    live = 0
     for site in cfg["sites"]:
         for tgt in cfg["targets"]:
-            params = hz.build_params(site, tgt["command"], cfg["coverage_start_utc"],
-                                     cfg["coverage_end_utc"], cfg["sample_step_seconds"])
-            label = f"{site['id']} / {tgt['key']}"
-            if args.print_urls:
-                print(f"# {label}\n{hz.build_url(params)}\n")
-                continue
-            body_path, _ = hz.cache_paths(site["id"], tgt["key"], params)
-            if live_requests and not (body_path.exists() and not args.refresh):
-                time.sleep(hz.REQUEST_PAUSE_S)  # sequential + courteous
-            try:
-                r = hz.fetch(site["id"], tgt["key"], params, refresh=args.refresh)
-            except hz.HorizonsError as e:
-                print(f"FAILED {label}:\n{e}", file=sys.stderr)
-                return 1
-            if not r.from_cache:
-                live_requests += 1
-            rows = hz.parse_azel(r.payload["result"])
-            src = "cache" if r.from_cache else "live"
-            print(f"{label}: {len(rows)} rows ({src}) -> {body_path.relative_to(hz.REPO_ROOT)}")
-            if not r.meta.get("api_version_matches_documented", True):
-                print(f"  WARNING: API version {r.meta['api_signature']} differs from documented "
-                      f"{hz.EXPECTED_API_VERSION}", file=sys.stderr)
+            for (s, e), params in hz.site_queries(cfg, site, tgt):
+                label = f"{site['id']} / {tgt['key']} / {s} .. {e}"
+                if args.print_urls:
+                    print(f"# {label}\n{hz.build_url(params)}\n")
+                    continue
+                body_path, meta_path = hz.cache_paths(site["id"], tgt["key"], params)
+                cached = body_path.exists() and meta_path.exists() and not args.refresh
+                if live and not cached:
+                    time.sleep(hz.REQUEST_PAUSE_S)  # sequential + courteous
+                try:
+                    r = hz.fetch(site["id"], tgt["key"], params, refresh=args.refresh)
+                except hz.HorizonsError as err:
+                    print(f"FAILED {label}:\n{err}", file=sys.stderr)
+                    print("No data was substituted. Re-run to resume; cached chunks are kept.", file=sys.stderr)
+                    return 1
+                live += not r.from_cache
+                rows = hz.parse_azel(r.payload["result"])
+                print(f"{label}: {len(rows)} rows ({'cache' if r.from_cache else 'live'})")
+                if not r.meta.get("api_version_matches_documented", True):
+                    print(f"  note: API signature {r.meta['api_signature'].get('version')} vs documented "
+                          f"{hz.EXPECTED_API_VERSION}", file=sys.stderr)
+    if not args.print_urls:
+        print(f"{live} live request(s) made")
     return 0
 
 

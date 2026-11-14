@@ -185,3 +185,33 @@ real lunar conditions.
   `elevation_deg: null`, never 0.
 - `processing_notes` for a terrain horizon must state the stopping rule and
   the height bound used (global LOLA max 10 773 m + 100 m margin).
+
+### 2026-11-14, milestone 2 (schema_version stays "1.0", additive only)
+- Observer altitude: `site.surface_elevation_m` = LOLA surface height above
+  the 1737.4 km sphere; `site.observer_height_above_surface_m` = 1;
+  `site.horizons_site_altitude_km` = (surface + observer height) / 1000. All
+  three heights share the same 1737.4 km reference, so no datum conversion
+  is needed. Added `position_conventions.observer_altitude`.
+- Horizons sources are per chunk: ids `horizons-<target>-<n>` (n = 1…6 for
+  60 days in 10-day chunks), each with its exact query, headers and file.
+  Chunks share endpoint timestamps; the exporter merges them only if those
+  duplicate samples are identical.
+- File layout: one sample / interval per line (compact JSON). Field names,
+  units and semantics are unchanged.
+- Mission windows (frontend): `[start, end)`; delays are offsets of +1/+3/+7 d
+  from the baseline arrival, never cumulative; duration is unchanged by a
+  delay. A window is valid only if `coverage_start ≤ start` and
+  `end ≤ coverage_end`.
+- Metric details (frontend, version 1):
+  - A metric is unavailable if any relevant state in the window is null, or if
+    the window is not fully covered by intervals. It is never shown as 0.
+  - Darkness runs join adjacent intervals with `sun_visible: false`, even when
+    Earth's state differs. A null interval breaks a run.
+  - Ties for the longest run go to the earliest.
+  - A run touching a window boundary is flagged. The app also reports the
+    run's full extent in the data, and says when that extent reaches the edge
+    of the coverage.
+  - "Next change" searches to coverage end and otherwise reports "not found
+    in available data".
+- Smooth horizon = 0° local horizontal plane (ignores the ~0.06° dip for a
+  1 m observer over a smooth surface).

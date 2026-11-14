@@ -17,8 +17,10 @@ describe("real exported dataset", () => {
 
   it("passes the loader's structural checks (order, 600 s spacing, coverage)", () => {
     const times = checkSite(manifest, site);
-    expect(times).toHaveLength(145);
-    expect(times[times.length - 1] - times[0]).toBe(24 * 3600 * 1000);
+    const span = Date.parse(manifest.coverage_end_utc) - Date.parse(manifest.coverage_start_utc);
+    expect(times).toHaveLength(span / (manifest.sample_step_seconds * 1000) + 1); // incl. final endpoint
+    expect(times[times.length - 1] - times[0]).toBe(span);
+    expect(span).toBe(60 * 86_400_000);
   });
 
   it("loads through loadDataset with a fetch stub", async () => {

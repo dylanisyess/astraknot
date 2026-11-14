@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -24,54 +25,85 @@ def check(ok: bool, name: str, detail: str = "") -> None:
     results.append((bool(ok), name, detail))
 
 
+def _header_checks(tag: str, site: dict, tgt: dict, r: hz.CachedResponse, chunk: tuple[str, str],
+                   step_s: int) -> tuple[dict[str, tuple[bool, str]], list[hz.AzElRow]]:
+    """Per-chunk checks: name -> (ok, detail)."""
+    out: dict[str, tuple[bool, str]] = {}
+    h = hz.header_fields(r.payload["result"])
+    out["cached body sha256 matches metadata"] = (hashlib.sha256(r.body).hexdigest() == r.meta["response_sha256"], "")
+    out["HTTP 200, no API error field"] = (r.meta["http_status"] == 200 and "error" not in r.payload,
+                                         str(r.meta["http_status"]))
+    out["observer body is Moon (301)"] = (h.get("Center body name", "").startswith("Moon (301)"),
+                                         h.get("Center body name", ""))
+    expect_target = {"sun": "Sun (10)", "earth": "Earth (399)"}[tgt["key"]]
+    out[f"target is {expect_target}"] = (h.get("Target body name", "").startswith(expect_target),
+                                        h.get("Target body name", ""))
+    geo = h.get("Center geodetic", "")
+    try:
+        lon, lat, alt = (float(x) for x in geo.split("{")[0].split(","))
+        ok = (abs(lon - site["longitude_deg_east"]) < 1e-9 and abs(lat - site["latitude_deg"]) < 1e-9
+              and abs(alt - site["horizons_site_altitude_km"]) < 1e-9)
+    except ValueError:
+        ok = False
+    out["site echoed as E-lon,Lat,Alt = config"] = (ok and "{E-lon(deg),Lat(deg),Alt(km)}" in geo, geo)
+    cyl = h.get("Center cylindric", "")
+    try:
+        _, dxy, dz = (float(x) for x in cyl.split("{")[0].split(","))
+        r_site = math.hypot(dxy, dz)
+        ok = abs(r_site - (1737.4 + site["horizons_site_altitude_km"])) < 1e-3
+    except ValueError:
+        r_site, ok = float("nan"), False
+    out["altitude is height above 1737.4 km sphere (|cylindric| = R + alt)"] = (ok, f"|r| = {r_site:.4f} km")
+    out["lunar frame MEAN_ME, east-longitude positive"] = (
+        "MEAN_ME" in h.get("Center pole/equ", "") and "East-longitude positive" in h.get("Center pole/equ", ""),
+        h.get("Center pole/equ", ""))
+    out["reference body radii 1737.4 km sphere"] = (h.get("Center radii", "").startswith("1737.4, 1737.4, 1737.4"),
+                                                   h.get("Center radii", ""))
+    out["airless output"] = (h.get("Atmos refraction", "") == "NO (AIRLESS)", h.get("Atmos refraction", ""))
+    out["time scale UT (=UTC after 1962)"] = (h.get("Start time", "").endswith("UT") and
+                                             h.get("Stop time", "").endswith("UT"), "")
+    out["columns are airless apparent AZ/EL of target center"] = (
+        "Airless apparent azimuth and elevation of target center" in r.payload["result"], "")
+    rows = hz.parse_azel(r.payload["result"])
+    n_exp = int((vis.parse_utc(chunk[1]) - vis.parse_utc(chunk[0])).total_seconds() // step_s) + 1
+    out["chunk row count and endpoints"] = (len(rows) == n_exp and rows[0].time_utc == chunk[0]
+                                           and rows[-1].time_utc == chunk[1], f"{len(rows)} (expected {n_exp})")
+    missing = sum(x.azimuth_deg is None or x.elevation_deg is None for x in rows)
+    out["no missing (n.a.) values"] = (missing == 0, f"{missing} missing")
+    return out, rows
+
+
 def validate_raw(cfg: dict, site: dict) -> dict[str, list[hz.AzElRow]]:
     rows_by_key = {}
-    n_expected = int((vis.parse_utc(cfg["coverage_end_utc"]) - vis.parse_utc(cfg["coverage_start_utc"]))
-                     .total_seconds() // cfg["sample_step_seconds"]) + 1
     for tgt in cfg["targets"]:
-        params = hz.build_params(site, tgt["command"], cfg["coverage_start_utc"],
-                                 cfg["coverage_end_utc"], cfg["sample_step_seconds"])
-        r = hz.fetch(site["id"], tgt["key"], params, offline=True)
         tag = f"raw/{tgt['key']}"
-        check(hashlib.sha256(r.body).hexdigest() == r.meta["response_sha256"],
-              f"{tag}: cached body sha256 matches metadata")
-        check(r.meta["http_status"] == 200, f"{tag}: HTTP 200", str(r.meta["http_status"]))
-        check("error" not in r.payload, f"{tag}: no API error field")
-        ver = r.payload["signature"].get("version")
+        per_check: dict[str, list[tuple[bool, str]]] = {}
+        chunks, versions = [], set()
+        queries = hz.site_queries(cfg, site, tgt)
+        for chunk, params in queries:
+            r = hz.fetch(site["id"], tgt["key"], params, offline=True)
+            versions.add(r.payload["signature"].get("version"))
+            res, rows = _header_checks(tag, site, tgt, r, chunk, cfg["sample_step_seconds"])
+            chunks.append(rows)
+            for k, v in res.items():
+                per_check.setdefault(k, []).append(v)
+        for k, vals in per_check.items():
+            n_ok = sum(ok for ok, _ in vals)
+            details = sorted({d for _, d in vals if d})
+            check(n_ok == len(vals), f"{tag}: {k}",
+                  f"{n_ok}/{len(vals)} chunks" + (f"; {details[0]}" if len(details) == 1 else ""))
         check(True, f"{tag}: API signature version recorded",
-              f"{ver} (doc page says {hz.EXPECTED_API_VERSION})")
-
-        h = hz.header_fields(r.payload["result"])
-        check(h.get("Center body name", "").startswith("Moon (301)"), f"{tag}: observer body is Moon (301)",
-              h.get("Center body name", ""))
-        expect_target = {"sun": "Sun (10)", "earth": "Earth (399)"}[tgt["key"]]
-        check(h.get("Target body name", "").startswith(expect_target), f"{tag}: target is {expect_target}",
-              h.get("Target body name", ""))
-        geo = h.get("Center geodetic", "")
+              f"{sorted(versions)} (doc page says {hz.EXPECTED_API_VERSION})")
         try:
-            lon, lat, alt = (float(x) for x in geo.split("{")[0].split(","))
-            ok = (abs(lon - site["longitude_deg_east"]) < 1e-9 and abs(lat - site["latitude_deg"]) < 1e-9
-                  and abs(alt - site["horizons_site_altitude_km"]) < 1e-9)
-        except ValueError:
-            ok = False
-        check(ok and "{E-lon(deg),Lat(deg),Alt(km)}" in geo,
-              f"{tag}: site echoed as E-lon,Lat,Alt = config", geo)
-        check("East-longitude positive" in h.get("Center pole/equ", ""),
-              f"{tag}: lunar frame is east-longitude positive", h.get("Center pole/equ", ""))
-        check(h.get("Center radii", "").startswith("1737.4, 1737.4, 1737.4"),
-              f"{tag}: altitude reference is 1737.4 km sphere", h.get("Center radii", ""))
-        check(h.get("Atmos refraction", "") == "NO (AIRLESS)", f"{tag}: airless output",
-              h.get("Atmos refraction", ""))
-        check(h.get("Start time", "").endswith("UT") and h.get("Stop time", "").endswith("UT"),
-              f"{tag}: time scale UT (=UTC after 1962)", h.get("Start time", ""))
-        check("Airless apparent azimuth and elevation of target center" in r.payload["result"],
-              f"{tag}: columns are airless apparent AZ/EL of target center")
-
-        rows = hz.parse_azel(r.payload["result"])
-        rows_by_key[tgt["key"]] = rows
-        check(len(rows) == n_expected, f"{tag}: row count", f"{len(rows)} (expected {n_expected})")
-        missing = sum(x.azimuth_deg is None or x.elevation_deg is None for x in rows)
-        check(missing == 0, f"{tag}: no missing values", f"{missing} missing")
+            merged = hz.merge_chunks(chunks)
+            check(True, f"{tag}: chunk boundary samples identical in both chunks", f"{len(chunks) - 1} boundaries")
+        except hz.HorizonsError as e:
+            check(False, f"{tag}: chunk boundary samples identical in both chunks", str(e))
+            merged = [row for c in chunks for row in c]
+        n_expected = int((vis.parse_utc(cfg["coverage_end_utc"]) - vis.parse_utc(cfg["coverage_start_utc"]))
+                         .total_seconds() // cfg["sample_step_seconds"]) + 1
+        check(len(merged) == n_expected, f"{tag}: merged row count", f"{len(merged)} (expected {n_expected})")
+        rows_by_key[tgt["key"]] = merged
     return rows_by_key
 
 

@@ -5,182 +5,195 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
-## Current state (2026-11-14)
-Milestone 1 is complete and verified locally:
-one documented lunar point, one day of real JPL Horizons Sun/Earth
-positions, and a working interactive elevation chart.
+## Current state (2026-11-14, milestone 2)
+Milestone 2 is complete and verified locally: a smooth-horizon mission-window
+workflow for the IM-2 Athena site, using 60 days of real JPL Horizons data.
 
-- Site: IM-2 Athena landing point, 84.7906° S, 29.1957° E, from
-  [LROC "IM-2 Athena Seen Obliquely"](https://lroc.im-ldi.com/images/1408)
-  (M. Robinson, 10 March 2025).
-- Interval: 2026-12-01T00:00:00Z (inclusive) to 2026-12-02T00:00:00Z,
-  145 samples at 600 s, including the final sample at coverage end.
-- Raw Horizons responses and request metadata: `data/horizons/`.
-- App data: `app/public/data/manifest.json`, `app/public/data/im2-athena.json`
-  (`is_synthetic: false`).
-- Frontend (React 19 + TypeScript 7 + Vite 8): site and coordinates, selected
-  UTC time, Sun/Earth elevation curves, 0° smooth-horizon line, slider and
-  ±10 min buttons, a synchronized cursor (drag or click on the chart), hover
-  tooltip, current az/el readouts, a data table, sources, and a prominent
-  "Terrain not yet modeled" label. Deep link: `?t=<ISO UTC>`.
+- Branch `milestone-2-mission-window`; checkpoint commit `171b561` holds
+  milestone 1. Milestone 2 changes are in the working tree (not committed).
+- Data: 2026-12-01T00:00:00Z (inclusive) to 2027-01-30T00:00:00Z, 8 641
+  samples at 600 s, including the final endpoint. Fetched as 12 sequential
+  Horizons requests (Sun and Earth, six 10-day chunks).
+- Observer: 5 322.9 m above the 1737.4 km sphere (LOLA surface 5 321.9 m +
+  1 m observer height); Horizons altitude 5.3229 km. Verified, see below.
+- App: baseline arrival (UTC date + hour), duration (default 14 Earth days),
+  slips of +1/+3/+7 d from the baseline; comparison table (Sun/Earth/both
+  visible %, longest darkness, changes in pp and h); Sun/Earth/both timeline
+  rows for baseline and slipped windows; elevation chart; one shared cursor for
+  timeline, chart, readouts and slider; interval table; boundary flags;
+  "not found in available data"; smooth-horizon banner.
+- URL state: `?arrival=2026-12-05T00:00Z&days=14&delay=3&t=<ISO UTC>`.
 
-Observed in the data: on this day the Sun's center is below the
-horizontal plane all day (−0.24° → −1.24°, azimuth 250.8° → 238.7°). Earth's
-center is above it all day (3.20° → 1.75°, azimuth ~337.4°–337.7°).
-With terrain these conclusions can change. Earth only a few degrees up is
-especially likely to be blocked.
+What the data shows (smooth horizon only): the Sun's center is below 0°
+from coverage start until 2026-12-12 22:20, above it until 12-29 23:40, below
+until 2027-01-12 01:50, above until 01-27 22:20. Earth's center is below 0° on
+12-03 09:50 → 12-11 05:00, 12-30 10:50 → 01-07 08:50 and 01-26 15:30 → end.
+Terrain could change all of these.
 
-## Decisions made in milestone 1
-- **Ownership.** The documents assumed two people; updated for a sole developer
-  (SPEC.md, DATA_CONTRACT.md).
-- **Site.** IM-2 Athena (84.79° S) is a precisely published point (four
-  decimals, by the LRO camera team), is a real surface site, and lies poleward
-  of 80° S, so the LOLA polar DEMs will cover it.
-- **Coordinate frame (assumption).** The LROC page does not name its frame.
-  LRO products use the Mean Earth/polar axis (ME) frame by convention, and
-  Horizons interprets lunar site coordinates in MOON_ME (DE421). Treated as the
-  same frame; the difference between ME realizations is far below this
-  milestone's 10-minute resolution. Revisit if a source states otherwise.
-- **Altitude.** `horizons_site_altitude_km = 0`, i.e. on the 1737.4 km
-  reference sphere, because the local LOLA surface elevation is not yet
-  extracted (`surface_elevation_m = null`), and
-  `observer_height_above_surface_m = 0`. A radial offset of a few km changes the
-  Earth direction by < 0.001° (h / 384 400 km). It matters for terrain
-  horizons, which are deferred.
-- **Date.** 2026-12-01 UTC: a near-future day inside Horizons' EOP prediction
-  span (EOP file `eop.261113.p270209`, predicts to 2027-02-08). Chosen for
-  convenience, not for an event.
-- **Raw cache location.** `data/horizons/` (committed). `data/raw/` is
-  git-ignored in the root `.gitignore`, so it is reserved for large terrain
-  downloads.
-- **Smooth horizon.** Exported (0°, labeled `smooth`) with midpoint-classified
-  intervals so the files are contract-complete; the UI shows only the 0° line.
-- **Dependencies.** The pipeline uses the Python standard library only.
+## Observer altitude (verified 2026-11-14)
+Evidence: `data/terrain/site_elevation_report.json` (`python pipeline/site_elevation.py`).
 
-## Terrain product selection (2026-11-14)
-Evidence: `data/terrain/lola_coverage_report.json`, produced by
-`python pipeline/terrain_check.py`; labels cached in `data/terrain/labels/`.
+Two different quantities:
+- **Surface elevation** = height of the modeled lunar surface above the
+  1737.4 km reference sphere = **5 321.9 m** (LOLA LDEM_80S_20M, bilinear at
+  the site).
+- **Observer height above surface** = **1 m** (documented choice).
+- Horizons altitude = (5 321.9 + 1) m = **5.3229 km above the 1737.4 km sphere**.
+
+Checks:
+- Scaling and reference: height = DN × 0.5 m relative to 1737.4 km (label).
+  Independently tested against **1 131 individual LOLA RDR laser shots** (PDS
+  ODE GDS, valid shots only) within ~600 m. Each shot gives radius from the
+  Moon's center in km, with no scaling. DEM − shot: mean **−0.26 m**, sd
+  0.67 m, max 4.71 m.
+- Orientation and pixel selection: the same comparison with an
+  east/west-mirrored pixel mapping gives mean −5 899 m, so our mapping places
+  the terrain correctly. Earlier check: LDEM_75S_240M vs global LDEM_64, RMS
+  30 m vs 2 507 m mirrored.
+- Interpolation: bilinear between pixels (19055, 8300)–(19056, 8301); fractional pixel
+  (19055.91, 8300.84). Nearest pixel 5 322.0 m vs bilinear 5 321.88 m.
+- Shots within 30 m of the site: 8, heights 5 321.75–5 322.69 m (mean 5 322.17 m).
+- Products at the site: 80S_20M 5 321.88, 80S_40M 5 321.70, 85S_20M 5 321.88,
+  85S_10M 5 322.00, 75S_60M 5 321.45, LDEM_64 (nearest) 5 323.00 m.
+- Sensitivity to the site coordinate: local slope 2.3°; height changes
+  −1.5…+1.2 m within 30 m and −4.4…+4.6 m within 100 m. LROC does not state
+  the coordinate's accuracy, so the surface value is good to ~1 m **for the
+  stated coordinates**, and ~±5 m if the true point is up to 100 m away.
+- Horizons convention: GEODETIC altitude is height above the reference body;
+  for the Moon that is a 1737.4 km sphere (header `Center radii`). Verified in
+  all 12 responses: echoed `Center geodetic … 5.3229` and
+  |`Center cylindric`| = 1742.7229 km = 1737.4 + 5.3229.
+
+Measured effect of the correction (2026-12-01, 145 samples, 0 km vs 5.3229 km;
+`data/horizons/altitude_comparison.json`):
+- Earth: angular change 7.99–8.09 × 10⁻⁴° (mean 8.04 × 10⁻⁴°), all in elevation
+  (lower). This matches the parallax h·cos(el)/d at ~379 000 km.
+- Sun: 2.07 × 10⁻⁶°. Azimuth changes ≤ 4 × 10⁻¹⁰°.
+- At 10-minute resolution this does not change any visibility state by itself.
+- The 0 km responses are kept in `data/horizons/` for this comparison.
+
+## Decisions
+Milestone 2:
+- **Coverage:** 60 days from 2026-12-01T00:00Z, in 10-day chunks. Each chunk
+  includes both endpoints; the exporter refuses to merge if a shared boundary
+  sample differs (all 5 boundaries identical per target).
+- **Service limits:** sequential requests with a 2 s pause, at most 3 retries
+  (10/30/90 s or Retry-After) for HTTP 429/5xx/timeouts only, cache keyed by
+  exact query parameters, so re-runs make 0 requests (observed). Failures stop
+  the run; nothing is substituted.
+- **Mission windows:** [arrival, arrival + duration), end exclusive. Arrivals
+  are whole UTC hours, durations whole Earth days (1–60), delays fixed at
+  0/1/3/7 d from the baseline. Earliest arrival = coverage start; latest =
+  coverage end − duration. A delay is offered only if its window ends at or
+  before coverage end. If a chosen delay stops fitting, the app shows the
+  baseline and says so.
+- **Default scenario:** baseline 2026-12-05 00:00 UTC, 14 d, +3 d. It spans
+  the 12-12 sunrise, so the slip visibly changes the metrics.
+- **Smooth horizon:** 0° local horizontal plane. This ignores the ~0.06° dip of
+  a 1 m observer over a smooth surface; terrain will replace it.
+- **Metrics:** shares of elapsed time; unavailable (never 0) when any
+  relevant state is unknown or the window is not fully covered. Darkness =
+  Sun not visible; unknown breaks darkness runs; ties go to the earliest run.
+  The full darkness run in the data is reported when it touches a boundary.
+
+Milestone 1 and terrain selection (unchanged): site IM-2 Athena, 84.7906° S,
+29.1957° E (LROC); coordinate frame assumed ME (LROC does not state it); raw
+Horizons cache in `data/horizons/`; terrain products LDEM_80S_20M (near field)
++ LDEM_75S_60M (far field). Raw source files are marked `-text` in
+`.gitattributes` so line endings never change their recorded sha256.
+
+## Terrain product selection (milestone 1.5, unchanged)
+Evidence: `data/terrain/lola_coverage_report.json` (`python pipeline/terrain_check.py`).
 
 **Selected:** LDEM_80S_20M (near field) + LDEM_75S_60M (far field), with
-LDEC_80S_20M / LDEC_75S_60M shot counts. Both come from the PDS Geosciences
-Node, data set LRO-L-LOLA-4-GDR-V1.0, product version V2.0, LOLA data through
-2017-02-02T22:18:35. Frame: "MEAN EARTH/POLAR AXIS OF DE421" (same as
-Horizons MOON_ME). Projection: polar stereographic, spherical R = 1737.4 km,
-scale true at the pole. Values: LSB int16, height = DN × 0.5 m relative to
-1737.4 km.
+LDEC_80S_20M / LDEC_75S_60M shot counts. PDS Geosciences Node,
+LRO-L-LOLA-4-GDR-V1.0, product V2.0, LOLA data through 2017-02-02T22:18:35.
+Frame "MEAN EARTH/POLAR AXIS OF DE421" (as Horizons MOON_ME). Polar
+stereographic, spherical R = 1737.4 km, true at the pole; LSB int16,
+height = DN × 0.5 m relative to 1737.4 km.
 
 product | grid (px) | m/px at pole (at site) | actual bounds (edge mid / corner) | site inside | site → file edge
 ---|---|---|---|---|---
 LDEM_875S_5M/10M/20M | 30336/15168/7584 | 5/10/20 | 87.499° S / 86.464° S | no | n/a
-LDEM_85S_10M/20M/40M | 30336/15168/7584 | 10/20/40 | 85.001° S / 82.935° S | **yes** (square corner) | only 13.7 km (min)
+LDEM_85S_10M/20M/40M | 30336/15168/7584 | 10/20/40 | 85.001° S / 82.935° S | yes (square corner) | only 13.7 km (min)
 **LDEM_80S_20M** | 30400 | 20 (19.96) | 80.000° S / 75.894° S | yes | 165.2–505 km
 **LDEM_75S_60M** | 15248 | 60 (59.88) | 75.001° S / 68.907° S | yes | ≥ 316.8 km
 
-(Labels give only nominal MAXIMUM_LATITUDE. Actual bounds were computed from
-LINES × MAP_SCALE using the projection equations in `dsmap_polar.cat`.)
-
-Why both products: a horizon ray can stop only once no terrain beyond it
-could rise above the horizon found so far. The test assumes the global LOLA
-maximum height of 10 773 m (LDEM_64 label MAXIMUM) plus a 100 m margin. On a
-240 m planning grid, rays need 62–190 km of terrain (median 117 km). In
-azimuths **320°–351°** this is up to 24.6 km beyond the LDEM_80S_20M edge.
-That sector contains Earth on our day (az 337.4°–337.7°), and its horizon is
-low (about −1° on the coarse grid), so far terrain matters there. Every
-azimuth reaches its stopping point inside LDEM_75S_60M. A ray that leaves
-every file before stopping will be recorded as unknown (null), never as flat
-terrain.
-
-Missing data: no LDEM label defines MISSING_CONSTANT. Every pixel is filled
-by GMT `surface` interpolation between LOLA tracks, so a gap never appears as
-a missing value. The LDEC count files record which pixels were actually
-measured:
-- In the 2.02 km window around the site, **33.9 % of 20 m pixels have 0 shots**
-  (their values are interpolated). The site pixel has 1 shot; the maximum count
-  in the window is 9.
-- Sampled along the rays at 240 m, 0 % of pixels had 0 shots (43 166 samples).
-
-The horizon computation must report the LDEC count of the pixel that sets
-each azimuth's horizon, so horizons set by interpolated terrain are visible.
-
-Site terrain: 5321.9 m above 1737.4 km (LDEM_80S_20M, bilinear). The 2 km
-window spans 5238.5–5358.5 m. Not yet fed back into Horizons (altitude still 0 km).
+Rays need 62–190 km of terrain (stopping rule with the global LOLA maximum
+10 773 m + 100 m). Azimuths 320°–351° (Earth's direction) need up to 24.6 km
+beyond the 80S file, so the 75S product is required. LDEM has no
+missing-data value (everything is interpolated); LDEC counts show 33.9 % of
+20 m pixels near the site have no LOLA shot.
 
 ## Validation log
 date | check | inputs | expected behavior | observed result | pass/fail
 ---|---|---|---|---|---
-2026-11-14 | Horizons observer body | both raw responses | `Center body name: Moon (301)` | as expected | pass
-2026-11-14 | Site echoed by Horizons | both | `29.1957, -84.7906, 0.0 {E-lon(deg),Lat(deg),Alt(km)}` | as expected | pass
-2026-11-14 | Longitude convention | both | east-positive | `MEAN_ME (high precision) {East-longitude positive}` | pass
-2026-11-14 | Altitude reference | both | stated reference surface | `Center radii: 1737.4, 1737.4, 1737.4 km` (sphere) | pass
-2026-11-14 | Time standard | both | UT = UTC | `... 00:00:00.0000 UT`; footer: "Times AFTER 1962 are in UTC" | pass
-2026-11-14 | Airless, target center | both | no refraction, body center | `Atmos refraction: NO (AIRLESS)`; column = "Airless apparent azimuth and elevation of target center" | pass
-2026-11-14 | Targets | both | Sun 10, Earth 399 | `Sun (10)`, `Earth (399)`, source DE441 | pass
-2026-11-14 | Parsing / row count | both | 145 rows, no `n.a.` | 145 + 145, 0 missing | pass
-2026-11-14 | Timestamp order, spacing | exported samples | strictly increasing, unique, 600 s | as expected | pass
-2026-11-14 | Coverage | exported samples | first = start, last = end | 2026-12-01T00:00:00Z … 2026-12-02T00:00:00Z | pass
-2026-11-14 | Ranges | exported samples | el in [−90, 90], az in [0, 360) | el −1.2426…3.2019 | pass
-2026-11-14 | Export = raw | 290 values | exact equality | 0 mismatches | pass
-2026-11-14 | Raw integrity | cached bodies | sha256 = metadata | match | pass
-2026-11-14 | Intervals | smooth horizon | contiguous, exact coverage | 1 interval (Sun false, Earth true) | pass
-2026-11-14 | Independent sanity | Sun rows | Horizons' own daylight flag flips when the upper limb (center + ~0.27° semi-diameter) crosses 0° | `*` at 00:40 (center −0.2696°), `s` at 00:50 (center −0.2769°): consistent with ~0.27° semi-diameter | pass
-2026-11-14 | Pipeline unit tests (synthetic) | 11 tests: 359/1° crossing, periodic horizon, unknown sectors, all-visible, all-dark, unknown-not-merged, strict >, parsing, `n.a.`→null, refracted rejected | all pass | `Ran 11 tests … OK` | pass
-2026-11-14 | Frontend unit tests | 11 vitest tests (real file + synthetic bad inputs) | all pass | 11 passed | pass
-2026-11-14 | Typecheck + production build | `npm run build` | no errors | built: JS 233 kB (73 kB gzip), CSS 7 kB | pass
-2026-11-14 | Displayed = source | headless Chrome DOM at 6 times (00:00, 00:50, 07:20, 12:00, 17:40, 24:00) | readouts equal raw values rounded to 0.001° | 24/24 values + 6/6 time labels match | pass
-2026-11-14 | Interaction | Chrome DevTools Protocol | slider keys, buttons, click, drag keep cursor/readout/slider/URL in sync; hover shows tooltip | 12:00 → +2 keys 12:20 → back 12:10 → click 06:00 → drag 18:00; tooltip 08:00 on hover | pass
-2026-11-14 | Layout | screenshots 1280 px (dark), 390 px iframe (light) | no overflow, legible | no horizontal overflow; light and dark both render | pass
+2026-11-14 | Horizons conventions (M1) | 2 raw responses | Moon (301) observer; site echoed E-lon,Lat,Alt; MEAN_ME east-positive; 1737.4 km sphere; UT=UTC; airless; target centers Sun 10 / Earth 399 | as expected | pass
+2026-11-14 | M1 data and app | 145 samples; DOM at 6 times | parse, order, 600 s, export = raw, display = raw | 290/290 values exact; 24/24 displayed values match | pass
+2026-11-14 | LOLA label vs file | 13 LDEM + 2 LDEC products | LINES × LINE_SAMPLES × bytes = HTTP Content-Length | 15/15 match | pass
+2026-11-14 | LOLA orientation vs global grid | LDEM_75S_240M vs LDEM_64, 480 points | our mapping fits, mirrored does not | RMS 30 m vs 2 507 m | pass
+2026-11-14 | Seam 80S_20M vs 75S_60M | 20 points near the 80S edge | agree to resolution | mean +1.4 m, max 9.5 m | pass
+2026-11-14 | Surface elevation vs LOLA shots | 1 131 RDR shots within ~600 m | DEM − shot ≈ 0 | mean −0.26 m, sd 0.67 m; mirrored control −5 899 m | pass
+2026-11-14 | Horizons altitude convention | 12 responses | echo 5.3229; \|cylindric\| = 1737.4 + alt | 12/12: 1742.7229 km | pass
+2026-11-14 | Altitude effect | 2026-12-01, 0 vs 5.3229 km | Earth ~h/d ≈ 8 × 10⁻⁴°, Sun ~2 × 10⁻⁶° | Earth 8.04 × 10⁻⁴° (mean), Sun 2.07 × 10⁻⁶° | pass
+2026-11-14 | 60-day retrieval | 12 chunked requests | sequential, cached, complete | 12 live, then re-run 0 live; 6 × 1 441 rows per target | pass
+2026-11-14 | `validate.py` | raw cache + export | contract + raw checks | **50/50 pass**: per chunk sha256, HTTP 200, conventions, altitude, row counts, 0 `n.a.`; 5 identical boundaries per target; 8 641 samples, uniform 600 s, final endpoint; el −4.26…10.72°; export = raw 17 282/17 282; 10 contiguous intervals | pass
+2026-11-14 | Pipeline unit tests | 23 tests (synthetic + labels) | pass | `Ran 23 tests … OK` | pass
+2026-11-14 | Frontend unit tests | 32 vitest tests | pass | 32 passed | pass
+2026-11-14 | Mission rules (tests) | synthetic coverage | delays are offsets, not cumulative; duration unchanged; earliest/latest arrival; end-exclusive fit; disabled delays | all pass | pass
+2026-11-14 | Metric rules (tests) | synthetic intervals | all-visible, all-dark, unknown, both-known-false, duration not counts, clipping through intervals, beyond-data, unknown breaks darkness, ties | all pass | pass
+2026-11-14 | Real-data metrics | 3 windows (5 cases) | TypeScript = independent Python (`crosscheck_metrics.py`, from samples, no shared code) | equal to 1e-9 | pass
+2026-11-14 | Manual cross-check | 2026-12-05 + 14 d vs interval list | Sun 145.67 h / 336 h; Earth 187 h; dark 12-05 00:00 → 12-12 22:20 | 43.35 %, 55.65 %, 190.33 h (touches start); app shows 43.4 % / 55.7 % / 190.3 h ⚠ | pass
+2026-11-14 | Production build | `npm run build` | no errors | JS 252 kB (79 kB gzip), CSS 12 kB | pass
+2026-11-14 | Browser checks | headless Chrome via DevTools protocol | 29 checks: metrics, deltas, duration unchanged, +1 after +7 = +1, latest/earliest arrival, disabled delays, fallback notice, real drag on timeline and chart, cursor sync, arrow key, readouts at 12-12 22:10/22:20, "not found in available data" near the end, banner, no overflow at 1280/390 px light and dark | **29/29 pass** | pass
 
-2026-11-14 | LOLA label vs file | 13 LDEM + 2 LDEC polar south products | LINES × LINE_SAMPLES × bytes = HTTP Content-Length | all 15 match | pass
-2026-11-14 | LOLA polar orientation | LDEM_75S_240M vs global LDEM_64, 480 points | one east/west reading clearly fits | RMS 30 m (90°E right of pole) vs 2507 m (mirrored); `dsmap_polar.cat`'s printed inverse is mirrored, forward equations used | pass
-2026-11-14 | Seam consistency | 20 points near the 80S edge, az 320°–351° | products agree to resolution | 80S_20M − 75S_60M: mean +1.4 m, max 9.5 m; − 75S_240M: mean +2.0 m, max 21.5 m | pass
-2026-11-14 | Terrain coverage | ray march, 360 azimuths | every azimuth reaches its stopping point inside a selected file | 360/360 inside LDEM_75S; 330/360 inside LDEM_80S | pass (with far field)
-2026-11-14 | Projection unit tests | 6 tests (round trip, pole, orientation, bounds, site inside, outside → None) | pass | `Ran 17 tests … OK` (all pipeline tests) | pass
+Not yet checked: screen readers, Firefox/Safari, real touch hardware,
+keyboard-only use of the timeline (the slider is keyboard-accessible; the
+timeline itself is pointer-only).
 
-Not yet checked: screen reader output, Firefox/Safari, touch devices
-(pointer events are used but were not tested on real touch hardware).
+## Unresolved issues and assumptions
+- Site coordinate frame assumed ME; LROC does not state the frame or the
+  coordinate's accuracy, which drives the ±5 m surface uncertainty.
+- Terrain is not included; "visible" is the smooth 0° approximation only.
+- Horizons API signature 1.2 vs doc page 1.3 (output format verified by hand).
+- Future UTC: Horizons applies the last known leap second (EOP predictions to
+  2027-02-08 cover the dataset).
+- `app/public/data/im2-athena.json` is 1.5 MB (≈ 400 kB gzip). Fine for now;
+  revisit with a second site or longer coverage.
+- Projection documentation: when we read the printed lat/lon → line/sample
+  equations in `dsmap_polar.cat` literally, they place 90° E left of the pole.
+  That conflicts with the same document's forward equations and description.
+  We have not established whether the text or our reading is at fault, so we
+  make no claim that the document is wrong. We implement the forward equations
+  and their algebraic inverse, and that mapping is checked against independent
+  data (global grid, LOLA shots).
+- Planning-grid stopping distances must be recomputed by the real horizon code.
+- LDEM_80S_20M / LDEM_75S_60M are not downloaded (1.85 + 0.47 GB).
+- Windows only: Vitest needs `app/scripts/run-vitest.mjs` (drive-letter case).
 
-## Unresolved issues
-- Horizons API signature reports version **1.2**, while the API doc page
-  describes **1.3**. The output format was inspected by hand and parses as
-  expected; `fetch.py` prints a warning on every run until this is resolved.
-- Site coordinate frame is assumed (see decisions).
-- Surface elevation at the site is unknown; terrain is not modeled, so
-  "above 0°" says nothing about real visibility yet.
-- Vitest 5 on Windows fails ("failed to find the current suite") when the
-  shell's working directory uses a lowercase drive letter (`c:\…`).
-  Worked around by `app/scripts/run-vitest.mjs` (used by `npm test`).
-- Future UTC: Horizons applies the last known leap second over future spans.
-- `dsmap_polar.cat` (2022-01-15 revision) prints a southern-hemisphere inverse
-  that mirrors east/west relative to its own forward equations and text. We
-  use the forward equations, verified against data.
-- The stopping distances come from a 240 m planning grid, which smooths the
-  near-field horizon. The real computation must apply the same stopping rule
-  itself rather than reuse these distances.
-- The LDEM_80S_20M and LDEM_75S_60M files (1.85 GB + 0.47 GB) are not yet
-  downloaded. The checks used byte-range reads; only LDEM_75S_240M and
-  LDEC_75S_240M are stored, in `data/raw/lola/` (git-ignored).
+## Backlog (not in this milestone)
+- Curated list of documented sites (second site, then more), each with a
+  cited coordinate source and verified surface elevation.
+- Custom user-entered coordinates (requires live or precomputed positions and
+  terrain; conflicts with the static-data architecture, design first).
+- Keyboard interaction for the timeline itself.
 
 ## Next milestone
-Smooth-horizon workflow over the full supported dataset for Site A:
-1. Choose the ~60-day interval (supporting a 14-day mission, +1/+3/+7-day
-   slips) and fetch it in ≤ 1-month chunks, sequentially, with the same cache.
-2. Show visibility rows (Sun, Earth, both) from `visibility_intervals` and
-   the selected-window metrics, including the boundary flags and "not found in
-   available data".
-3. Add frontend tests for window clipping and duration-based percentages.
-Then Stage 2: set the Horizons altitude from the LOLA site height (5.3219 km
-plus observer height) and re-fetch. Then compute the terrain horizon from
-LDEM_80S_20M + LDEM_75S_60M using the stopping rule above, with LDEC flags and
-null for unknown sectors.
+Stage 2 terrain horizon for the Athena site:
+1. Download LDEM_80S_20M and LDEM_75S_60M (+ LDEC) into `data/raw/lola/`.
+2. Compute the horizon with the stopping rule, curvature once, LDEC flags, and
+   null for unknown sectors; record extent and resolution.
+3. Export `horizon.model = "terrain"` and re-classify intervals; show smooth
+   and terrain results side by side and label which is shown.
 
 ## Milestone checklist
-- [x] Shared data contract accepted (v1.0, with 2026-11-14 clarifications).
+- [x] Shared data contract accepted (v1.0 + clarifications).
 - [x] One site with real sky positions.
-- [ ] Complete smooth-horizon workflow.
-- [ ] Terrain loaded and inspected.
+- [x] Complete smooth-horizon workflow.
+- [ ] Terrain loaded and inspected (products selected and verified; not downloaded).
 - [ ] First terrain horizon checked.
 - [ ] Second site integrated.
-- [ ] Date-slip comparison verified.
+- [x] Date-slip comparison verified (smooth horizon).
 - [ ] Sources and limitations complete.
 - [ ] Deployment tested.
 - [ ] Demo recorded.
@@ -194,16 +207,19 @@ owner | exact symptom | attempts made | next diagnostic step
 ## AI assistance log
 Record tool/model, task, affected files, and human verification.
 
-- 2026-11-14 | Claude Code (Claude Opus 5.5) | Milestone 1: picked and documented
-  the site; consulted the Horizons docs; wrote the pipeline (`pipeline/`); ran
-  the Horizons retrievals (2 live requests, sequential); exported the data;
-  wrote the React app (`app/`); ran the checks; updated the docs (SPEC.md,
-  DATA_CONTRACT.md, STATUS.md, README.md) | Human verification: **pending**.
-  Dylan should review the site choice, the frame assumption, and the rendered app.
-- 2026-11-14 | Claude Code (Claude Opus 5.5) | LOLA terrain product verification and
-  selection: `pipeline/lola.py`, `pipeline/terrain_check.py`,
-  `pipeline/tests/test_lola.py`, `pipeline/config.json` (terrain section),
-  `data/terrain/`, STATUS.md, DATA_CONTRACT.md, README.md | Human verification: **pending**.
+- 2026-11-14 | Claude Code (Claude Opus 5.5) | Milestone 1 (site, one day of
+  Horizons data, elevation chart) | pipeline/, app/, docs | Human verification: **pending**.
+- 2026-11-14 | Claude Code (Claude Opus 5.5) | LOLA terrain product selection |
+  `pipeline/lola.py`, `pipeline/terrain_check.py`, `data/terrain/` | Human verification: **pending**.
+- 2026-11-14 | Claude Code (Claude Opus 5.5) | Milestone 2: checkpoint commit;
+  observer altitude verification (`pipeline/site_elevation.py`,
+  `data/terrain/lola_rdr/`, `data/terrain/site_elevation_report.json`);
+  60-day chunked retrieval with retries (`pipeline/horizons.py`, `fetch.py`,
+  `export.py`, `validate.py`); altitude comparison (`compare_altitude.py`);
+  independent metric reference (`crosscheck_metrics.py`); mission-window UI
+  (`app/src/mission.ts`, `axis.ts`, `Timeline.tsx`, `ElevationChart.tsx`,
+  `App.tsx`, `styles.css`) and tests; docs | Human verification: **pending**,
+  see the manual checklist in the milestone report.
 
 ## Handoff template
 - Completed:

@@ -1,179 +1,123 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Sample } from "./types";
 import { type Body, elevation, elevationDomain, fmtDeg, fmtUtc, nearestIndex } from "./data";
+import { type TimeScale, timeTicks, useTimePointer } from "./axis";
 
 interface Props {
   samples: Sample[];
   times: number[];
+  /** Inclusive sample-index range shown. */
+  i0: number;
+  i1: number;
   selected: number;
-  onSelect: (i: number) => void;
+  onSelect: (index: number) => void;
+  scale: TimeScale;
 }
 
 const BODIES: { key: Body; label: string }[] = [
   { key: "sun", label: "Sun" },
   { key: "earth", label: "Earth" },
 ];
-const HOUR = 3_600_000;
 
-function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
-  const ref = useRef<T>(null);
-  const [w, setW] = useState(720);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => setW(Math.max(280, Math.round(e.contentRect.width))));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  return [ref, w];
-}
-
-export function ElevationChart({ samples, times, selected, onSelect }: Props) {
-  const [wrapRef, width] = useWidth<HTMLDivElement>();
+export function ElevationChart({ samples, times, i0, i1, selected, onSelect, scale }: Props) {
   const [hover, setHover] = useState<number | null>(null);
-  const dragging = useRef(false);
+  const narrow = scale.width < 560;
+  const height = narrow ? 230 : 280;
+  const top = 12;
+  const bottom = 28;
+  const ph = height - top - bottom;
 
-  const narrow = width < 560;
-  const height = narrow ? 260 : 320;
-  const m = { top: 14, right: narrow ? 52 : 64, bottom: 34, left: 44 };
-  const pw = width - m.left - m.right;
-  const ph = height - m.top - m.bottom;
+  const [yLo, yHi] = useMemo(() => {
+    const v: (number | null)[] = [];
+    for (let i = i0; i <= i1; i++) v.push(samples[i].sun_elevation_deg, samples[i].earth_elevation_deg);
+    return elevationDomain(v);
+  }, [samples, i0, i1]);
+  const y = (v: number) => top + ((yHi - v) / (yHi - yLo)) * ph;
+  const x = scale.x;
 
-  const t0 = times[0];
-  const t1 = times[times.length - 1];
-  const [yLo, yHi] = useMemo(
-    () => elevationDomain(samples.flatMap((s) => [s.sun_elevation_deg, s.earth_elevation_deg])),
-    [samples],
-  );
-  const x = (t: number) => m.left + ((t - t0) / (t1 - t0)) * pw;
-  const y = (v: number) => m.top + ((yHi - v) / (yHi - yLo)) * ph;
-
-  // 145 points per series: cheap enough to rebuild on every render.
   const paths: Record<Body, string> = { sun: "", earth: "" };
   for (const { key } of BODIES) {
     let pen = false;
-    samples.forEach((s, i) => {
-      const v = elevation(s, key);
+    for (let i = i0; i <= i1; i++) {
+      const v = elevation(samples[i], key);
       if (v === null) {
         pen = false; // gaps stay gaps; never drawn as zero
-        return;
+        continue;
       }
-      paths[key] += `${pen ? "L" : "M"}${x(times[i]).toFixed(2)},${y(v).toFixed(2)}`;
+      paths[key] += `${pen ? "L" : "M"}${x(times[i]).toFixed(1)},${y(v).toFixed(1)}`;
       pen = true;
-    });
+    }
   }
 
-  const yStep = yHi - yLo > 8 ? 2 : 1;
+  const span = yHi - yLo;
+  const yStep = span > 16 ? 4 : span > 8 ? 2 : 1;
   const yTicks: number[] = [];
-  for (let v = yLo; v <= yHi; v += yStep) yTicks.push(v);
-  const xStep = (narrow ? 6 : 3) * HOUR;
-  const xTicks: number[] = [];
-  for (let t = t0; t <= t1; t += xStep) xTicks.push(t);
+  for (let v = Math.ceil(yLo / yStep) * yStep; v <= yHi; v += yStep) yTicks.push(v);
 
-  // Direct labels at the right end, nudged apart if they would collide.
-  const last = samples[samples.length - 1];
-  const ends = BODIES.map((b) => ({ ...b, v: elevation(last, b.key) }))
-    .filter((e): e is { key: Body; label: string; v: number } => e.v !== null)
-    .map((e) => ({ ...e, py: y(e.v) }))
-    .sort((a, b) => a.py - b.py);
-  for (let i = 1; i < ends.length; i++) {
-    if (ends[i].py - ends[i - 1].py < 14) ends[i].py = ends[i - 1].py + 14;
-  }
-
-  const indexAt = (clientX: number, el: Element) => {
-    const r = el.getBoundingClientRect();
-    const px = ((clientX - r.left) / r.width) * width;
-    const t = t0 + ((px - m.left) / pw) * (t1 - t0);
-    return nearestIndex(times, t);
-  };
+  const snap = (t: number) => Math.min(i1, Math.max(i0, nearestIndex(times, t)));
+  const pointer = useTimePointer(scale, (t) => onSelect(snap(t)), (t) => setHover(t === null ? null : snap(t)));
 
   const sel = samples[selected];
   const hov = hover === null ? null : samples[hover];
-  const hoverLeft = hover === null ? 0 : x(times[hover]);
+  const hx = hover === null ? 0 : x(times[hover]);
+  const plotRight = scale.left + scale.plotWidth;
 
   return (
-    <div className="chart-wrap" ref={wrapRef}>
+    <div className="chart-wrap">
       <svg
-        width={width}
+        width={scale.width}
         height={height}
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label={`Sun and Earth elevation from ${fmtUtc(t0)} to ${fmtUtc(t1)}. Selected ${fmtUtc(times[selected])}: Sun ${fmtDeg(sel.sun_elevation_deg)}, Earth ${fmtDeg(sel.earth_elevation_deg)}.`}
+        viewBox={`0 0 ${scale.width} ${height}`}
         className="chart"
-        onPointerDown={(e) => {
-          dragging.current = true;
-          (e.currentTarget as Element).setPointerCapture(e.pointerId);
-          onSelect(indexAt(e.clientX, e.currentTarget));
-        }}
-        onPointerMove={(e) => {
-          const i = indexAt(e.clientX, e.currentTarget);
-          setHover(i);
-          if (dragging.current) onSelect(i);
-        }}
-        onPointerUp={() => (dragging.current = false)}
-        onPointerCancel={() => (dragging.current = false)}
-        onPointerLeave={() => setHover(null)}
+        role="img"
+        aria-label={`Sun and Earth elevation, ${fmtUtc(times[i0])} to ${fmtUtc(times[i1])}. At ${fmtUtc(times[selected])}: Sun ${fmtDeg(sel.sun_elevation_deg)}, Earth ${fmtDeg(sel.earth_elevation_deg)}.`}
+        {...pointer}
       >
-        {/* grid + y axis */}
         {yTicks.map((v) => (
           <g key={v}>
-            <line className={v === 0 ? "horizon-line" : "grid"} x1={m.left} x2={m.left + pw} y1={y(v)} y2={y(v)} />
-            <text className="tick" x={m.left - 8} y={y(v)} dy="0.32em" textAnchor="end">
+            <line className={v === 0 ? "horizon-line" : "grid"} x1={scale.left} x2={plotRight} y1={y(v)} y2={y(v)} />
+            <text className="tick" x={scale.left - 8} y={y(v)} dy="0.32em" textAnchor="end">
               {fmtDeg(v, 0)}
             </text>
           </g>
         ))}
-        <text className="horizon-label" x={m.left + 6} y={y(0) - 6}>
-          0° smooth horizon (terrain not modeled)
+        <text className="horizon-label" x={scale.left + 6} y={y(0) - 5}>
+          0° smooth horizon (terrain not included)
         </text>
-        {/* x axis */}
-        {xTicks.map((t) => (
-          <g key={t}>
-            <line className="axis-tick" x1={x(t)} x2={x(t)} y1={m.top + ph} y2={m.top + ph + 4} />
-            <text className="tick" x={x(t)} y={m.top + ph + 18} textAnchor="middle">
-              {new Date(t).toISOString().slice(11, 16)}
-            </text>
+        {timeTicks(scale).map((tk) => (
+          <g key={tk.t}>
+            {tk.major && <line className="grid grid-v" x1={x(tk.t)} x2={x(tk.t)} y1={top} y2={top + ph} />}
+            <line className="axis-tick" x1={x(tk.t)} x2={x(tk.t)} y1={top + ph} y2={top + ph + (tk.label ? 5 : 3)} />
+            {tk.label && (
+              <text className="tick" x={x(tk.t)} y={top + ph + 18} textAnchor="middle">
+                {tk.label}
+              </text>
+            )}
           </g>
         ))}
-        <line className="axis" x1={m.left} x2={m.left + pw} y1={m.top + ph} y2={m.top + ph} />
-
-        {/* hover crosshair (behind data) */}
-        {hover !== null && hover !== selected && (
-          <line className="crosshair" x1={hoverLeft} x2={hoverLeft} y1={m.top} y2={m.top + ph} />
+        <line className="axis" x1={scale.left} x2={plotRight} y1={top + ph} y2={top + ph} />
+        {!narrow && (
+          <text className="axis-title" x={12} y={top + ph / 2} dy="0.32em">
+            Elevation
+          </text>
         )}
-
-        {/* series */}
+        {hover !== null && hover !== selected && (
+          <line className="crosshair" x1={hx} x2={hx} y1={top} y2={top + ph} />
+        )}
         {BODIES.map(({ key }) => (
           <path key={key} className={`series series-${key}`} d={paths[key]} />
         ))}
-
-        {/* selected-time cursor */}
-        <line className="cursor" x1={x(times[selected])} x2={x(times[selected])} y1={m.top} y2={m.top + ph} />
+        <line className="cursor" x1={x(times[selected])} x2={x(times[selected])} y1={top} y2={top + ph} />
         {BODIES.map(({ key }) => {
           const v = elevation(sel, key);
-          return v === null ? null : (
-            <circle key={key} className={`dot dot-${key}`} cx={x(times[selected])} cy={y(v)} r={5} />
-          );
+          return v === null ? null : <circle key={key} className={`dot dot-${key}`} cx={x(times[selected])} cy={y(v)} r={4.5} />;
         })}
-
-        {/* direct labels */}
-        {ends.map((e) => (
-          <text key={e.key} className="direct-label" x={m.left + pw + 8} y={e.py} dy="0.32em">
-            {e.label}
-          </text>
-        ))}
       </svg>
-
       {hov && hover !== null && (
         <div
           className="tooltip"
-          // Beside the crosshair (never centred on it) so the hovered points stay visible.
-          style={
-            hoverLeft > width - 190
-              ? { left: hoverLeft - 12, top: m.top, transform: "translateX(-100%)" }
-              : { left: hoverLeft + 12, top: m.top }
-          }
           aria-hidden="true"
+          style={hx > scale.width - 200 ? { left: hx - 12, top, transform: "translateX(-100%)" } : { left: hx + 12, top }}
         >
           <div className="tooltip-time">{fmtUtc(times[hover])}</div>
           {BODIES.map(({ key, label }) => (

@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0",
-  "dataset_id": "m1-athena-2026-12-01",
-  "generated_at_utc": "2026-11-14T17:36:04Z",
+  "dataset_id": "m2-athena-2026-12-01-60d",
+  "generated_at_utc": "2026-11-14T18:17:22Z",
   "coverage_start_utc": "2026-12-01T00:00:00Z",
-  "coverage_end_utc": "2026-12-02T00:00:00Z",
+  "coverage_end_utc": "2027-01-30T00:00:00Z",
   "sample_step_seconds": 600,
   "sites": [
     {

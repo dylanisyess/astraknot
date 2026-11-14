@@ -1,0 +1,127 @@
+{
+ "generated_at_utc": "2026-11-14T18:13:52Z",
+ "site": {
+  "latitude_deg": -84.7906,
+  "longitude_deg_east": 29.1957
+ },
+ "lola_rdr_check": {
+  "source": "PDS Geosciences Node ODE GDS, query=lolardr (LOLA RDR, valid shots only: flag 0)",
+  "small_box": {
+   "request_url": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-84.792100&maxlat=-84.789100&westernlon=29.180700&easternlon=29.210700",
+   "params": {
+    "query": "lolardr",
+    "results": "v",
+    "output": "JSON",
+    "minlat": "-84.792100",
+    "maxlat": "-84.789100",
+    "westernlon": "29.180700",
+    "easternlon": "29.210700"
+   },
+   "http_status": 200,
+   "retrieved_at_utc": "2026-11-14T18:14:05Z",
+   "csv_url": "https://oderest.rsl.wustl.edu/output/20261114t121353023/LolaRDR_-85N-85N_29E29E_20261114T121358264_pts_csv.csv",
+   "label_url": "https://oderest.rsl.wustl.edu/output/20261114t121353023/LolaRDR_-85N-85N_29E29E_20261114T121358264_pts_csv.lbl",
+   "points": 30
+  },
+  "medium_box": {
+   "request_url": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-84.800600&maxlat=-84.780600&westernlon=29.095700&easternlon=29.295700",
+   "params": {
+    "query": "lolardr",
+    "results": "v",
+    "output": "JSON",
+    "minlat": "-84.800600",
+    "maxlat": "-84.780600",
+    "westernlon": "29.095700",
+    "easternlon": "29.295700"
+   },
+   "http_status": 200,
+   "retrieved_at_utc": "2026-11-14T18:14:18Z",
+   "csv_url": "https://oderest.rsl.wustl.edu/output/20261114t121405827/LolaRDR_-85N-85N_29E29E_20261114T121411356_pts_csv.csv",
+   "label_url": "https://oderest.rsl.wustl.edu/output/20261114t121405827/LolaRDR_-85N-85N_29E29E_20261114T121411356_pts_csv.lbl",
+   "points": 1131
+  },
+  "dem_minus_shot_height_forward_orientation": {
+   "n": 1131,
+   "mean_m": -0.2601916707088465,
+   "sd_m": 0.6673383120065851,
+   "max_abs_m": 4.710159875063255
+  },
+  "dem_minus_shot_height_mirrored_control": {
+   "n": 1131,
+   "mean_m": -5899.267521866282,
+   "sd_m": 32.512669129281164,
+   "max_abs_m": 5970.525628489162
+  },
+  "nearest_shot_to_site_m": 7.403563876497443,
+  "shots_within_30m_of_site": 8,
+  "shot_heights_within_30m_m": [
+   5321.746999999974,
+   5322.169750000001,
+   5322.690999999875
+  ]
+ },
+ "ldem_80s_20m_at_site": {
+  "fractional_pixel_1based": {
+   "sample": 19055.912076519486,
+   "line": 8300.836486748416
+  },
+  "bilinear_height_m": 5321.880448488673,
+  "pixels_used": [
+   {
+    "sample": 19055,
+    "line": 8300,
+    "dn": 10643,
+    "height_m": 5321.5,
+    "weight": 0.014376654189468624
+   },
+   {
+    "sample": 19056,
+    "line": 8300,
+    "dn": 10642,
+    "height_m": 5321.0,
+    "weight": 0.1491365973944673
+   },
+   {
+    "sample": 19055,
+    "line": 8301,
+    "dn": 10645,
+    "height_m": 5322.5,
+    "weight": 0.07354682632482282
+   },
+   {
+    "sample": 19056,
+    "line": 8301,
+    "dn": 10644,
+    "height_m": 5322.0,
+    "weight": 0.7629399220912413
+   }
+  ],
+  "nearest_pixel_height_m": 5322.0,
+  "ground_pixel_m": 19.958695159462476,
+  "local_slope_deg": 2.268315801300782,
+  "height_change_on_30m_ring_m": [
+   -1.5287469753175174,
+   1.1787500087975786
+  ],
+  "height_change_on_100m_ring_m": [
+   -4.42552339323629,
+   4.57079659221472
+  ],
+  "scaling": "height = DN x 0.5 m relative to 1737400 m sphere"
+ },
+ "site_height_by_product_m": {
+  "LDEM_80S_20M": 5321.880448488673,
+  "LDEM_80S_40M": 5321.698803046509,
+  "LDEM_85S_20M": 5321.880448488672,
+  "LDEM_85S_10M": 5322.0,
+  "LDEM_75S_60M": 5321.446319727306,
+  "LDEM_64 (nearest, ~474 m lat spacing)": 5323.0
+ },
+ "horizons_altitude": {
+  "surface_elevation_m": 5321.9,
+  "surface_elevation_reference": "height above the 1737.4 km LOLA reference sphere (LDEM_80S_20M, bilinear)",
+  "observer_height_above_surface_m": 1.0,
+  "horizons_site_altitude_km": 5.3229,
+  "convention": "Horizons GEODETIC altitude is height above the reference ellipsoid; for the Moon the response header reports a 1737.4 km sphere, the same reference as LOLA heights. Checked in each response via |Center cylindric| = 1737.4 km + altitude."
+ }
+}

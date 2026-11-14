@@ -138,11 +138,17 @@ def load_label(name: str, kind: str = "polar") -> Label:
 #   forward  X = (I - N/2 - 0.5)*s,  Y = (J - N/2 - 0.5)*s*NS  (NS = -1 south)
 #            LON = atan2(X, Y),  LAT = -90 + 2*atan(0.5*R/1737400)   [south]
 # and describes "In the south, Longitude 0 extends straight up from the
-# center, and Longitude 90 East extends to the right." Its printed INVERSE
-# multiplies both X and Y by SIGN(LAT) = -1, which mirrors east/west relative
-# to the forward equations. We therefore implement the forward equations and
-# their exact algebraic inverse, and verify the east/west sense empirically
-# against the global cylindrical LDEM (terrain_check.py, check 'orientation').
+# center, and Longitude 90 East extends to the right." We implement these
+# forward equations and their exact algebraic inverse.
+#
+# Note: when we read the catalog's separately printed lat/lon -> line/sample
+# equations literally (sample 1 at the left, line 1 at the top), they would
+# place 90 E to the LEFT of the pole. We have not established whether that is
+# an error in the text or in our reading, so we do not rely on them. What IS
+# independently checked is the mapping we use: it matches the global
+# cylindrical LDEM_64 (terrain_check.py) and individual LOLA RDR laser shots
+# (site_elevation.py: DEM - shot mean -0.26 m over 1131 shots), while the
+# east/west-mirrored mapping is off by ~5.9 km in height at the same points.
 
 def polar_forward(lbl: Label, i: float, j: float, east_right: bool = True) -> tuple[float, float]:
     """1-based (sample I, line J) -> (planetocentric lat, east lon [0,360)), south pole maps."""
@@ -258,6 +264,34 @@ class Grid:
             return None
         v = (q[0] * (1 - a) * (1 - b) + q[1] * a * (1 - b) + q[2] * (1 - a) * b + q[3] * a * b)
         return v * self.lbl.scaling
+
+
+class Window:
+    """A rectangular block of a polar product read with one range request."""
+
+    def __init__(self, lbl: Label, ci: int, cj: int, half: int):
+        self.lbl, self.i0, self.j0 = lbl, ci - half, cj - half
+        self.rows = read_window(lbl, ci - half, ci + half, cj - half, cj + half)
+
+    def dn(self, i: int, j: int) -> int | None:
+        r, c = j - self.j0, i - self.i0
+        if 0 <= r < len(self.rows) and 0 <= c < len(self.rows[0]):
+            return self.rows[r][c]
+        return None
+
+    def bilinear(self, fi: float, fj: float) -> dict | None:
+        """Bilinear height (m) at fractional 1-based pixel, with the pixels and
+        weights used (pixel centres at integer coordinates)."""
+        i0, j0 = math.floor(fi), math.floor(fj)
+        a, b = fi - i0, fj - j0
+        px = [(i0, j0, (1 - a) * (1 - b)), (i0 + 1, j0, a * (1 - b)),
+              (i0, j0 + 1, (1 - a) * b), (i0 + 1, j0 + 1, a * b)]
+        vals = [self.dn(i, j) for i, j, _ in px]
+        if any(v is None for v in vals):
+            return None
+        h = sum(v * w for v, (_, _, w) in zip(vals, px)) * self.lbl.scaling
+        return {"height_m": h, "pixels": [{"sample": i, "line": j, "dn": v, "height_m": v * self.lbl.scaling,
+                                            "weight": w} for (i, j, w), v in zip(px, vals)]}
 
 
 def read_window(lbl: Label, i0: int, i1: int, j0: int, j1: int) -> list[list[int]]:
