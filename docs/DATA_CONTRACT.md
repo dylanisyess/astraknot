@@ -177,7 +177,7 @@ real lunar conditions.
 - Terrain sources: LDEM_80S_20M (near field) and LDEM_75S_60M (far field),
   PDS LRO-L-LOLA-4-GDR-V1.0 V2.0. Selection evidence and processing metadata
   (projection, height reference, scale, actual bounds, resolution, coverage,
-  missing-data handling) are in `data/terrain/lola_coverage_report.json`.
+  missing-data handling) are in `data/terrain/im2-athena_lola_coverage_report.json`.
 - LOLA LDEM products have no missing-data value; every pixel is interpolated
   where no shot exists. Shot counts come from the matching LDEC products.
   A terrain horizon must record the LDEC count of the pixel that sets each
@@ -276,3 +276,17 @@ real lunar conditions.
 - The app selects Smooth or Terrain. It uses that model's intervals for every
   metric, timeline and readout; arrival, delay, duration and the selected time
   do not depend on the mode. URL parameter `horizon=smooth|terrain`.
+
+### 2026-11-14, milestone 4A (no app schema change)
+- Pipeline commands accept `--site ID`. Each exported filename must equal
+  `<site_id>.json`; manifest entries and nested `site` identity must agree with
+  config (ID, coordinates, nominal observer height, Horizons altitude).
+- Intermediate coverage/elevation/terrain/cross-check reports are per-site:
+  `data/terrain/<site_id>_<report_kind>.json`; altitude comparisons are
+  `data/horizons/<site_id>_altitude_comparison.json`. Former Athena coverage,
+  elevation and altitude filenames were migrated to this layout.
+- Cross-check reports include `site` identity and `terrain_report_sha256` to
+  bind the evidence to the exact horizon report. These are pipeline evidence
+  fields, not additions to app data. Athena's existing evidence was annotated
+  without changing its calculations. LOLA shot caches include site/query keys;
+  source raster/label caches remain shared by product.

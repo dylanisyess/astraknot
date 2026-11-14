@@ -16,11 +16,11 @@ import statistics
 import time
 from datetime import datetime, timedelta, timezone
 
+import sites
 import lola
 import terrain_horizon as th
 import visibility as vis
 
-SITE_FILE = lola.REPO_ROOT / "app" / "public" / "data" / "im2-athena.json"
 DEMO_BASELINE = "2026-12-05T00:00:00Z"
 DEMO_DAYS = 14
 DELAYS = (0, 1, 3, 7)
@@ -28,8 +28,8 @@ DELAYS = (0, 1, 3, 7)
 
 # ------------------------------------------------------------------ visibility helpers
 
-def load_samples() -> list[dict]:
-    return json.loads(SITE_FILE.read_text("utf-8"))["samples"]
+def load_samples(cfg, site) -> list[dict]:
+    return sites.load_site_data(cfg, site)["samples"]
 
 
 def horizon_dict(az: list[float], el: list[float | None], model="terrain") -> dict:
@@ -140,9 +140,9 @@ def max_demo_delta(v: dict) -> dict:
 
 # ------------------------------------------------------------------ driver
 
-def run_all(obs: th.Observer, products, h_max: float, base_rays: list[dict]) -> dict:
+def run_all(obs: th.Observer, products, h_max: float, base_rays: list[dict], cfg: dict, site: dict) -> dict:
     t0 = time.time()
-    samples = load_samples()
+    samples = load_samples(cfg, site)
     base_az = [r["azimuth_deg"] for r in base_rays]
     base_el = [r["elevation_deg"] for r in base_rays]
     base_states = step_states(samples, horizon_dict(base_az, base_el))
@@ -251,7 +251,7 @@ def run_all(obs: th.Observer, products, h_max: float, base_rays: list[dict]) -> 
             "seam": seam, "smooth_vs_terrain": smooth_vs, "runtime_s": round(time.time() - t0)}
 
 
-def seam_check(obs: th.Observer, products, base_rays: list[dict]) -> dict:
+def seam_check(obs: th.Observer, products, base_rays: list[dict], cfg: dict, site: dict) -> dict:
     """Height step between the two products where a ray leaves the near product,
     and how far below the running horizon that seam point lies."""
     near = th.Raster.from_files(*products[0])

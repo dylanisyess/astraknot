@@ -15,6 +15,7 @@ visibility.horizon_elevation).
 """
 from __future__ import annotations
 
+import sites
 import json
 import sys
 from datetime import datetime, timedelta, timezone
@@ -107,15 +108,21 @@ def metrics(samples, ws: datetime, we: datetime, horizon=lambda a: 0.0) -> dict:
 
 
 def main() -> int:
+    ap = sites.parser(description=__doc__)
+    ap.add_argument("baseline_iso", nargs="?", default="2026-12-05T00:00:00Z")
+    ap.add_argument("duration_days", nargs="?", type=float, default=14.0)
+    ap.add_argument("--terrain", action="store_true")
+    args = ap.parse_args()
+    cfg = json.loads((Path(__file__).parent / "config.json").read_text("utf-8"))
+    selected = sites.cli_sites(ap, args, cfg)[0]
     m = json.loads((DATA / "manifest.json").read_text("utf-8"))
-    site = json.loads((DATA / m["sites"][0]["file"]).read_text("utf-8"))
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    base = t(args[0]) if len(args) > 0 else t("2026-12-05T00:00:00Z")
-    days = float(args[1]) if len(args) > 1 else 14.0
+    site = sites.load_site_data(cfg, selected, DATA, m)
+    base = t(args.baseline_iso)
+    days = args.duration_days
     horizon = lambda a: 0.0  # noqa: E731
-    if "--terrain" in sys.argv:
+    if args.terrain:
         horizon = terrain_lookup(site["terrain_horizon"]["horizon"])
-    print("horizon:", "terrain (exported profile)" if "--terrain" in sys.argv else "smooth 0 deg")
+    print("horizon:", "terrain (exported profile)" if args.terrain else "smooth 0 deg")
     cov_end = t(m["coverage_end_utc"])
     for delay in (0, 1, 3, 7):
         ws = base + timedelta(days=delay)
@@ -129,4 +136,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(sites.run(main))

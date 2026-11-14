@@ -34,8 +34,8 @@ LDEM_64 and LOLA shots), the site coordinates and their ME-frame assumption,
 and the observer radius.
 
     python pipeline/horizon_crosscheck.py
-Writes data/terrain/im2-athena_horizon_crosscheck.json. Requires the
-downloaded products (fetch_terrain.py) and data/terrain/im2-athena_terrain_horizon.json.
+Writes data/terrain/<site_id>_horizon_crosscheck.json. Requires the
+downloaded products (fetch_terrain.py) and data/terrain/<site_id>_terrain_horizon.json.
 The RDR queries are cached in data/terrain/lola_rdr/ (network on first run).
 """
 from __future__ import annotations
@@ -48,15 +48,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sites
 import lola  # noqa: E402
 import site_elevation  # noqa: E402  (gds_points: cached ODE GDS LOLA RDR queries)
 import terrain_check  # noqa: E402  (destination: spherical-trig great-circle formula)
 import terrain_horizon as th  # noqa: E402  (only: Raster file access, profile() for the comparison side)
 
 R = lola.R_REF_M
-HORIZON = lola.REPO_ROOT / "data" / "terrain" / "im2-athena_terrain_horizon.json"
-SITE_FILE = lola.REPO_ROOT / "app" / "public" / "data" / "im2-athena.json"
-OUT = lola.REPO_ROOT / "data" / "terrain" / "im2-athena_horizon_crosscheck.json"
 SWEEP_KM = 200.0
 WEDGE_DEG = 1.0
 
@@ -153,8 +151,15 @@ def sweep(frame: LocalFrame, lat, lon, a0, a1, near: th.Raster, far: th.Raster, 
 # ---------------------------------------------------------- main
 
 def main() -> int:
-    rep_h = json.loads(HORIZON.read_text("utf-8"))
-    cfg, site = th.load_site()
+    ap = sites.parser(description=__doc__)
+    args = ap.parse_args()
+    cfg = json.loads(th.CONFIG.read_text("utf-8"))
+    site = sites.cli_sites(ap, args, cfg)[0]
+    horizon_path = sites.report_path(site["id"], "terrain_horizon")
+    out_path = sites.report_path(site["id"], "horizon_crosscheck")
+    rep_h = json.loads(horizon_path.read_text("utf-8"))
+    sites.require_identity(rep_h.get("site", {}), site, str(horizon_path))
+    site_data = sites.load_site_data(cfg, site)
     obs = th.site_observer(site)
     lat, lon = obs.lat, obs.lon
     frame = LocalFrame(lat, lon, obs.r_obs)
@@ -165,6 +170,8 @@ def main() -> int:
     rays = rep_h["rays"]
     h_max = rep_h["method"]["stopping_rule"]["h_max_m"]
     out: dict = {"generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                 "site": sites.identity(site),
+                 "terrain_report_sha256": sites.sha256(horizon_path),
                  "shared_assumptions": ["LOLA LDEM heights (same files)",
                                         "LOLA RDR shots are the DEM's own source data (consistency, not independence)",
                                         "1737.4 km reference radius",
@@ -247,7 +254,7 @@ def main() -> int:
         dlon = dlat / math.cos(math.radians(r["lat_deg"]))
         name = f"horizon_az{a:05.1f}_box_500m"
         pts, meta = site_elevation.gds_points(name, r["lat_deg"] - dlat, r["lat_deg"] + dlat,
-                                              r["lon_deg"] - dlon, r["lon_deg"] + dlon)
+                                              r["lon_deg"] - dlon, r["lon_deg"] + dlon, site_id=site["id"])
         valid = [p for p in pts if p["flag"] == 0]
         win = 0.1
         ray_az = [round((a - win + k * 0.01) % 360, 6) for k in range(round(2 * win / 0.01) + 1)]
@@ -286,7 +293,7 @@ def main() -> int:
                              "rows": shot_rows}
 
     # 3. azimuth convention vs Horizons -------------------------------------------
-    s = json.loads(SITE_FILE.read_text("utf-8"))["samples"]
+    s = site_data["samples"]
     eaz = [x["earth_azimuth_deg"] for x in s]
     mean_az = math.degrees(math.atan2(statistics.fmean(math.sin(math.radians(a)) for a in eaz),
                                       statistics.fmean(math.cos(math.radians(a)) for a in eaz))) % 360
@@ -306,10 +313,10 @@ def main() -> int:
     print(f"azimuth convention: ME +X predicted az {paz:.2f} el {pel:.2f}; Horizons mean az {mean_az:.2f} "
           f"el {mean_el:.2f}; mirrored would be {maz:.2f}", flush=True)
 
-    OUT.write_text(json.dumps(out, indent=1) + "\n", "utf-8")
-    print(f"wrote {OUT.relative_to(lola.REPO_ROOT)}")
+    out_path.write_text(json.dumps(out, indent=1) + "\n", "utf-8")
+    print(f"wrote {out_path.relative_to(lola.REPO_ROOT)}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(sites.run(main))

@@ -34,7 +34,7 @@ raise the horizon. H_MAX = global LOLA maximum (LDEM_64 label) + 100 m.
 
     python pipeline/terrain_horizon.py               # profile + sensitivity
     python pipeline/terrain_horizon.py --profile-only
-Writes data/terrain/im2-athena_terrain_horizon.json.
+Writes data/terrain/<site_id>_terrain_horizon.json.
 """
 from __future__ import annotations
 
@@ -51,11 +51,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sites
 import lola  # noqa: E402
 
 R = lola.R_REF_M
 CONFIG = Path(__file__).resolve().parent / "config.json"
-OUT = lola.REPO_ROOT / "data" / "terrain" / "im2-athena_terrain_horizon.json"
 
 # Global LOLA maximum height from the LDEM_64 label (MAXIMUM 21546 DN x 0.5 m),
 # plus a margin because a 64 px/deg grid can under-sample summits.
@@ -347,9 +347,9 @@ def profile(obs: Observer, azimuths: list[float], products: list[tuple[str, str 
 
 # ------------------------------------------------------------------ main
 
-def load_site() -> tuple[dict, dict]:
+def load_site(site_id=None) -> tuple[dict, dict]:
     cfg = json.loads(CONFIG.read_text("utf-8"))
-    return cfg, cfg["sites"][0]
+    return cfg, sites.select_sites(cfg, site_id)[0]
 
 
 def site_observer(site: dict, dlat: float = 0.0, dlon: float = 0.0) -> Observer:
@@ -388,7 +388,12 @@ def dump_report(report: dict) -> str:
 
 def main() -> int:
     t0 = time.time()
-    cfg, site = load_site()
+    ap = sites.parser(description=__doc__)
+    ap.add_argument("--profile-only", action="store_true", help="skip sensitivity recomputations")
+    args = ap.parse_args()
+    cfg = json.loads(CONFIG.read_text("utf-8"))
+    site = sites.cli_sites(ap, args, cfg)[0]
+    out_path = sites.report_path(site["id"], "terrain_horizon")
     t = cfg["terrain"]
     products = [(t["near_field_product"], t["near_field_counts"]), (t["far_field_product"], t["far_field_counts"])]
     obs = site_observer(site)
@@ -437,13 +442,14 @@ def main() -> int:
         "summary": summ,
         "rays": rays,
     }
-    if "--profile-only" not in sys.argv:
+    if not args.profile_only:
         import terrain_sensitivity  # noqa: E402  (separate module: slower checks)
-        report["sensitivity"] = terrain_sensitivity.run_all(obs, products, h_max, rays)
-    OUT.write_text(dump_report(report), "utf-8")
-    print(f"wrote {OUT.relative_to(lola.REPO_ROOT)} ({time.time() - t0:.0f} s)")
+        report["sensitivity"] = terrain_sensitivity.run_all(obs, products, h_max, rays, cfg, site)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(dump_report(report), "utf-8", newline="\n")
+    print(f"wrote {out_path.relative_to(lola.REPO_ROOT)} ({time.time() - t0:.0f} s)")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(sites.run(main))

@@ -12,17 +12,19 @@ Also compares the site value across LOLA products and estimates how sensitive
 the elevation is to the site-coordinate uncertainty (local slope).
 
     python pipeline/site_elevation.py
-Writes data/terrain/site_elevation_report.json; caches the RDR query
+Writes data/terrain/<site_id>_site_elevation_report.json; caches the RDR query
 responses in data/terrain/lola_rdr/.
 """
 from __future__ import annotations
 
+import hashlib
 import csv
 import io
 import json
 import math
 import statistics
 import sys
+import sites
 import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,20 +34,25 @@ import lola  # noqa: E402
 
 CONFIG = Path(__file__).resolve().parent / "config.json"
 RDR_DIR = lola.REPO_ROOT / "data" / "terrain" / "lola_rdr"
-REPORT = lola.REPO_ROOT / "data" / "terrain" / "site_elevation_report.json"
 GDS_URL = "https://oderest.rsl.wustl.edu/livegds/"
 KM_PER_DEG = math.pi * lola.R_REF_M / 180 / 1000  # 30.32 km
 
 
-def gds_points(name: str, minlat: float, maxlat: float, wlon: float, elon: float) -> tuple[list[dict], dict]:
+def rdr_cache_stem(site_id: str, name: str, query: dict) -> str:
+    digest = hashlib.sha256(json.dumps(query, sort_keys=True).encode()).hexdigest()[:12]
+    return f"{sites.valid_id(site_id)}__{name}__{digest}"
+
+
+def gds_points(name: str, minlat: float, maxlat: float, wlon: float, elon: float, *, site_id: str) -> tuple[list[dict], dict]:
     """LOLA RDR points in a lat/lon box (valid shots only, per the GDS label).
     Query JSON, point CSV and its label are cached byte-for-byte."""
     q = {"query": "lolardr", "results": "v", "output": "JSON", "minlat": f"{minlat:.6f}",
          "maxlat": f"{maxlat:.6f}", "westernlon": f"{wlon:.6f}", "easternlon": f"{elon:.6f}"}
+    name = rdr_cache_stem(site_id, name, q)
     qpath, cpath, lpath = (RDR_DIR / f"{name}.query.json", RDR_DIR / f"{name}_pts.csv",
                            RDR_DIR / f"{name}_pts.lbl")
     meta_path = RDR_DIR / f"{name}.meta.json"
-    if not (qpath.exists() and cpath.exists() and lpath.exists()):
+    if not (qpath.exists() and cpath.exists() and lpath.exists() and meta_path.exists()):
         url = GDS_URL + "?" + urllib.parse.urlencode(q)
         body, info = lola._get(url)
         res = json.loads(body)["GDSResults"]
@@ -61,9 +68,12 @@ def gds_points(name: str, minlat: float, maxlat: float, wlon: float, elon: float
         qpath.write_bytes(body)
         cpath.write_bytes(csv_body)
         lpath.write_bytes(lbl_body)
-        meta_path.write_text(json.dumps({"request_url": url, "params": q, "http_status": info["status"],
+        meta_path.write_text(json.dumps({"site_id": site_id, "request_url": url, "params": q, "http_status": info["status"],
                                          "retrieved_at_utc": lola._utc_now(), "csv_url": csv_url,
                                          "label_url": lbl_url}, indent=2) + "\n", "utf-8")
+    meta = json.loads(meta_path.read_text("utf-8"))
+    if meta.get("site_id") != site_id or meta.get("params") != q:
+        raise ValueError(f"RDR cache query mismatch: {meta_path}")
     rows = list(csv.reader(io.StringIO(cpath.read_text("latin-1"))))
     head = [h.strip() for h in rows[0]]
     ix = {k: head.index(k) for k in ("Coordinated_Universal_Time", "Pt_Longitude", "Pt_Latitude", "Pt_Radius", "Flg")}
@@ -74,7 +84,7 @@ def gds_points(name: str, minlat: float, maxlat: float, wlon: float, elon: float
         pts.append({"utc": r[ix["Coordinated_Universal_Time"]].strip(),
                     "lon": float(r[ix["Pt_Longitude"]]), "lat": float(r[ix["Pt_Latitude"]]),
                     "radius_km": float(r[ix["Pt_Radius"]]), "flag": int(r[ix["Flg"]])})
-    return pts, json.loads(meta_path.read_text("utf-8"))
+    return pts, meta
 
 
 def ground_dist_m(lat1, lon1, lat2, lon2) -> float:
@@ -90,11 +100,14 @@ def stats(v: list[float]) -> dict:
 
 
 def main() -> int:
+    ap = sites.parser(description=__doc__)
+    args = ap.parse_args()
     cfg = json.loads(CONFIG.read_text("utf-8"))
-    site = cfg["sites"][0]
+    site = sites.cli_sites(ap, args, cfg)[0]
+    report_path = sites.report_path(site["id"], "site_elevation_report")
     lat, lon = site["latitude_deg"], site["longitude_deg_east"]
     rep: dict = {"generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                 "site": {"latitude_deg": lat, "longitude_deg_east": lon}}
+                 "site": sites.identity(site)}
 
     # Gridded product: LDEM_80S_20M, 101 x 101 px window, plus the mirrored control.
     dem = lola.load_label("LDEM_80S_20M")
@@ -108,8 +121,8 @@ def main() -> int:
     # LOLA RDR shots (the DEM's source data): ~90 m box and ~600 m box around the site.
     dlat_s, dlon_s = 0.0015, 0.015
     dlat_m, dlon_m = 0.0100, 0.100
-    small, small_meta = gds_points("site_box_90m", lat - dlat_s, lat + dlat_s, lon - dlon_s, lon + dlon_s)
-    med, med_meta = gds_points("site_box_600m", lat - dlat_m, lat + dlat_m, lon - dlon_m, lon + dlon_m)
+    small, small_meta = gds_points("site_box_90m", lat - dlat_s, lat + dlat_s, lon - dlon_s, lon + dlon_s, site_id=site["id"])
+    med, med_meta = gds_points("site_box_600m", lat - dlat_m, lat + dlat_m, lon - dlon_m, lon + dlon_m, site_id=site["id"])
 
     def residuals(points, w, east_right):
         out = []
@@ -203,10 +216,10 @@ def main() -> int:
     print(f"height change within 30 m ring: {rep['ldem_80s_20m_at_site']['height_change_on_30m_ring_m']}, "
           f"100 m ring: {rep['ldem_80s_20m_at_site']['height_change_on_100m_ring_m']}")
     print(f"Horizons altitude: {rep['horizons_altitude']['horizons_site_altitude_km']} km")
-    REPORT.write_text(json.dumps(rep, indent=1) + "\n", "utf-8")
-    print(f"wrote {REPORT.relative_to(lola.REPO_ROOT)}")
+    report_path.write_text(json.dumps(rep, indent=1) + "\n", "utf-8")
+    print(f"wrote {report_path.relative_to(lola.REPO_ROOT)}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(sites.run(main))

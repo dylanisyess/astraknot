@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sites
 import lola  # noqa: E402
 
 CONFIG = Path(__file__).resolve().parent / "config.json"
@@ -51,11 +52,16 @@ def check_on_disk(name: str, rehash: bool) -> tuple[bool, str]:
 
 def main() -> int:
     cfg = json.loads(CONFIG.read_text("utf-8"))
+    ap = sites.parser(description=__doc__)
+    ap.add_argument("--check", action="store_true")
+    ap.add_argument("--rehash", action="store_true")
+    args = ap.parse_args()
+    sites.cli_sites(ap, args, cfg)
     names = products(cfg)
-    if "--check" in sys.argv:
+    if args.check:
         bad = 0
         for n in names:
-            ok, msg = check_on_disk(n, rehash="--rehash" in sys.argv)
+            ok, msg = check_on_disk(n, rehash=args.rehash)
             bad += not ok
             print(f"{'OK ' if ok else 'BAD'} {n}: {msg}")
         return 1 if bad else 0
@@ -68,4 +74,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(sites.run(main))

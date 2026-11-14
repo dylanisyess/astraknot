@@ -3,7 +3,9 @@
  "site": {
   "id": "im2-athena",
   "latitude_deg": -84.7906,
-  "longitude_deg_east": 29.1957
+  "longitude_deg_east": 29.1957,
+  "horizons_site_altitude_km": 5.3229,
+  "observer_height_above_surface_m": 1
  },
  "source": {
   "archive": "PDS Geosciences Node",

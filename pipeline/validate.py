@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sites
 import horizons as hz  # noqa: E402
 import visibility as vis  # noqa: E402
 
@@ -118,7 +119,8 @@ def validate_export(cfg: dict, site: dict, raw: dict[str, list[hz.AzElRow]]) -> 
     check(manifest["generated_at_utc"].endswith("Z"), "manifest: generated_at_utc ends in Z")
     entry = next((s for s in manifest["sites"] if s["id"] == site["id"]), None)
     check(entry is not None, f"manifest: lists site {site['id']}")
-    d = json.loads((DATA / entry["file"]).read_text("utf-8"))
+    d = sites.load_site_data(cfg, site, DATA, manifest)
+    check(True, "site: manifest filename, identity and configured coverage match")
     m = d["site"]
     check(m["is_synthetic"] is False, "site: is_synthetic false")
     check(0 <= m["longitude_deg_east"] < 360, "site: longitude in [0, 360)", str(m["longitude_deg_east"]))
@@ -190,7 +192,8 @@ def validate_terrain(d: dict, m: dict, s: list[dict], times: list[str]) -> None:
     check(all((e is None) == (sp["distance_km"][i] is None) for i, e in enumerate(el)),
           "terrain: unknown elevation <-> no setting point")
     # equals the pipeline report (rounded) and was computed for this site
-    rep = json.loads((hz.REPO_ROOT / "data" / "terrain" / "im2-athena_terrain_horizon.json").read_text("utf-8"))
+    rep, xc = sites.load_terrain_reports(m)
+    check(True, "terrain: report and cross-check identities + fingerprint match")
     same = [None if r["elevation_deg"] is None else round(r["elevation_deg"], 5) for r in rep["rays"]] == el
     check(same and rep["site"]["horizons_site_altitude_km"] == m["horizons_site_altitude_km"],
           "terrain: export == data/terrain report (rounded 1e-5 deg), same site altitude")
@@ -219,10 +222,19 @@ def validate_terrain(d: dict, m: dict, s: list[dict], times: list[str]) -> None:
 
 
 def main() -> int:
+    ap = sites.parser(description=__doc__)
+    args = ap.parse_args()
     cfg = json.loads(CONFIG.read_text("utf-8"))
-    for site in cfg["sites"]:
-        raw = validate_raw(cfg, site)
-        validate_export(cfg, site, raw)
+    selected = sites.cli_sites(ap, args, cfg, batch=True)
+    results.clear()
+    for site in selected:
+        start = len(results)
+        try:
+            raw = validate_raw(cfg, site)
+            validate_export(cfg, site, raw)
+        except (ValueError, KeyError, OSError, hz.HorizonsError) as e:
+            check(False, "site data validation", str(e))
+        results[start:] = [(ok, f"{site['id']}: {name}", detail) for ok, name, detail in results[start:]]
     width = max(len(n) for _, n, _ in results)
     for ok, name, detail in results:
         print(f"{'PASS' if ok else 'FAIL'}  {name.ljust(width)}  {detail}")
@@ -232,4 +244,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(sites.run(main))

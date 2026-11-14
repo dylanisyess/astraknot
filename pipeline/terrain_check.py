@@ -13,7 +13,7 @@ Checks (all requests sequential; big files go to git-ignored data/raw/lola/):
      horizon. Rays that leave the file first are UNKNOWN, never flat.
 
     python pipeline/terrain_check.py
-Writes data/terrain/lola_coverage_report.json.
+Writes data/terrain/<site_id>_lola_coverage_report.json.
 """
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ import json
 import math
 import statistics
 import sys
+import sites
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -28,7 +29,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lola  # noqa: E402
 
 CONFIG = Path(__file__).resolve().parent / "config.json"
-REPORT = lola.REPO_ROOT / "data" / "terrain" / "lola_coverage_report.json"
 
 CANDIDATES = ["LDEM_875S_5M", "LDEM_875S_10M", "LDEM_875S_20M", "LDEM_85S_10M", "LDEM_85S_20M",
               "LDEM_85S_40M", "LDEM_80S_20M", "LDEM_80S_40M", "LDEM_80S_80M", "LDEM_75S_30M",
@@ -73,11 +73,14 @@ def elev_angle(r_obs: float, r_tgt: float, theta: float) -> float:
 
 
 def main() -> int:
+    ap = sites.parser(description=__doc__)
+    args = ap.parse_args()
     cfg = json.loads(CONFIG.read_text("utf-8"))
-    site = cfg["sites"][0]
+    site = sites.cli_sites(ap, args, cfg)[0]
+    report_path = sites.report_path(site["id"], "lola_coverage_report")
     lat, lon = site["latitude_deg"], site["longitude_deg_east"]
     report: dict = {"generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "site": {"id": site["id"], "latitude_deg": lat, "longitude_deg_east": lon},
+                    "site": sites.identity(site),
                     "source": {"archive": "PDS Geosciences Node", "data_set_id": "LRO-L-LOLA-4-GDR-V1.0",
                                "polar_dir": lola.POLAR_DIR, "projection_catalog": lola.PDS_BASE + "/catalog/dsmap_polar.cat"}}
 
@@ -145,7 +148,7 @@ def main() -> int:
           f"{rms['east_left']:.0f} m (90E left) over {pts} points -> {'OK' if ok else 'INCONCLUSIVE'}")
     if not ok:
         print("Orientation not confirmed; stopping before any terrain use.", file=sys.stderr)
-        REPORT.write_text(json.dumps(report, indent=1) + "\n", "utf-8")
+        report_path.write_text(json.dumps(report, indent=1) + "\n", "utf-8")
         return 1
 
     # 4. terrain + shot counts at the site (20 m) ---------------------------------
@@ -279,11 +282,11 @@ def main() -> int:
     print(f"  80S_20M - 75S_60M : mean {statistics.fmean(d60):+.1f} m, max |diff| {max(map(abs, d60)):.1f} m")
     print(f"  80S_20M - 75S_240M: mean {statistics.fmean(d240):+.1f} m, max |diff| {max(map(abs, d240)):.1f} m")
 
-    REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text(json.dumps(report, indent=1) + "\n", "utf-8")
-    print(f"\nwrote {REPORT.relative_to(lola.REPO_ROOT)}")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(report, indent=1) + "\n", "utf-8")
+    print(f"\nwrote {report_path.relative_to(lola.REPO_ROOT)}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(sites.run(main))

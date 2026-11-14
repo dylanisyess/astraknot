@@ -4,7 +4,7 @@ A NASA Space Apps prototype that shows when the Sun and Earth are above the
 horizon from lunar south-polar sites. It is an educational planning tool, not
 flight-qualified analysis.
 
-**Milestone 3 (current, under review):** mission windows for one documented
+**Milestone 4A complete (pipeline site isolation):** mission windows for one documented
 site (IM-2 Athena landing point, 84.7906° S, 29.1957° E) with a **terrain
 horizon** computed from the LOLA terrain model (20 m pixels), and the smooth 0° horizon kept as a
 comparison mode. The data is 60 days (2026-12-01 to 2027-01-30 UTC) of real
@@ -79,6 +79,31 @@ npm test                          # vitest unit tests
 npm run build                     # typecheck + production build -> app/dist/
 npm run preview                   # serve the built app on http://localhost:4173
 ```
+
+All pipeline entry points accept `--site ID`, for example:
+
+```sh
+python pipeline/fetch.py --site im2-athena
+python pipeline/export.py --site im2-athena
+python pipeline/validate.py --site im2-athena
+python pipeline/crosscheck_metrics.py 2026-12-05T00:00:00Z 14 --terrain --site im2-athena
+```
+
+Fetch, export and validation default to all configured sites. The other commands
+use the sole configured site by default; with multiple sites, specify `--site`.
+IDs must be unique lowercase letters/digits separated by hyphens. Unknown IDs
+are errors. Only Athena is configured; the frontend still displays one site.
+
+Reports are `data/terrain/<site_id>_{lola_coverage_report,site_elevation_report,
+terrain_horizon,horizon_crosscheck}.json` and
+`data/horizons/<site_id>_altitude_comparison.json`. LOLA shot caches include the
+site ID and query fingerprint; large raster/label caches stay shared by product.
+Terrain cross-checks carry site identity and the exact horizon report SHA-256,
+so rerunning a horizon requires rerunning its cross-check before export.
+A scoped export preserves other valid manifest entries and their data files;
+incompatible retained metadata or files cause an error before writing.
+Coordinate source date/product belong in each site config as
+`coordinate_source_retrieved_at_utc` and `coordinate_source_product`.
 
 The scenario is kept in the URL, for example
 `http://localhost:5173/?arrival=2026-12-05T00:00Z&days=14&delay=3&t=2026-12-14T12:00:00Z&horizon=terrain`

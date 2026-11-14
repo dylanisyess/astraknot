@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sites
 import horizons as hz  # noqa: E402
 import visibility as vis  # noqa: E402
 
@@ -118,9 +119,9 @@ def export_site(cfg: dict, site: dict) -> dict:
         "id": "site-coordinates",
         "title": site["coordinate_source_title"],
         "url": site["coordinate_source_url"],
-        "retrieved_at_utc": "2026-11-14",
-        "product_version_or_filename": "LROC featured image 1408",
-        "notes": "Point coordinates as published by the LROC team. Date consulted; time of day not recorded.",
+        "retrieved_at_utc": site["coordinate_source_retrieved_at_utc"],
+        "product_version_or_filename": site.get("coordinate_source_product", site["coordinate_source_url"]),
+        "notes": "Point coordinates as published by the cited source. Date consulted; time of day not recorded.",
     }
 
     out = {
@@ -149,8 +150,6 @@ def export_site(cfg: dict, site: dict) -> dict:
 
 # ------------------------------------------------------------------ terrain horizon
 
-TERRAIN_REPORT = hz.REPO_ROOT / "data" / "terrain" / "im2-athena_terrain_horizon.json"
-TERRAIN_CROSSCHECK = hz.REPO_ROOT / "data" / "terrain" / "im2-athena_horizon_crosscheck.json"
 LOLA_POLAR_DIR = "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img"
 
 
@@ -161,18 +160,17 @@ def _r(v, nd):
 def terrain_block(cfg: dict, site: dict, samples: list[dict]) -> tuple[dict | None, list[dict], str]:
     """Terrain horizon + its own visibility intervals, or (None, [], reason).
 
-    Built only from data/terrain/im2-athena_terrain_horizon.json (terrain_horizon.py)
+    Built only from the selected site's terrain_horizon report (terrain_horizon.py)
     after the independent check (horizon_crosscheck.py) has been run; never from
     anything else. Values are rounded first and the intervals are classified
     from the rounded profile, so the app gets exactly what was classified."""
-    if site["id"] != "im2-athena":
-        return None, [], "no terrain horizon computed for this site"
-    if not TERRAIN_REPORT.exists():
-        return None, [], f"{TERRAIN_REPORT.name} missing (run pipeline/terrain_horizon.py)"
-    if not TERRAIN_CROSSCHECK.exists():
-        return None, [], f"{TERRAIN_CROSSCHECK.name} missing (run pipeline/horizon_crosscheck.py)"
-    rep = json.loads(TERRAIN_REPORT.read_text("utf-8"))
-    xc = json.loads(TERRAIN_CROSSCHECK.read_text("utf-8"))
+    terrain_report = sites.report_path(site["id"], "terrain_horizon")
+    terrain_crosscheck = sites.report_path(site["id"], "horizon_crosscheck")
+    if not terrain_report.exists():
+        return None, [], f"{terrain_report.name} missing (run pipeline/terrain_horizon.py)"
+    if not terrain_crosscheck.exists():
+        return None, [], f"{terrain_crosscheck.name} missing (run pipeline/horizon_crosscheck.py)"
+    rep, xc = sites.load_terrain_reports(site)
     rays = rep["rays"]
     m = rep["method"]
     step = m["azimuth_step_deg"]
@@ -282,8 +280,8 @@ def terrain_block(cfg: dict, site: dict, samples: list[dict]) -> tuple[dict | No
         f"{ps['diff_deg_maxabs_where_ray_setting_ge_2km']:.3f} deg where the horizon is set >= 2 km away. "
         f"Comparisons with LOLA laser shots are consistency checks against the DEM's own source data, not "
         f"independent terrain validation. Shot counts (LDEC) are quality indicators, not accuracy guarantees. "
-        f"Regional DEM-based visibility for the published coordinate, not Athena's actual operating conditions. "
-        f"Details: data/terrain/im2-athena_terrain_horizon.json and data/terrain/im2-athena_horizon_crosscheck.json."
+        f"Regional DEM-based visibility for the published coordinate, not actual lander operating conditions. "
+        f"Details: {terrain_report.relative_to(hz.REPO_ROOT).as_posix()} and {terrain_crosscheck.relative_to(hz.REPO_ROOT).as_posix()}."
     )
     horizon = {
         "model": "terrain",
@@ -394,15 +392,25 @@ def dump_site(data: dict) -> str:
 
 
 def main() -> int:
+    ap = sites.parser(description=__doc__)
+    args = ap.parse_args()
     cfg = json.loads(CONFIG.read_text("utf-8"))
+    selected = sites.cli_sites(ap, args, cfg, batch=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     manifest_sites = []
-    for site in cfg["sites"]:
-        try:
-            data = export_site(cfg, site)
-        except hz.HorizonsError as e:
-            print(f"Cannot export {site['id']}: {e}", file=sys.stderr)
-            return 1
+    prepared = [(site, export_site(cfg, site)) for site in selected]
+    manifest_path = OUT_DIR / "manifest.json"
+    selected_ids = {s["id"] for s in selected}
+    retained = []
+    if args.site and manifest_path.exists():
+        previous = json.loads(manifest_path.read_text("utf-8"))
+        for entry in previous["sites"]:
+            if entry["id"] not in selected_ids:
+                other = sites.select_sites(cfg, entry["id"])[0]
+                sites.load_site_data(cfg, other, OUT_DIR, previous)
+                retained.append(entry)
+    for site, data in prepared:
+        sites.require_identity(data["site"], site, "prepared export")
         fname = f"{site['id']}.json"
         (OUT_DIR / fname).write_text(dump_site(data), "utf-8")
         manifest_sites.append({"id": site["id"], "name": site["name"], "file": fname})
@@ -419,7 +427,7 @@ def main() -> int:
         "coverage_start_utc": cfg["coverage_start_utc"],
         "coverage_end_utc": cfg["coverage_end_utc"],
         "sample_step_seconds": cfg["sample_step_seconds"],
-        "sites": manifest_sites,
+        "sites": sorted(manifest_sites + retained, key=lambda e: [s["id"] for s in cfg["sites"]].index(e["id"])),
         "is_synthetic": False,
     }
     (OUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", "utf-8")
@@ -428,4 +436,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(sites.run(main))

@@ -5,9 +5,19 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
-## Start here (handoff for a new session, updated 2026-11-14 after milestone 3)
+## Start here (handoff for a new session, updated 2026-11-14 after milestone 4A)
 Read this section first, then `docs/SPEC.md` and `docs/DATA_CONTRACT.md`.
 The rest of this file is the detailed record behind it.
+
+**Current checkpoint:** Milestone 4A complete on `milestone-4-site-comparison`,
+branched from verified `milestone-3-terrain` at `9e2b1b4` with a clean tree.
+The pipeline accepts `--site im2-athena`; all evidence and shot caches are
+site-specific. Athena scientific outputs are unchanged. Only Athena is
+configured; no second site was selected or fetched, and no frontend code changed.
+**Exact next task (4B):** choose and cite a second documented south-polar point,
+record its coordinate/frame evidence, and verify its terrain coverage and
+surface elevation before fetching Horizons or computing its horizon.
+Do not start the two-site frontend until that evidence and data are ready.
 
 ### What works (verified)
 - **Data:** 60 days of real JPL Horizons Sun/Earth airless apparent az/el of
@@ -31,7 +41,10 @@ The rest of this file is the detailed record behind it.
 
 ### Key files
 Pipeline (`pipeline/`, Python standard library only; run from the repo root):
-- `config.json`: site, altitude, coverage, chunking, terrain product choice (single source of truth).
+- `config.json`: sites, altitude, coverage, chunking, shared terrain product choice (single source of truth).
+- `sites.py`: site selection, canonical report paths, identity and report fingerprint checks.
+  Every pipeline entry point accepts `--site ID`; batch fetch/export/validate
+  still default to all configured sites. Other scripts default only when one site exists.
 - `horizons.py`, `fetch.py`, `export.py`, `validate.py`, `visibility.py`,
   `compare_altitude.py`, `crosscheck_metrics.py` (milestone 2; `export.py`,
   `validate.py`, `visibility.py` and `crosscheck_metrics.py` extended for terrain).
@@ -47,7 +60,7 @@ Pipeline (`pipeline/`, Python standard library only; run from the repo root):
   vs Horizons → `data/terrain/im2-athena_horizon_crosscheck.json`.
 - `terrain_check.py`, `site_elevation.py`: milestone 1.5 product selection and
   surface-elevation checks (unchanged).
-- Tests: `tests/test_pipeline.py`, `tests/test_lola.py`, `tests/test_terrain_horizon.py`.
+- Tests: `tests/test_pipeline.py`, `tests/test_lola.py`, `tests/test_terrain_horizon.py`, `tests/test_sites.py`.
 
 App (`app/src/`):
 - `mission.ts` (window, delay, metric logic), `horizon.ts` (profile lookup,
@@ -138,8 +151,8 @@ App (`app/src/`):
 
 ### Validation commands (expected results on 2026-11-14)
 ```sh
-python pipeline/validate.py                        # 66/66 checks passed
-python -m unittest discover -s pipeline/tests      # Ran 34 tests ... OK
+python pipeline/validate.py                        # 68/68 checks passed
+python -m unittest discover -s pipeline/tests      # Ran 48 tests ... OK
 python pipeline/fetch.py                           # "0 live request(s) made" (all cached)
 python pipeline/crosscheck_metrics.py              # 12-05 +0 d: sun 43.353..., dark 190.333 h
 python pipeline/crosscheck_metrics.py --terrain    # 12-05 +0 d: sun 27.232..., earth 67.262..., dark 244.5 h
@@ -173,7 +186,7 @@ Environment notes (Windows):
 - `numpy` happens to be installed globally but is deliberately **not** used:
   the pipeline stays standard-library only.
 
-### Next steps: second documented south-polar site (Stage 3)
+### Next steps: Milestone 4B, second documented south-polar site (Stage 3)
 Milestone 3 was reviewed in the browser and committed on `milestone-3-terrain`
 ("feat: add validated terrain horizon and linked panorama").
 
@@ -182,26 +195,26 @@ Milestone 3 was reviewed in the browser and committed on `milestone-3-terrain`
    LDEM_80S_20M with enough margin, or plan its own products. Record the
    coordinate source in `pipeline/config.json` (`sites[]`), keeping the
    "frame assumed ME" note honest.
-2. **Coverage first** (`terrain_check.py`, generalise its single-site
-   `cfg["sites"][0]`): site pixel, distance to every product edge per azimuth,
+2. **Coverage first** (`terrain_check.py --site <id>`): site pixel, distance to every product edge per azimuth,
    and whether the stopping rule could leave the 80S/75S files (that azimuth
    would be unknown, never flat). A site nearer 80° S may need LDEM_75S_30M or
    another far-field product; verify labels, sizes and the projection again.
-3. **Surface elevation** (`site_elevation.py`, now single-site): bilinear LDEM
+3. **Surface elevation** (`site_elevation.py --site <id>`): bilinear LDEM
    height, the LOLA-shot consistency check with the mirrored control, product
    comparison, local slope; then the Horizons altitude = surface + 1 m.
 4. **Horizons positions**: add the site to `config.json`; `fetch.py` caches 12
    new chunked responses (sequential, retry/backoff). `validate.py` checks the
    echoed site, altitude and conventions per chunk.
-5. **Terrain horizon**: `terrain_horizon.py`, `terrain_sensitivity.py` and
-   `horizon_crosscheck.py` read `cfg["sites"][0]` and write
-   `data/terrain/im2-athena_*.json`; parametrise both by site id. Re-use the
+5. **Terrain horizon**: `terrain_horizon.py --site <id>` passes the selected
+   site to `terrain_sensitivity.py`; `horizon_crosscheck.py --site <id>` binds
+   its report to that site and the exact horizon report SHA-256. Re-use the
    crosscheck wedge selection (cardinals, every crossing azimuth, extremes) and
    the LOLA-shot boxes (consistency only).
-6. **Export**: `export.py` `terrain_block()` currently returns nothing for any
-   site other than `im2-athena` and reads fixed report paths; make both
-   per-site. The manifest already lists sites; `validate.py`
-   `validate_terrain()` reads the Athena report path and must follow.
+6. **Export/validation**: `export.py --site <id>` and `validate.py --site <id>`
+   already use per-site reports (4A). A scoped export preserves other valid
+   manifest entries and refuses incompatible retained files before writing.
+   Run export once for the smooth samples before terrain sensitivity/cross-checks,
+   then again after both terrain reports exist.
 7. **App**: `loadDataset` loads only `manifest.sites[0]`; the workspace,
    comparison table and panorama are single-site. SPEC asks for two
    comparison cards and a site locator, so this is the main UI work. Keep
@@ -214,6 +227,68 @@ Milestone 3 was reviewed in the browser and committed on `milestone-3-terrain`
 Open question carried over: whether to show the site-position scenarios on the
 panorama (no sensitivity band yet, by decision in the milestone 3 review).
 Backlog, not next: custom coordinates, 3D, deployment.
+
+## Milestone 4A: explicit site IDs and file isolation (2026-11-14)
+
+Completed on `milestone-4-site-comparison` from `9e2b1b4`. Starting branch,
+commit and clean tree were checked, not assumed. No push or merge.
+
+- Added shared selection/ID validation (`sites.py`) and `--site ID` to fetch,
+  terrain downloads/planning/elevation, terrain horizon/cross-check, altitude
+  comparison, metric reference, export and validation. Existing Athena commands
+  and metric positional arguments remain supported. Batch fetch/export/validate
+  default to all configured sites; other commands require an explicit ID once
+  more than one site is configured. Invalid, unknown and duplicate IDs fail clearly.
+- Reports use `<site_id>_<report_kind>.json`; migrated Athena's coverage,
+  elevation and altitude reports. Cross-check reports now carry site identity
+  (ID, coordinates, observer height, Horizons altitude) and the exact terrain
+  report SHA-256 (terrain reports are `-text` in `.gitattributes` to preserve
+  that fingerprint across checkouts). The existing Athena cross-check was annotated from its known
+  provenance, without recomputing it; its timestamp and calculations are preserved.
+- Readers reject mismatched site files, manifest aliases/duplicates, incompatible
+  coverage/dataset metadata, report identities and stale cross-check fingerprints.
+  Raw Horizons reads also check site/target/query/body SHA-256 and echoed observer.
+  Scoped exports prepare selected outputs and validate retained entries before
+  writing; unselected site JSON bytes are preserved.
+- LOLA shot caches now include the site ID and exact-query fingerprint, and
+  verify cached site/query metadata. Migrated all 10 existing Athena cache sets;
+  the 30 raw query/CSV/label files are byte-identical. Large LOLA rasters, labels
+  and pixel windows remain shared product caches, as they contain no site choice.
+- Coordinate source date/product metadata comes from each site's config rather
+  than Athena's LROC product being attached to every site. No app schema change.
+
+Checks observed:
+
+- `python -m unittest discover -s pipeline/tests`: **48 passed**, including
+  14 new tests for explicit/non-first selection, ID errors across all 10 CLIs,
+  report/cache separation, same-coordinate different-ID rejection, wrong/stale
+  reports, manifest aliasing, scoped-export preservation and failure before writes.
+  Multi-site fixtures are synthetic; they do not select a second real site.
+- `python pipeline/validate.py` and `--site im2-athena`: **68/68 passed**;
+  all 17 282 exported Sun/Earth sample pairs match raw Horizons exactly.
+- Default `fetch.py` and explicit Athena fetch: **0 live requests**. All 10
+  migrated shot cache sets were read with network access mocked to fail.
+  `fetch_terrain.py --site im2-athena --check`: **4/4 match** label sizes and
+  recorded download metadata (no expensive rehash or terrain recomputation).
+- Comparison against committed `9e2b1b4`: all 8 641 samples, smooth horizon,
+  both visibility interval lists, terrain profile/setting points/products/checks
+  and observer metadata **exactly equal** (only report/source text changed).
+  All four migrated reports retain identical prior calculations/timestamps;
+  the original full terrain report is unchanged.
+- Independent metrics for baseline/+1/+3/+7 d in both modes: **8/8 exactly equal**
+  to the starting export. Baseline terrain remains Sun 27.232142857142858%,
+  Earth 67.26190476190476%, longest darkness 244.5 h; smooth remains Sun
+  43.3531746031746%, Earth 55.654761904761905%, darkness 190.33333333333334 h.
+  `compare_altitude.py --site im2-athena`: same 145 rows/target and all values.
+- `npm test`: **43 passed**; `npm run build`: passed. No browser recheck was
+  needed for this pipeline-only change; existing browser limitations still apply.
+
+Limits/next task: config's terrain product selection and the planning/elevation
+checks still target the existing south-polar LOLA product family. Site IDs do
+not establish that a future point has adequate coverage; verify that first.
+The frontend remains single-site, and no second site was selected/fetched.
+**Next: Milestone 4B, choose/cite a second documented point and verify terrain
+coverage and surface elevation before retrieving positions or computing terrain.**
 
 ## Milestone 3: terrain horizon for the Athena site (2026-11-14)
 Branch `milestone-3-terrain` from `3971fdd`; browser-reviewed and committed after the review corrections below.
@@ -495,7 +570,7 @@ Terrain changes all of these; see "Effect on the demonstration scenario"
 under Milestone 3.
 
 ## Observer altitude (verified 2026-11-14)
-Evidence: `data/terrain/site_elevation_report.json` (`python pipeline/site_elevation.py`).
+Evidence: `data/terrain/im2-athena_site_elevation_report.json` (`python pipeline/site_elevation.py`).
 
 Two different quantities:
 - **Surface elevation** = height of the modeled lunar surface above the
@@ -544,7 +619,7 @@ Checks:
   echo's printed precision (difference 10.5 mm; see "Echoed radius").
 
 Measured effect of the correction (2026-12-01, 145 samples, 0 km vs 5.3229 km;
-`data/horizons/altitude_comparison.json`):
+`data/horizons/im2-athena_altitude_comparison.json`):
 - Earth: angular change 7.99–8.09 × 10⁻⁴° (mean 8.04 × 10⁻⁴°), all in elevation
   (lower). This matches the parallax h·cos(el)/d at ~379 000 km.
 - Sun: 2.07 × 10⁻⁶°. Azimuth changes ≤ 4 × 10⁻¹⁰°.
@@ -603,7 +678,7 @@ Horizons cache in `data/horizons/`; terrain products LDEM_80S_20M (near field)
 `.gitattributes` so line endings never change their recorded sha256.
 
 ## Terrain product selection (milestone 1.5, unchanged)
-Evidence: `data/terrain/lola_coverage_report.json` (`python pipeline/terrain_check.py`).
+Evidence: `data/terrain/im2-athena_lola_coverage_report.json` (`python pipeline/terrain_check.py`).
 
 **Selected:** LDEM_80S_20M (near field) + LDEM_75S_60M (far field), with
 LDEC_80S_20M / LDEC_75S_60M shot counts. PDS Geosciences Node,
@@ -707,9 +782,10 @@ timeline itself is pointer-only).
 - Keyboard interaction for the timeline itself.
 
 ## Next milestone
-Stage 3: a second documented site with a verified terrain horizon (same
-pipeline: coordinate source, surface-elevation check, product coverage,
-`terrain_horizon.py`, `horizon_crosscheck.py`), after the milestone 3 review.
+Milestone 4B: select and cite the second south-polar point, verify coverage
+and surface elevation with `--site <id>`, then fetch its positions and build
+its checked terrain horizon. Milestone 4A pipeline generalization is complete.
+The frontend still loads the first manifest site; two-site UI is later work.
 
 ## Milestone checklist
 - [x] Shared data contract accepted (v1.0 + clarifications).
@@ -717,6 +793,7 @@ pipeline: coordinate source, surface-elevation check, product coverage,
 - [x] Complete smooth-horizon workflow.
 - [x] Terrain loaded and inspected (4 LOLA products downloaded, sizes = labels, sha256 recorded).
 - [x] First terrain horizon checked (synthetic tests, sensitivity, independently implemented pixel sweep, LOLA-shot consistency); reviewed in the browser 2026-11-14.
+- [x] Milestone 4A: explicit site selection and pipeline file isolation.
 - [ ] Second site integrated.
 - [x] Date-slip comparison verified (smooth horizon).
 - [ ] Sources and limitations complete (terrain sources/limits added; second site pending).
@@ -738,7 +815,7 @@ Record tool/model, task, affected files, and human verification.
   `pipeline/lola.py`, `pipeline/terrain_check.py`, `data/terrain/` | Human verification: **pending**.
 - 2026-11-14 | Claude Code (Claude Opus 5.5) | Milestone 2: checkpoint commit;
   observer altitude verification (`pipeline/site_elevation.py`,
-  `data/terrain/lola_rdr/`, `data/terrain/site_elevation_report.json`);
+  `data/terrain/lola_rdr/`, `data/terrain/im2-athena_site_elevation_report.json`);
   60-day chunked retrieval with retries (`pipeline/horizons.py`, `fetch.py`,
   `export.py`, `validate.py`); altitude comparison (`compare_altitude.py`);
   independent metric reference (`crosscheck_metrics.py`); mission-window UI
@@ -753,6 +830,10 @@ Record tool/model, task, affected files, and human verification.
   app (`horizon.ts`, `Panorama.tsx`, `ElevationChart.tsx`, `App.tsx`,
   `data.ts`, `mission.ts`, `types.ts`, `styles.css`, `horizon.test.ts`), docs |
   Human verification: **pending** (not committed; see milestone report).
+
+- 2026-11-14 | OpenAI Codex | Milestone 4A: site IDs, report/export/cache isolation,
+  focused synthetic tests and Athena regression verification | pipeline/,
+  renamed/annotated cached evidence, README.md, docs | Human verification: **pending**.
 
 ## Handoff template
 - Completed:

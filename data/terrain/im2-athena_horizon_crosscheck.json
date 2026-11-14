@@ -1149,5 +1149,13 @@
   "diff_el_deg": -0.9521201081418043,
   "mirrored_convention_would_predict_az_deg": 29.296793359856167,
   "note": "Sanity check only. Libration moves Earth by several degrees, so the 60-day mean need not equal the +X direction; one direction is tested; the elevation difference (parallax, residual libration) is not analysed. Agreement within ~2 deg rules out a mirrored (counter-clockwise, ~60 deg off here) or grossly rotated azimuth, not sub-degree offsets."
- }
+ },
+ "site": {
+  "id": "im2-athena",
+  "latitude_deg": -84.7906,
+  "longitude_deg_east": 29.1957,
+  "horizons_site_altitude_km": 5.3229,
+  "observer_height_above_surface_m": 1
+ },
+ "terrain_report_sha256": "09ce6ed35c4072f95329cb88559eb3d6fb0102d86361c4602bb478c614112038"
 }

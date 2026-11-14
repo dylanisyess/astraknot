@@ -2,7 +2,10 @@
  "generated_at_utc": "2026-11-14T18:13:52Z",
  "site": {
   "latitude_deg": -84.7906,
-  "longitude_deg_east": 29.1957
+  "longitude_deg_east": 29.1957,
+  "id": "im2-athena",
+  "horizons_site_altitude_km": 5.3229,
+  "observer_height_above_surface_m": 1
  },
  "lola_rdr_check": {
   "source": "PDS Geosciences Node ODE GDS, query=lolardr (LOLA RDR, valid shots only: flag 0)",
@@ -21,7 +24,8 @@
    "retrieved_at_utc": "2026-11-14T18:14:05Z",
    "csv_url": "https://oderest.rsl.wustl.edu/output/20261114t121353023/LolaRDR_-85N-85N_29E29E_20261114T121358264_pts_csv.csv",
    "label_url": "https://oderest.rsl.wustl.edu/output/20261114t121353023/LolaRDR_-85N-85N_29E29E_20261114T121358264_pts_csv.lbl",
-   "points": 30
+   "points": 30,
+   "site_id": "im2-athena"
   },
   "medium_box": {
    "request_url": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-84.800600&maxlat=-84.780600&westernlon=29.095700&easternlon=29.295700",
@@ -38,7 +42,8 @@
    "retrieved_at_utc": "2026-11-14T18:14:18Z",
    "csv_url": "https://oderest.rsl.wustl.edu/output/20261114t121405827/LolaRDR_-85N-85N_29E29E_20261114T121411356_pts_csv.csv",
    "label_url": "https://oderest.rsl.wustl.edu/output/20261114t121405827/LolaRDR_-85N-85N_29E29E_20261114T121411356_pts_csv.lbl",
-   "points": 1131
+   "points": 1131,
+   "site_id": "im2-athena"
   },
   "dem_minus_shot_height_forward_orientation": {
    "n": 1131,
