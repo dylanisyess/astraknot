@@ -1,0 +1,76 @@
+{
+ "consulted_date_utc": "2026-11-14",
+ "source_title": "NASA Lunar Surface Data Book, ACD-50044 Revision A (May 2023), NTRS 20230007818",
+ "source_url": "https://ntrs.nasa.gov/api/citations/20230007818/downloads/ACD-50044%20Lunar%20Surface%20Data%20Book%20Rev%20A.pdf",
+ "chosen_site_id": "connecting-ridge-cr1",
+ "candidates": [
+  {
+   "name": "CR1",
+   "latitude_deg": -89.468,
+   "longitude_deg_east": 222.6,
+   "represents": "Assumed landing point in a notional traverse study, section 7.3.3, p.46",
+   "source_url": "https://ntrs.nasa.gov/api/citations/20230007818/downloads/ACD-50044%20Lunar%20Surface%20Data%20Book%20Rev%20A.pdf",
+   "terrain_placement": {
+    "LDEM_80S_20M": {
+     "fractional_pixel_1based": [
+      14654.52716133553,
+      15794.24100158383
+     ],
+     "site_inside_actual_raster": true,
+     "edge_distance_km_5deg_min_max": [
+      291.61148578161374,
+      427.19272057851776
+     ]
+    },
+    "LDEM_75S_60M": {
+     "fractional_pixel_1based": [
+      7442.50905377851,
+      7822.41366719461
+     ],
+     "site_inside_actual_raster": true,
+     "edge_distance_km_5deg_min_max": [
+      443.3454002579674,
+      631.0706358072348
+     ]
+    }
+   }
+  },
+  {
+   "name": "C2",
+   "latitude_deg": -89.5,
+   "longitude_deg_east": 222.1,
+   "represents": "Endpoint of a notional logistics-transfer traverse, Figure 0.1, p.38",
+   "source_url": "https://ntrs.nasa.gov/api/citations/20230007818/downloads/ACD-50044%20Lunar%20Surface%20Data%20Book%20Rev%20A.pdf",
+   "terrain_placement": {
+    "LDEM_80S_20M": {
+     "fractional_pixel_1based": [
+      14692.257242078489,
+      15762.983405438523
+     ],
+     "site_inside_actual_raster": true,
+     "edge_distance_km_5deg_min_max": [
+      292.1659938180819,
+      427.9696726188995
+     ]
+    },
+    "LDEM_75S_60M": {
+     "fractional_pixel_1based": [
+      7455.085747359496,
+      7811.994468479507
+     ],
+     "site_inside_actual_raster": true,
+     "edge_distance_km_5deg_min_max": [
+      443.85430775536224,
+      632.2972152591683
+     ]
+    }
+   }
+  }
+ ],
+ "selection_rationale": "CR1 has an explicit coordinate tuple and a clear hypothetical landing role in NASA section 7.3.3. C2 is documented but only a logistics-traverse endpoint. Both fit the existing raster footprints. Choose CR1 for source clarity, a location much closer to the pole than Athena, and cached terrain suitability, before computing any coverage skyline or visibility. No illumination or communications results used to rank candidates.",
+ "frame_as_stated_at_coordinate": "not stated",
+ "pipeline_frame_assumption": "ME/DE421 body-fixed, planetocentric latitude, east-positive longitude, following cached LOLA labels; equivalence to source coordinate frame not demonstrated",
+ "point_status": "study location / hypothetical landing point; not an observed landing or a designated mission destination",
+ "coordinate_accuracy": "not stated; published decimal places are not a measured uncertainty",
+ "source_exclusions": "Appendix A2.1 polygon center coordinates and its 5-10 m statement do not describe this selected tuple and were not substituted. Nearby Connecting Ridge C1/CR1 tuples in other studies are not interchangeable."
+}

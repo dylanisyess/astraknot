@@ -1,0 +1,87 @@
+{
+ "generated_at_utc": "2026-11-14T22:03:16Z",
+ "site": {
+  "id": "connecting-ridge-cr1",
+  "latitude_deg": -89.468,
+  "longitude_deg_east": 222.6,
+  "horizons_site_altitude_km": 1.9428,
+  "observer_height_above_surface_m": 1
+ },
+ "lola_rdr_check": {
+  "status": "not performed",
+  "reason": "DEM-only preparation; no RDR shots requested",
+  "absolute_vertical_accuracy": "not established"
+ },
+ "ldem_80s_20m_at_site": {
+  "fractional_pixel_1based": {
+   "sample": 14654.52716133553,
+   "line": 15794.24100158383
+  },
+  "bilinear_height_m": 1941.8205581012821,
+  "pixels_used": [
+   {
+    "sample": 14654,
+    "line": 15794,
+    "dn": 3883,
+    "height_m": 1941.5,
+    "weight": 0.35888379743588095
+   },
+   {
+    "sample": 14655,
+    "line": 15794,
+    "dn": 3884,
+    "height_m": 1942.0,
+    "weight": 0.40011461873368015
+   },
+   {
+    "sample": 14654,
+    "line": 15795,
+    "dn": 3884,
+    "height_m": 1942.0,
+    "weight": 0.11395486703335544
+   },
+   {
+    "sample": 14655,
+    "line": 15795,
+    "dn": 3884,
+    "height_m": 1942.0,
+    "weight": 0.12704671679708346
+   }
+  ],
+  "nearest_pixel_height_m": 1942.0,
+  "ground_pixel_m": 19.99956893289393,
+  "local_slope_deg": 1.4321270384530604,
+  "height_change_on_30m_ring_m": [
+   0.08433350182031063,
+   2.028024892299527
+  ],
+  "height_change_on_100m_ring_m": [
+   -1.6442991633473412,
+   6.41375723182864
+  ],
+  "scaling": "height = DN x 0.5 m relative to 1737400 m sphere"
+ },
+ "site_height_by_product_m": {
+  "LDEM_80S_20M": 1941.8205581012821,
+  "LDEM_80S_40M": null,
+  "LDEM_85S_20M": null,
+  "LDEM_85S_10M": null,
+  "LDEM_75S_60M": 1942.985637694137,
+  "LDEM_64 (nearest, ~474 m lat spacing)": null
+ },
+ "product_comparisons_not_performed": {
+  "LDEM_80S_40M": "Offline: source is not cached: https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_80s_40m.img",
+  "LDEM_85S_20M": "Offline: source is not cached: https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_85s_20m.img",
+  "LDEM_85S_10M": "Offline: source is not cached: https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_85s_10m.img",
+  "LDEM_64 (nearest, ~474 m lat spacing)": "Offline: source is not cached: https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_64.img"
+ },
+ "horizons_altitude": {
+  "surface_elevation_m": 1941.8,
+  "surface_elevation_reference": "height above the 1737.4 km LOLA reference sphere (LDEM_80S_20M, bilinear)",
+  "observer_height_above_surface_m": 1,
+  "horizons_site_altitude_km": 1.9428,
+  "eye_above_bilinear_dem_m": 0.9794418987180507,
+  "submission_status": "planned only; this script does not request Horizons",
+  "convention": "Horizons GEODETIC altitude is height above the reference ellipsoid; for the Moon the response header reports a 1737.4 km sphere, the same reference as LOLA heights. For previously fetched sites checked via |Center cylindric| = 1737.4 km + altitude; new sites still require that check after a future fetch."
+ }
+}

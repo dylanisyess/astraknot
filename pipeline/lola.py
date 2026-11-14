@@ -32,6 +32,7 @@ LABEL_DIR = REPO_ROOT / "data" / "terrain" / "labels"      # committed (small)
 RAW_DIR = REPO_ROOT / "data" / "raw" / "lola"               # git-ignored (large)
 USER_AGENT = "lunar-visibility-pipeline/0.1 (python urllib)"
 PAUSE_S = 0.5
+OFFLINE = False  # enabled by preparation CLIs; missing cache must fail, never download
 R_REF_M = 1737400.0  # LOLA reference sphere (labels: OFFSET, A/B/C_AXIS_RADIUS)
 
 
@@ -40,6 +41,8 @@ def _utc_now() -> str:
 
 
 def _get(url: str, byte_range: tuple[int, int] | None = None) -> tuple[bytes, dict]:
+    if OFFLINE:
+        raise RuntimeError(f"Offline: source is not cached: {url}")
     headers = {"User-Agent": USER_AGENT}
     if byte_range:
         headers["Range"] = f"bytes={byte_range[0]}-{byte_range[1]}"
@@ -56,6 +59,8 @@ def _get(url: str, byte_range: tuple[int, int] | None = None) -> tuple[bytes, di
 
 
 def head_size(url: str) -> int:
+    if OFFLINE:
+        raise RuntimeError(f"Offline: HEAD request disabled: {url}")
     req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=120) as r:
         size = int(r.headers["Content-Length"])
@@ -359,10 +364,22 @@ class Window:
 
 
 def read_window(lbl: Label, i0: int, i1: int, j0: int, j1: int) -> list[list[int]]:
-    """Read lines j0..j1 (1-based, inclusive) with ONE contiguous range request,
-    return the sample columns i0..i1. Cached under data/raw/lola/windows/."""
+    """Read a window from a complete local IMG first, otherwise cached/remote range.
+    Bounds are 1-based and inclusive. Never download a complete missing raster.
+    """
     if not (1 <= i0 <= i1 <= lbl.samples and 1 <= j0 <= j1 <= lbl.lines):
         raise ValueError("window outside file")
+    local = RAW_DIR / lbl.name.lower() / f"{lbl.name.lower()}.img"
+    if local.exists():
+        if local.stat().st_size != lbl.expected_bytes:
+            raise RuntimeError(f"Incomplete local raster: {local}")
+        width = i1 - i0 + 1
+        with local.open("rb") as f:
+            rows = []
+            for j in range(j0, j1 + 1):
+                f.seek((j - 1) * lbl.row_bytes + (i0 - 1) * (lbl.sample_bits // 8))
+                rows.append(list(_decode(lbl, f.read(width * (lbl.sample_bits // 8)))))
+        return rows
     start = (j0 - 1) * lbl.row_bytes
     end = j1 * lbl.row_bytes - 1
     cache = RAW_DIR / "windows" / f"{lbl.name.lower()}_{start}_{end}.bin"

@@ -21,6 +21,28 @@
       "horizon_model": "smooth",
       "coordinate_source_retrieved_at_utc": "2026-11-14",
       "coordinate_source_product": "LROC featured image 1408"
+    },
+    {
+      "id": "connecting-ridge-cr1",
+      "name": "Connecting Ridge CR1 (NASA notional study point)",
+      "latitude_deg": -89.468,
+      "longitude_deg_east": 222.6,
+      "coordinate_frame": "ME/DE421 body-fixed, planetocentric latitude, east-positive longitude, following cached LOLA labels; equivalence to source coordinate frame not demonstrated. ASSUMED: NASA section 7.3.3 and Figure 0.1 do not specify the frame realization or latitude type for this tuple.",
+      "coordinate_source_url": "https://ntrs.nasa.gov/api/citations/20230007818/downloads/ACD-50044%20Lunar%20Surface%20Data%20Book%20Rev%20A.pdf#page=46",
+      "coordinate_source_title": "NASA Lunar Surface Data Book ACD-50044 Rev A, section 7.3.3 p.46: CR1 (89.468 S, 222.6 E), assumed landing point in a notional traverse scenario",
+      "coordinate_source_retrieved_at_utc": "2026-11-14",
+      "coordinate_source_product": "ACD-50044 Revision A, NTRS 20230007818, section 7.3.3 p.46; Figure 0.1 p.38",
+      "point_type": "notional_study_location",
+      "point_description": "study location / hypothetical landing point; not an observed landing or a designated mission destination",
+      "coordinate_accuracy_note": "not stated; published decimal places are not a measured uncertainty",
+      "observer_height_above_surface_m": 1,
+      "surface_elevation_m": 1941.8,
+      "surface_elevation_reference": "Height above the 1737.4 km LOLA reference sphere, LDEM_80S_20M V2.0, bilinear at the published point interpreted in ME. Rounded to 0.1 m. Absolute vertical accuracy and source-frame equivalence are not established. No local RDR shot consistency check performed. See data/terrain/connecting-ridge-cr1_site_elevation_report.json.",
+      "horizons_site_altitude_km": 1.9428,
+      "horizons_altitude_reference": "PLANNED, NOT SUBMITTED: height above the 1737.4 km lunar reference sphere, the same sphere as cached LOLA heights. Horizons echo remains to be checked in a later milestone.",
+      "altitude_conversion_note": "Planned altitude = (rounded surface 1941.8 m + nominal 1 m observer) / 1000 = 1.9428 km. Bilinear surface 1941.820558101 m; rounding gives an effective eye height 0.979441899 m above this DEM. No Horizons request or full horizon computation has been made.",
+      "horizon_model": "smooth",
+      "preparation_status": "terrain_preparation_only; no positions or final terrain horizon"
     }
   ],
   "terrain": {

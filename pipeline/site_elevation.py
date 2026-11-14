@@ -9,9 +9,10 @@ evaluated as a control. The LDEM was gridded from these shots, so this is not
 an independent check of the terrain heights themselves.
 
 Also compares the site value across LOLA products and estimates how sensitive
-the elevation is to the site-coordinate uncertainty (local slope).
+the elevation changes around the published point (local slope; not a coordinate uncertainty).
 
-    python pipeline/site_elevation.py
+    python pipeline/site_elevation.py --site ID
+    python pipeline/site_elevation.py --site ID --offline --dem-only
 Writes data/terrain/<site_id>_site_elevation_report.json; caches the RDR query
 responses in data/terrain/lola_rdr/.
 """
@@ -101,7 +102,10 @@ def stats(v: list[float]) -> dict:
 
 def main() -> int:
     ap = sites.parser(description=__doc__)
+    ap.add_argument("--offline", action="store_true", help="cached inputs only; no HTTP requests")
+    ap.add_argument("--dem-only", action="store_true", help="omit uncached LOLA RDR shot checks")
     args = ap.parse_args()
+    lola.OFFLINE = args.offline
     cfg = json.loads(CONFIG.read_text("utf-8"))
     site = sites.cli_sites(ap, args, cfg)[0]
     report_path = sites.report_path(site["id"], "site_elevation_report")
@@ -115,40 +119,44 @@ def main() -> int:
     win = lola.Window(dem, round(fi), round(fj), 50)
     site_b = win.bilinear(fi, fj)
     nearest = win.dn(round(fi), round(fj)) * dem.scaling
-    mfi, mfj = lola.polar_inverse(dem, lat, lon, east_right=False)
-    mwin = lola.Window(dem, round(mfi), round(mfj), 50)
 
-    # LOLA RDR shots (the DEM's source data): ~90 m box and ~600 m box around the site.
-    dlat_s, dlon_s = 0.0015, 0.015
-    dlat_m, dlon_m = 0.0100, 0.100
-    small, small_meta = gds_points("site_box_90m", lat - dlat_s, lat + dlat_s, lon - dlon_s, lon + dlon_s, site_id=site["id"])
-    med, med_meta = gds_points("site_box_600m", lat - dlat_m, lat + dlat_m, lon - dlon_m, lon + dlon_m, site_id=site["id"])
+    if args.dem_only:
+        rep["lola_rdr_check"] = {"status": "not performed", "reason": "DEM-only preparation; no RDR shots requested",
+                                 "absolute_vertical_accuracy": "not established"}
+    else:
+        mfi, mfj = lola.polar_inverse(dem, lat, lon, east_right=False)
+        mwin = lola.Window(dem, round(mfi), round(mfj), 50)
+        # LOLA RDR shots (the DEM's source data): ~90 m box and ~600 m box around the site.
+        dlat_s, dlon_s = 0.0015, 0.015
+        dlat_m, dlon_m = 0.0100, 0.100
+        small, small_meta = gds_points("site_box_90m", lat - dlat_s, lat + dlat_s, lon - dlon_s, lon + dlon_s, site_id=site["id"])
+        med, med_meta = gds_points("site_box_600m", lat - dlat_m, lat + dlat_m, lon - dlon_m, lon + dlon_m, site_id=site["id"])
 
-    def residuals(points, w, east_right):
-        out = []
-        for p in points:
-            if p["flag"] != 0:
-                continue
-            b = w.bilinear(*lola.polar_inverse(dem, p["lat"], p["lon"], east_right=east_right))
-            if b is None:
-                continue
-            out.append(b["height_m"] - (p["radius_km"] * 1000 - lola.R_REF_M))
-        return out
+        def residuals(points, w, east_right):
+            out = []
+            for p in points:
+                if p["flag"] != 0:
+                    continue
+                b = w.bilinear(*lola.polar_inverse(dem, p["lat"], p["lon"], east_right=east_right))
+                if b is None:
+                    continue
+                out.append(b["height_m"] - (p["radius_km"] * 1000 - lola.R_REF_M))
+            return out
 
-    res_ok = residuals(med, win, True)
-    res_mirror = residuals(med, mwin, False)
-    near = sorted(((ground_dist_m(lat, lon, p["lat"], p["lon"]), p) for p in small), key=lambda t: t[0])
-    within = [p["radius_km"] * 1000 - lola.R_REF_M for d, p in near if d <= 30.0]
-    rep["lola_rdr_check"] = {
-        "source": "PDS Geosciences Node ODE GDS, query=lolardr (LOLA RDR, valid shots only: flag 0)",
-        "small_box": {**small_meta, "points": len(small)},
-        "medium_box": {**med_meta, "points": len(med)},
-        "dem_minus_shot_height_forward_orientation": stats(res_ok),
-        "dem_minus_shot_height_mirrored_control": stats(res_mirror),
-        "nearest_shot_to_site_m": near[0][0],
-        "shots_within_30m_of_site": len(within),
-        "shot_heights_within_30m_m": [min(within), statistics.fmean(within), max(within)] if within else None,
-    }
+        res_ok = residuals(med, win, True)
+        res_mirror = residuals(med, mwin, False)
+        near = sorted(((ground_dist_m(lat, lon, p["lat"], p["lon"]), p) for p in small), key=lambda t: t[0])
+        within = [p["radius_km"] * 1000 - lola.R_REF_M for d, p in near if d <= 30.0]
+        rep["lola_rdr_check"] = {
+            "source": "PDS Geosciences Node ODE GDS, query=lolardr (LOLA RDR, valid shots only: flag 0)",
+            "small_box": {**small_meta, "points": len(small)},
+            "medium_box": {**med_meta, "points": len(med)},
+            "dem_minus_shot_height_forward_orientation": stats(res_ok),
+            "dem_minus_shot_height_mirrored_control": stats(res_mirror),
+            "nearest_shot_to_site_m": near[0][0],
+            "shots_within_30m_of_site": len(within),
+            "shot_heights_within_30m_m": [min(within), statistics.fmean(within), max(within)] if within else None,
+        }
 
     # Pixel selection detail and local slope / sensitivity.
     s = dem.map_scale_m / lola.stereo_scale_factor(lat)
@@ -178,41 +186,54 @@ def main() -> int:
     }
 
     # Cross-product comparison at the site.
-    comp = {}
-    for name in ("LDEM_80S_40M", "LDEM_85S_20M", "LDEM_85S_10M", "LDEM_75S_60M"):
-        l2 = lola.load_label(name)
-        f2i, f2j = lola.polar_inverse(l2, lat, lon)
-        w2 = lola.Window(l2, round(f2i), round(f2j), 2)
-        comp[name] = w2.bilinear(f2i, f2j)["height_m"]
-    cyl = lola.load_label("LDEM_64", kind="cylindrical")
-    ci, cj = lola.cyl_pixel(cyl, lat, lon)
-    comp["LDEM_64 (nearest, ~474 m lat spacing)"] = lola.read_window(cyl, ci, ci, cj, cj)[0][0] * cyl.scaling
+    comp, unavailable = {}, {}
+    for name in ("LDEM_80S_40M", "LDEM_85S_20M", "LDEM_85S_10M", "LDEM_75S_60M", "LDEM_64"):
+        display_name = "LDEM_64 (nearest, ~474 m lat spacing)" if name == "LDEM_64" else name
+        try:
+            l2 = lola.load_label(name, kind="cylindrical" if name == "LDEM_64" else "polar")
+            if name == "LDEM_64":
+                ci, cj = lola.cyl_pixel(l2, lat, lon)
+                comp[display_name] = lola.read_window(l2, ci, ci, cj, cj)[0][0] * l2.scaling
+            else:
+                f2i, f2j = lola.polar_inverse(l2, lat, lon)
+                comp[display_name] = lola.Window(l2, round(f2i), round(f2j), 2).bilinear(f2i, f2j)["height_m"]
+        except RuntimeError as e:
+            if not args.offline:
+                raise
+            comp[display_name] = None
+            unavailable[display_name] = str(e)
     rep["site_height_by_product_m"] = {"LDEM_80S_20M": site_b["height_m"], **comp}
+    if unavailable:
+        rep["product_comparisons_not_performed"] = unavailable
 
     # Altitude to submit to Horizons.
-    obs_h = 1.0
+    obs_h = site["observer_height_above_surface_m"]
     surf = round(site_b["height_m"], 1)
     rep["horizons_altitude"] = {
         "surface_elevation_m": surf,
         "surface_elevation_reference": "height above the 1737.4 km LOLA reference sphere (LDEM_80S_20M, bilinear)",
         "observer_height_above_surface_m": obs_h,
         "horizons_site_altitude_km": round((surf + obs_h) / 1000, 4),
+        "eye_above_bilinear_dem_m": round((surf + obs_h) / 1000, 4) * 1000 - site_b["height_m"],
+        "submission_status": "planned only; this script does not request Horizons",
         "convention": ("Horizons GEODETIC altitude is height above the reference ellipsoid; for the Moon the "
                        "response header reports a 1737.4 km sphere, the same reference as LOLA heights. "
-                       "Checked in each response via |Center cylindric| = 1737.4 km + altitude."),
+                       "For previously fetched sites checked via |Center cylindric| = 1737.4 km + altitude; "
+                       "new sites still require that check after a future fetch."),
     }
 
     print(f"LDEM_80S_20M at site: bilinear {site_b['height_m']:.2f} m, nearest pixel {nearest:.1f} m "
           f"(pixel {fi:.2f}, {fj:.2f}); slope {slope:.2f} deg")
-    r = rep["lola_rdr_check"]
-    print(f"RDR shots: {r['small_box']['points']} in ~90 m box, {r['medium_box']['points']} in ~600 m box; "
-          f"nearest shot {r['nearest_shot_to_site_m']:.1f} m from site; {r['shots_within_30m_of_site']} within 30 m "
-          f"(heights {r['shot_heights_within_30m_m']})")
-    a, b = r["dem_minus_shot_height_forward_orientation"], r["dem_minus_shot_height_mirrored_control"]
-    print(f"DEM - shot (forward orientation): n={a['n']} mean {a['mean_m']:+.2f} m sd {a['sd_m']:.2f} m max {a['max_abs_m']:.2f} m")
-    print(f"DEM - shot (mirrored control):    n={b['n']} mean {b['mean_m']:+.2f} m sd {b['sd_m']:.2f} m max {b['max_abs_m']:.2f} m")
+    if not args.dem_only:
+        r = rep["lola_rdr_check"]
+        print(f"RDR shots: {r['small_box']['points']} in ~90 m box, {r['medium_box']['points']} in ~600 m box; "
+              f"nearest shot {r['nearest_shot_to_site_m']:.1f} m from site; {r['shots_within_30m_of_site']} within 30 m "
+              f"(heights {r['shot_heights_within_30m_m']})")
+        a, b = r["dem_minus_shot_height_forward_orientation"], r["dem_minus_shot_height_mirrored_control"]
+        print(f"DEM - shot (forward orientation): n={a['n']} mean {a['mean_m']:+.2f} m sd {a['sd_m']:.2f} m max {a['max_abs_m']:.2f} m")
+        print(f"DEM - shot (mirrored control):    n={b['n']} mean {b['mean_m']:+.2f} m sd {b['sd_m']:.2f} m max {b['max_abs_m']:.2f} m")
     for k, v in rep["site_height_by_product_m"].items():
-        print(f"  {k:40s} {v:9.2f} m")
+        print(f"  {k:40s} " + ("not cached / not checked" if v is None else f"{v:9.2f} m"))
     print(f"height change within 30 m ring: {rep['ldem_80s_20m_at_site']['height_change_on_30m_ring_m']}, "
           f"100 m ring: {rep['ldem_80s_20m_at_site']['height_change_on_100m_ring_m']}")
     print(f"Horizons altitude: {rep['horizons_altitude']['horizons_site_altitude_km']} km")

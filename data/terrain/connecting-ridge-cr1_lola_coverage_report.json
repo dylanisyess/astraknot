@@ -1,0 +1,3441 @@
+{
+ "generated_at_utc": "2026-11-14T22:03:10Z",
+ "site": {
+  "id": "connecting-ridge-cr1",
+  "latitude_deg": -89.468,
+  "longitude_deg_east": 222.6,
+  "horizons_site_altitude_km": 1.9428,
+  "observer_height_above_surface_m": 1
+ },
+ "source": {
+  "archive": "PDS Geosciences Node",
+  "data_set_id": "LRO-L-LOLA-4-GDR-V1.0",
+  "polar_dir": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img",
+  "projection_catalog": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/catalog/dsmap_polar.cat"
+ },
+ "products": {
+  "LDEM_875S_5M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_875s_5m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_875s_5m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 30336,
+   "line_samples": 30336,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 5.0,
+   "ground_pixel_m_at_site": 4.999892233223482,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 1840545792,
+   "local_file_bytes": null,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": null,
+   "map_half_width_km": 75.84,
+   "lat_at_edge_midpoints_deg": -87.49935412969984,
+   "lat_at_corners_deg": -86.46411384641807,
+   "label_maximum_latitude": "-87.5 <deg>",
+   "site_pixel_1based": [
+    12984.608645342121,
+    17543.464006335318
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 64.00900726299733,
+   "site_to_edge_km_max": 119.13173256441951
+  },
+  "LDEM_875S_10M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_875s_10m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_875s_10m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 15168,
+   "line_samples": 15168,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 10.0,
+   "ground_pixel_m_at_site": 9.999784466446965,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 460136448,
+   "local_file_bytes": null,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": null,
+   "map_half_width_km": 75.84,
+   "lat_at_edge_midpoints_deg": -87.49935412969984,
+   "lat_at_corners_deg": -86.46411384641807,
+   "label_maximum_latitude": "-87.5 <deg>",
+   "site_pixel_1based": [
+    6492.554322671061,
+    8771.982003167659
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 64.00900726299733,
+   "site_to_edge_km_max": 119.13173256441951
+  },
+  "LDEM_875S_20M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_875s_20m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_875s_20m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 7584,
+   "line_samples": 7584,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 20.0,
+   "ground_pixel_m_at_site": 19.99956893289393,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 115034112,
+   "local_file_bytes": null,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": null,
+   "map_half_width_km": 75.84,
+   "lat_at_edge_midpoints_deg": -87.49935412969984,
+   "lat_at_corners_deg": -86.46411384641807,
+   "label_maximum_latitude": "-87.5 <deg>",
+   "site_pixel_1based": [
+    3246.5271613355303,
+    4386.2410015838295
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 64.00900726299733,
+   "site_to_edge_km_max": 119.13173256441951
+  },
+  "LDEM_85S_10M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_85s_10m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_85s_10m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 30336,
+   "line_samples": 30336,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 10.0,
+   "ground_pixel_m_at_site": 9.999784466446965,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 1840545792,
+   "local_file_bytes": null,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": null,
+   "map_half_width_km": 151.68,
+   "lat_at_edge_midpoints_deg": -85.00108766213854,
+   "lat_at_corners_deg": -82.9349480697874,
+   "label_maximum_latitude": "-85 <deg>",
+   "site_pixel_1based": [
+    14076.55432267106,
+    16355.982003167659
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 139.83165773563087,
+   "site_to_edge_km_max": 221.9507601945661
+  },
+  "LDEM_85S_20M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_85s_20m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_85s_20m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 15168,
+   "line_samples": 15168,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 20.0,
+   "ground_pixel_m_at_site": 19.99956893289393,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 460136448,
+   "local_file_bytes": null,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": null,
+   "map_half_width_km": 151.68,
+   "lat_at_edge_midpoints_deg": -85.00108766213854,
+   "lat_at_corners_deg": -82.9349480697874,
+   "label_maximum_latitude": "-85 <deg>",
+   "site_pixel_1based": [
+    7038.52716133553,
+    8178.2410015838295
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 139.83165773563087,
+   "site_to_edge_km_max": 221.9507601945661
+  },
+  "LDEM_85S_40M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_85s_40m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_85s_40m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 7584,
+   "line_samples": 7584,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 40.0,
+   "ground_pixel_m_at_site": 39.99913786578786,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 115034112,
+   "local_file_bytes": null,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": null,
+   "map_half_width_km": 151.68,
+   "lat_at_edge_midpoints_deg": -85.00108766213854,
+   "lat_at_corners_deg": -82.9349480697874,
+   "label_maximum_latitude": "-85 <deg>",
+   "site_pixel_1based": [
+    3519.513580667765,
+    4089.3705007919148
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 139.83165773563087,
+   "site_to_edge_km_max": 221.9507601945661
+  },
+  "LDEM_80S_20M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_80s_20m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_80s_20m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 30400,
+   "line_samples": 30400,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 20.0,
+   "ground_pixel_m_at_site": 19.99956893289393,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 1848320000,
+   "local_file_bytes": 1848320000,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": true,
+   "map_half_width_km": 304.0,
+   "lat_at_edge_midpoints_deg": -80.00018353583529,
+   "lat_at_corners_deg": -75.89380428852846,
+   "label_maximum_latitude": "-80 <deg>",
+   "site_pixel_1based": [
+    14654.52716133553,
+    15794.24100158383
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 291.61148578161374,
+   "site_to_edge_km_max": 427.19272057851776
+  },
+  "LDEM_80S_40M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_80s_40m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_80s_40m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 15200,
+   "line_samples": 15200,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 40.0,
+   "ground_pixel_m_at_site": 39.99913786578786,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 462080000,
+   "local_file_bytes": null,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": null,
+   "map_half_width_km": 304.0,
+   "lat_at_edge_midpoints_deg": -80.00018353583529,
+   "lat_at_corners_deg": -75.89380428852846,
+   "label_maximum_latitude": "-80 <deg>",
+   "site_pixel_1based": [
+    7327.513580667765,
+    7897.370500791915
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 291.61148578161374,
+   "site_to_edge_km_max": 427.19272057851776
+  },
+  "LDEM_80S_80M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_80s_80m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_80s_80m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 7600,
+   "line_samples": 7600,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 80.0,
+   "ground_pixel_m_at_site": 79.99827573157572,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 115520000,
+   "local_file_bytes": null,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": null,
+   "map_half_width_km": 304.0,
+   "lat_at_edge_midpoints_deg": -80.00018353583529,
+   "lat_at_corners_deg": -75.89380428852846,
+   "label_maximum_latitude": "-80 <deg>",
+   "site_pixel_1based": [
+    3664.0067903338827,
+    3948.9352503959576
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 291.61148578161374,
+   "site_to_edge_km_max": 427.19272057851776
+  },
+  "LDEM_75S_30M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_30m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_30m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 30496,
+   "line_samples": 30496,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 30.0,
+   "ground_pixel_m_at_site": 29.999353399340894,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 1860012032,
+   "local_file_bytes": null,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": null,
+   "map_half_width_km": 457.44,
+   "lat_at_edge_midpoints_deg": -75.00084601460128,
+   "lat_at_corners_deg": -68.90749860552876,
+   "label_maximum_latitude": "-75 <deg>",
+   "site_pixel_1based": [
+    14884.51810755702,
+    15644.32733438922
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 443.3454002579674,
+   "site_to_edge_km_max": 631.0706358072348
+  },
+  "LDEM_75S_60M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_60m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_60m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 15248,
+   "line_samples": 15248,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 60.0,
+   "ground_pixel_m_at_site": 59.99870679868179,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 465003008,
+   "local_file_bytes": 465003008,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": true,
+   "map_half_width_km": 457.44,
+   "lat_at_edge_midpoints_deg": -75.00084601460128,
+   "lat_at_corners_deg": -68.90749860552876,
+   "label_maximum_latitude": "-75 <deg>",
+   "site_pixel_1based": [
+    7442.50905377851,
+    7822.41366719461
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 443.3454002579674,
+   "site_to_edge_km_max": 631.0706358072348
+  },
+  "LDEM_75S_120M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_120m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_120m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 7624,
+   "line_samples": 7624,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 120.0,
+   "ground_pixel_m_at_site": 119.99741359736358,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 116250752,
+   "local_file_bytes": null,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": null,
+   "map_half_width_km": 457.44,
+   "lat_at_edge_midpoints_deg": -75.00084601460128,
+   "lat_at_corners_deg": -68.90749860552876,
+   "label_maximum_latitude": "-75 <deg>",
+   "site_pixel_1based": [
+    3721.504526889255,
+    3911.456833597305
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 443.3454002579674,
+   "site_to_edge_km_max": 631.0706358072348
+  },
+  "LDEM_75S_240M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_240m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_240m.lbl",
+   "product_version": "V2.0",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 3812,
+   "line_samples": 3812,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 0.5,
+   "unit": "METER",
+   "height_reference": "radius 1737400 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 240.0,
+   "ground_pixel_m_at_site": 239.99482719472715,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 29062688,
+   "local_file_bytes": 29062688,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": true,
+   "map_half_width_km": 457.44,
+   "lat_at_edge_midpoints_deg": -75.00084601460128,
+   "lat_at_corners_deg": -68.90749860552876,
+   "label_maximum_latitude": "-75 <deg>",
+   "site_pixel_1based": [
+    1861.0022634446275,
+    1955.9784167986525
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 443.3454002579674,
+   "site_to_edge_km_max": 631.0706358072348
+  },
+  "LDEC_80S_20M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldec_80s_20m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldec_80s_20m.lbl",
+   "product_version": "V2.1",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 30400,
+   "line_samples": 30400,
+   "sample_type": "LSB_INTEGER 8-bit",
+   "scaling_factor": 1.0,
+   "unit": "N/A",
+   "height_reference": "radius 0 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 20.0,
+   "ground_pixel_m_at_site": 19.99956893289393,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 924160000,
+   "local_file_bytes": 924160000,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": true,
+   "map_half_width_km": 304.0,
+   "lat_at_edge_midpoints_deg": -80.00018353583529,
+   "lat_at_corners_deg": -75.89380428852846,
+   "label_maximum_latitude": "-80 <deg>",
+   "site_pixel_1based": [
+    14654.52716133553,
+    15794.24100158383
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 291.61148578161374,
+   "site_to_edge_km_max": 427.19272057851776
+  },
+  "LDEC_75S_240M": {
+   "img_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldec_75s_240m.img",
+   "label_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldec_75s_240m.lbl",
+   "product_version": "V2.1",
+   "lola_data_through": "2017-02-02T22:18:35",
+   "lines": 3812,
+   "line_samples": 3812,
+   "sample_type": "LSB_INTEGER 16-bit",
+   "scaling_factor": 1.0,
+   "unit": "N/A",
+   "height_reference": "radius 0 m sphere (label OFFSET)",
+   "map_scale_m_per_pixel_at_pole": 240.0,
+   "ground_pixel_m_at_site": 239.99482719472715,
+   "frame": "MEAN EARTH/POLAR AXIS OF DE421",
+   "latitude_type": "PLANETOCENTRIC",
+   "missing_constant": null,
+   "http_content_length": null,
+   "label_implied_bytes": 29062688,
+   "local_file_bytes": 29062688,
+   "size_check_method": "local IMG size only (offline)",
+   "bytes_match": true,
+   "map_half_width_km": 457.44,
+   "lat_at_edge_midpoints_deg": -75.00084601460128,
+   "lat_at_corners_deg": -68.90749860552876,
+   "label_maximum_latitude": "-75 <deg>",
+   "site_pixel_1based": [
+    1861.0022634446275,
+    1955.9784167986525
+   ],
+   "site_inside": true,
+   "site_to_edge_km_min": 443.3454002579674,
+   "site_to_edge_km_max": 631.0706358072348
+  }
+ },
+ "orientation_check": {
+  "method": "LDEM_75S_240M (bilinear) vs global LDEM_64 (nearest) at 4 latitudes x 120 longitudes",
+  "points": 480,
+  "rms_m": {
+   "east_right": 29.821876386511697,
+   "east_left": 2507.1329632628162
+  },
+  "verdict": "forward equations (90E to the right of the pole) confirmed"
+ },
+ "site_terrain_20m": {
+  "window": "101 x 101 px (2.02 km) centred on site",
+  "site_height_m_bilinear": 1941.8205581012821,
+  "site_pixel_count": 0,
+  "window_height_min_max_m": [
+   1661.0,
+   1959.0
+  ],
+  "window_fraction_pixels_with_zero_lola_shots": 0.2192922262523282,
+  "window_max_count": 16,
+  "nearest_measured_pixel_from_site_m": 20.0
+ },
+ "horizon_search": {
+  "method": "Ray march on LDEM_75S_240M from the site at 240 m steps; stop when terrain at the global maximum height (LDEM_64 label MAXIMUM, +100 m margin) at that distance would lie below the running horizon (elevation of a fixed-height point decreases monotonically with distance). Lunar curvature enters once, via exact sphere geometry.",
+  "observer_radius_m": 1739342.8205581012,
+  "global_max_height_m_used": 10873.0,
+  "azimuth_step_deg": 1.0,
+  "required_search_km_min_median_max": [
+   147.84,
+   215.76,
+   296.16
+  ],
+  "azimuths_unknown_ray_exits_75S_file": [],
+  "azimuths_needing_terrain_beyond_80S_file": [],
+  "fraction_zero_shot_240m_pixels_along_rays": 0.00026198585276395077,
+  "coarse_horizon_deg_min_max": [
+   -3.1615557534027037,
+   1.0110530791629875
+  ],
+  "caveat": "coarse_horizon values are a 240 m diagnostic for coverage planning, NOT a validated horizon",
+  "rays": [
+   {
+    "az_deg": 0.0,
+    "required_search_km": 151.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8719783888641157,
+    "coarse_horizon_at_km": 0.72,
+    "edge_80S_km": 394.9286757269874
+   },
+   {
+    "az_deg": 1.0,
+    "required_search_km": 151.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8684450419341677,
+    "coarse_horizon_at_km": 0.72,
+    "edge_80S_km": 401.3750119712204
+   },
+   {
+    "az_deg": 2.0,
+    "required_search_km": 151.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8643289061730826,
+    "coarse_horizon_at_km": 0.72,
+    "edge_80S_km": 408.1598144178279
+   },
+   {
+    "az_deg": 3.0,
+    "required_search_km": 151.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8596297984647828,
+    "coarse_horizon_at_km": 0.72,
+    "edge_80S_km": 408.0742357065901
+   },
+   {
+    "az_deg": 4.0,
+    "required_search_km": 151.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8543493051077063,
+    "coarse_horizon_at_km": 0.72,
+    "edge_80S_km": 401.3389362413436
+   },
+   {
+    "az_deg": 5.0,
+    "required_search_km": 151.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8484907812644205,
+    "coarse_horizon_at_km": 0.72,
+    "edge_80S_km": 394.9389565521851
+   },
+   {
+    "az_deg": 6.0,
+    "required_search_km": 152.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8354923293362506,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 388.85485891858116
+   },
+   {
+    "az_deg": 7.0,
+    "required_search_km": 152.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8413194339966676,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 383.0687861633487
+   },
+   {
+    "az_deg": 8.0,
+    "required_search_km": 151.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8458190578903446,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 377.5643094824627
+   },
+   {
+    "az_deg": 9.0,
+    "required_search_km": 151.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8490006125068957,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 372.3262936794199
+   },
+   {
+    "az_deg": 10.0,
+    "required_search_km": 151.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.850875990951124,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 367.34077754430473
+   },
+   {
+    "az_deg": 11.0,
+    "required_search_km": 151.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8514595488025283,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 362.59486744366586
+   },
+   {
+    "az_deg": 12.0,
+    "required_search_km": 151.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8507680815240539,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 358.0766424648464
+   },
+   {
+    "az_deg": 13.0,
+    "required_search_km": 151.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8659617107958711,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 353.7750696945004
+   },
+   {
+    "az_deg": 14.0,
+    "required_search_km": 150.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8857510768131027,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 349.6799284061417
+   },
+   {
+    "az_deg": 15.0,
+    "required_search_km": 150.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.903993675894158,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 345.78174209129065
+   },
+   {
+    "az_deg": 16.0,
+    "required_search_km": 150.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9207065926776358,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 342.0717174266465
+   },
+   {
+    "az_deg": 17.0,
+    "required_search_km": 149.76,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9359091155276332,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 338.54168937774375
+   },
+   {
+    "az_deg": 18.0,
+    "required_search_km": 149.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9496227016281451,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 335.1840717433952
+   },
+   {
+    "az_deg": 19.0,
+    "required_search_km": 149.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9618709374309822,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 331.99181254114956
+   },
+   {
+    "az_deg": 20.0,
+    "required_search_km": 148.8,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9726794984521762,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 328.95835370663553
+   },
+   {
+    "az_deg": 21.0,
+    "required_search_km": 148.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9820761049175579,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 326.0775946401991
+   },
+   {
+    "az_deg": 22.0,
+    "required_search_km": 148.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9900904756967231,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 323.34385920129716
+   },
+   {
+    "az_deg": 23.0,
+    "required_search_km": 148.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9967542799665493,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 320.75186578789726
+   },
+   {
+    "az_deg": 24.0,
+    "required_search_km": 148.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 1.0021010853233303,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 318.2967001940124
+   },
+   {
+    "az_deg": 25.0,
+    "required_search_km": 147.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 1.006166305169487,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 315.9737909617834
+   },
+   {
+    "az_deg": 26.0,
+    "required_search_km": 147.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 1.0089871423723566,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 313.778886990156
+   },
+   {
+    "az_deg": 27.0,
+    "required_search_km": 147.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 1.010602531576258,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 311.7080371771008
+   },
+   {
+    "az_deg": 28.0,
+    "required_search_km": 147.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 1.0110530791629875,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 309.757571909111
+   },
+   {
+    "az_deg": 29.0,
+    "required_search_km": 147.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 1.01038100074386,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 307.92408622894436
+   },
+   {
+    "az_deg": 30.0,
+    "required_search_km": 147.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 1.0086300576759828,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 306.20442452142015
+   },
+   {
+    "az_deg": 31.0,
+    "required_search_km": 147.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 1.0058454900436518,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 304.5956665975973
+   },
+   {
+    "az_deg": 32.0,
+    "required_search_km": 148.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 1.0020739495403699,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 303.0951150469482
+   },
+   {
+    "az_deg": 33.0,
+    "required_search_km": 148.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.99736342930415,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 301.70028375508264
+   },
+   {
+    "az_deg": 34.0,
+    "required_search_km": 148.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9917631926989149,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 300.4088874962181
+   },
+   {
+    "az_deg": 35.0,
+    "required_search_km": 148.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9853237002599153,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 299.21883251238614
+   },
+   {
+    "az_deg": 36.0,
+    "required_search_km": 148.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.978096535575572,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 298.12820800580084
+   },
+   {
+    "az_deg": 37.0,
+    "required_search_km": 148.8,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9701343287138708,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 297.13527848152444
+   },
+   {
+    "az_deg": 38.0,
+    "required_search_km": 149.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9614906799092955,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 296.23847687989473
+   },
+   {
+    "az_deg": 39.0,
+    "required_search_km": 149.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9522200801211466,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 295.4363984456286
+   },
+   {
+    "az_deg": 40.0,
+    "required_search_km": 149.52,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9423778324568766,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 294.72779529122636
+   },
+   {
+    "az_deg": 41.0,
+    "required_search_km": 149.76,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9320199710167859,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 294.11157161556184
+   },
+   {
+    "az_deg": 42.0,
+    "required_search_km": 150.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9212031793230518,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 293.5867795390077
+   },
+   {
+    "az_deg": 43.0,
+    "required_search_km": 150.24,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.9099847084428765,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 293.1526155290194
+   },
+   {
+    "az_deg": 44.0,
+    "required_search_km": 150.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.89842229363936,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 292.8084173905663
+   },
+   {
+    "az_deg": 45.0,
+    "required_search_km": 150.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8865740706044662,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 292.5536617990583
+   },
+   {
+    "az_deg": 46.0,
+    "required_search_km": 151.2,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8744984915518225,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 292.38796236133203
+   },
+   {
+    "az_deg": 47.0,
+    "required_search_km": 152.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8204192651715306,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 292.31106818607077
+   },
+   {
+    "az_deg": 48.0,
+    "required_search_km": 154.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.7580574211302551,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 292.32286295993254
+   },
+   {
+    "az_deg": 49.0,
+    "required_search_km": 156.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.6956231635257513,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 292.4233645191416
+   },
+   {
+    "az_deg": 50.0,
+    "required_search_km": 157.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.633162251408033,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 292.6127249156125
+   },
+   {
+    "az_deg": 51.0,
+    "required_search_km": 159.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.570720404620211,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 292.89123097714037
+   },
+   {
+    "az_deg": 52.0,
+    "required_search_km": 161.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.5083432564077879,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 293.259305363521
+   },
+   {
+    "az_deg": 53.0,
+    "required_search_km": 162.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.446076307017487,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 293.7175081311725
+   },
+   {
+    "az_deg": 54.0,
+    "required_search_km": 164.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.3839648763504634,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 294.26653881091624
+   },
+   {
+    "az_deg": 55.0,
+    "required_search_km": 166.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.3220540561772869,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 294.9072390184738
+   },
+   {
+    "az_deg": 56.0,
+    "required_search_km": 168.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.2603886653646876,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 295.6405956116505
+   },
+   {
+    "az_deg": 57.0,
+    "required_search_km": 169.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.19901320240311696,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 296.46774441888556
+   },
+   {
+    "az_deg": 58.0,
+    "required_search_km": 171.6,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.1379718004057194,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 297.3899745638482
+   },
+   {
+    "az_deg": 59.0,
+    "required_search_km": 173.52,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.07730818175421356,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 298.4087334210053
+   },
+   {
+    "az_deg": 60.0,
+    "required_search_km": 175.2,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.017065613453198923,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 299.52563222963363
+   },
+   {
+    "az_deg": 61.0,
+    "required_search_km": 177.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.042713136800864374,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 300.742452416569
+   },
+   {
+    "az_deg": 62.0,
+    "required_search_km": 179.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.10198584477408688,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 302.0611526700668
+   },
+   {
+    "az_deg": 63.0,
+    "required_search_km": 180.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.160710871347098,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 303.4838768164627
+   },
+   {
+    "az_deg": 64.0,
+    "required_search_km": 182.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.2188472047689742,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 305.01296256296337
+   },
+   {
+    "az_deg": 65.0,
+    "required_search_km": 184.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.27635450278711093,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 306.6509511754848
+   },
+   {
+    "az_deg": 66.0,
+    "required_search_km": 186.24,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.3331931310960251,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 308.40059816185385
+   },
+   {
+    "az_deg": 67.0,
+    "required_search_km": 187.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.38932420454252514,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 310.2648850544356
+   },
+   {
+    "az_deg": 68.0,
+    "required_search_km": 189.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.44470962431123034,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 312.24703238438815
+   },
+   {
+    "az_deg": 69.0,
+    "required_search_km": 191.52,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.49931211614104987,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 314.3505139602348
+   },
+   {
+    "az_deg": 70.0,
+    "required_search_km": 193.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.5530952660181657,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 316.5790725671686
+   },
+   {
+    "az_deg": 71.0,
+    "required_search_km": 195.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.6060235556213203,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 318.9367372337729
+   },
+   {
+    "az_deg": 72.0,
+    "required_search_km": 196.8,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.6580623974083861,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 321.4278422174975
+   },
+   {
+    "az_deg": 73.0,
+    "required_search_km": 198.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.709178165958484,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 324.0570478788577
+   },
+   {
+    "az_deg": 74.0,
+    "required_search_km": 200.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.7593382313446678,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 326.82936365529895
+   },
+   {
+    "az_deg": 75.0,
+    "required_search_km": 202.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.808510988598896,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 329.7501733470708
+   },
+   {
+    "az_deg": 76.0,
+    "required_search_km": 203.76,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.8566658876019627,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 332.8252629674971
+   },
+   {
+    "az_deg": 77.0,
+    "required_search_km": 205.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9037734609587477,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 336.0608514556661
+   },
+   {
+    "az_deg": 78.0,
+    "required_search_km": 206.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9498053508060307,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 339.4636245598085
+   },
+   {
+    "az_deg": 79.0,
+    "required_search_km": 208.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9947343333911784,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 343.0407722732052
+   },
+   {
+    "az_deg": 80.0,
+    "required_search_km": 210.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0385343442014687,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 346.8000302356668
+   },
+   {
+    "az_deg": 81.0,
+    "required_search_km": 211.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.081180499929788,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 350.74972558021545
+   },
+   {
+    "az_deg": 82.0,
+    "required_search_km": 213.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1226491190026728,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 354.8988277739845
+   },
+   {
+    "az_deg": 83.0,
+    "required_search_km": 214.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1629177427850825,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 359.2570050759241
+   },
+   {
+    "az_deg": 84.0,
+    "required_search_km": 216.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2019651520283237,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 363.8346873316914
+   },
+   {
+    "az_deg": 85.0,
+    "required_search_km": 217.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.239771385504639,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 368.64313593506813
+   },
+   {
+    "az_deg": 86.0,
+    "required_search_km": 218.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2763177537303734,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 373.6945218993351
+   },
+   {
+    "az_deg": 87.0,
+    "required_search_km": 220.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3115868533892459,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 379.00201314967126
+   },
+   {
+    "az_deg": 88.0,
+    "required_search_km": 219.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2945900451323864,
+    "coarse_horizon_at_km": 45.36,
+    "edge_80S_km": 384.5798723017797
+   },
+   {
+    "az_deg": 89.0,
+    "required_search_km": 218.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2674248026979535,
+    "coarse_horizon_at_km": 44.16,
+    "edge_80S_km": 390.44356641732156
+   },
+   {
+    "az_deg": 90.0,
+    "required_search_km": 216.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2180932231119916,
+    "coarse_horizon_at_km": 43.68,
+    "edge_80S_km": 396.6098904502578
+   },
+   {
+    "az_deg": 91.0,
+    "required_search_km": 208.8,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0027997058397558,
+    "coarse_horizon_at_km": 40.32,
+    "edge_80S_km": 403.09710640693083
+   },
+   {
+    "az_deg": 92.0,
+    "required_search_km": 204.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.8856699638842529,
+    "coarse_horizon_at_km": 37.92,
+    "edge_80S_km": 409.9251005779952
+   },
+   {
+    "az_deg": 93.0,
+    "required_search_km": 203.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.8360666023177797,
+    "coarse_horizon_at_km": 37.68,
+    "edge_80S_km": 417.1155616119504
+   },
+   {
+    "az_deg": 94.0,
+    "required_search_km": 206.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9481447299622734,
+    "coarse_horizon_at_km": 37.2,
+    "edge_80S_km": 424.6921827062033
+   },
+   {
+    "az_deg": 95.0,
+    "required_search_km": 214.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.164950070463559,
+    "coarse_horizon_at_km": 36.96,
+    "edge_80S_km": 425.40269245486706
+   },
+   {
+    "az_deg": 96.0,
+    "required_search_km": 223.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.4108473181072165,
+    "coarse_horizon_at_km": 36.72,
+    "edge_80S_km": 418.87157318228856
+   },
+   {
+    "az_deg": 97.0,
+    "required_search_km": 230.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.5911391621923963,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 412.6594156185165
+   },
+   {
+    "az_deg": 98.0,
+    "required_search_km": 231.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6115868599870762,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 406.748734514229
+   },
+   {
+    "az_deg": 99.0,
+    "required_search_km": 232.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6306517440968933,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 401.1234134081751
+   },
+   {
+    "az_deg": 100.0,
+    "required_search_km": 232.8,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6483337022703486,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 395.76857900293544
+   },
+   {
+    "az_deg": 101.0,
+    "required_search_km": 233.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.664633942510501,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 390.67048930190504
+   },
+   {
+    "az_deg": 102.0,
+    "required_search_km": 234.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.67955498578527,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 385.81643379619345
+   },
+   {
+    "az_deg": 103.0,
+    "required_search_km": 234.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6931006554038692,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 381.19464423228055
+   },
+   {
+    "az_deg": 104.0,
+    "required_search_km": 234.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7052760646142133,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 376.79421469476074
+   },
+   {
+    "az_deg": 105.0,
+    "required_search_km": 235.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7160876048075449,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 372.60502990242094
+   },
+   {
+    "az_deg": 106.0,
+    "required_search_km": 235.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7255429306139491,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 368.61770077003166
+   },
+   {
+    "az_deg": 107.0,
+    "required_search_km": 236.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7336509440522916,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 364.82350640557706
+   },
+   {
+    "az_deg": 108.0,
+    "required_search_km": 236.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7404217776231838,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 361.2143418248743
+   },
+   {
+    "az_deg": 109.0,
+    "required_search_km": 236.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.745866775844873,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 357.7826707488857
+   },
+   {
+    "az_deg": 110.0,
+    "required_search_km": 236.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7499984751753483,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 354.52148294402286
+   },
+   {
+    "az_deg": 111.0,
+    "required_search_km": 236.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7528305837612808,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 351.424255608581
+   },
+   {
+    "az_deg": 112.0,
+    "required_search_km": 236.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7543779582937273,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 348.48491839459166
+   },
+   {
+    "az_deg": 113.0,
+    "required_search_km": 236.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7546565809082433,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 345.69782168231905
+   },
+   {
+    "az_deg": 114.0,
+    "required_search_km": 236.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7536835346290682,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 343.05770778562874
+   },
+   {
+    "az_deg": 115.0,
+    "required_search_km": 236.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7514769769661984,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 340.5596847929992
+   },
+   {
+    "az_deg": 116.0,
+    "required_search_km": 236.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7480561134372792,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 338.199202791322
+   },
+   {
+    "az_deg": 117.0,
+    "required_search_km": 236.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7434411687921518,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 335.97203224152327
+   },
+   {
+    "az_deg": 118.0,
+    "required_search_km": 236.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.737653358821032,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 333.87424430949613
+   },
+   {
+    "az_deg": 119.0,
+    "required_search_km": 235.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.730714858637824,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 331.90219297027215
+   },
+   {
+    "az_deg": 120.0,
+    "required_search_km": 235.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7226487724272217,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 330.05249872617424
+   },
+   {
+    "az_deg": 121.0,
+    "required_search_km": 228.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.536135150454243,
+    "coarse_horizon_at_km": 117.36,
+    "edge_80S_km": 328.3220338006504
+   },
+   {
+    "az_deg": 122.0,
+    "required_search_km": 228.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.5363665785845098,
+    "coarse_horizon_at_km": 115.92,
+    "edge_80S_km": 326.70790868159384
+   },
+   {
+    "az_deg": 123.0,
+    "required_search_km": 233.76,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6722168748639064,
+    "coarse_horizon_at_km": 115.2,
+    "edge_80S_km": 325.20745990099385
+   },
+   {
+    "az_deg": 124.0,
+    "required_search_km": 234.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6796013282849243,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 323.81823895080015
+   },
+   {
+    "az_deg": 125.0,
+    "required_search_km": 233.52,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6662740738144897,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 322.5380022544414
+   },
+   {
+    "az_deg": 126.0,
+    "required_search_km": 233.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6599698560985723,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 321.3647021027282
+   },
+   {
+    "az_deg": 127.0,
+    "required_search_km": 233.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6587553185512978,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 320.2964784963988
+   },
+   {
+    "az_deg": 128.0,
+    "required_search_km": 233.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.655301250825433,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 319.3316518259235
+   },
+   {
+    "az_deg": 129.0,
+    "required_search_km": 232.8,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.649640858049164,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 318.4687163415365
+   },
+   {
+    "az_deg": 130.0,
+    "required_search_km": 232.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6418083886484955,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 317.7063343534246
+   },
+   {
+    "az_deg": 131.0,
+    "required_search_km": 232.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6318390852161437,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 317.04333113739267
+   },
+   {
+    "az_deg": 132.0,
+    "required_search_km": 231.6,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6197691340310936,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 316.47869049059227
+   },
+   {
+    "az_deg": 133.0,
+    "required_search_km": 231.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6056356151005053,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 316.01155092334375
+   },
+   {
+    "az_deg": 134.0,
+    "required_search_km": 230.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.5894764513225992,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 315.6412024474703
+   },
+   {
+    "az_deg": 135.0,
+    "required_search_km": 229.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.5713303572555777,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 315.36708394577727
+   },
+   {
+    "az_deg": 136.0,
+    "required_search_km": 222.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3904129098253983,
+    "coarse_horizon_at_km": 137.28,
+    "edge_80S_km": 315.18878110172227
+   },
+   {
+    "az_deg": 137.0,
+    "required_search_km": 218.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.27059855091517,
+    "coarse_horizon_at_km": 135.36,
+    "edge_80S_km": 315.1060248767026
+   },
+   {
+    "az_deg": 138.0,
+    "required_search_km": 210.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0496765803768502,
+    "coarse_horizon_at_km": 134.88,
+    "edge_80S_km": 315.11869052331895
+   },
+   {
+    "az_deg": 139.0,
+    "required_search_km": 206.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9356115632289398,
+    "coarse_horizon_at_km": 134.4,
+    "edge_80S_km": 315.2267971285619
+   },
+   {
+    "az_deg": 140.0,
+    "required_search_km": 205.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9197825567440305,
+    "coarse_horizon_at_km": 134.16,
+    "edge_80S_km": 315.4305076850578
+   },
+   {
+    "az_deg": 141.0,
+    "required_search_km": 207.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9562033143160896,
+    "coarse_horizon_at_km": 133.68,
+    "edge_80S_km": 315.73012968478724
+   },
+   {
+    "az_deg": 142.0,
+    "required_search_km": 208.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9828451441230989,
+    "coarse_horizon_at_km": 133.92,
+    "edge_80S_km": 316.12611625064164
+   },
+   {
+    "az_deg": 143.0,
+    "required_search_km": 206.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9364112686602919,
+    "coarse_horizon_at_km": 134.16,
+    "edge_80S_km": 316.6190678020939
+   },
+   {
+    "az_deg": 144.0,
+    "required_search_km": 203.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.8418555733238218,
+    "coarse_horizon_at_km": 134.16,
+    "edge_80S_km": 317.2097342722118
+   },
+   {
+    "az_deg": 145.0,
+    "required_search_km": 203.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.8451219287894559,
+    "coarse_horizon_at_km": 132.96,
+    "edge_80S_km": 317.89901789138094
+   },
+   {
+    "az_deg": 146.0,
+    "required_search_km": 206.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9352831283624047,
+    "coarse_horizon_at_km": 133.2,
+    "edge_80S_km": 318.6879765535705
+   },
+   {
+    "az_deg": 147.0,
+    "required_search_km": 215.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1793106677667324,
+    "coarse_horizon_at_km": 132.72,
+    "edge_80S_km": 319.5778277926147
+   },
+   {
+    "az_deg": 148.0,
+    "required_search_km": 224.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.440965455573619,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 320.5699533945881
+   },
+   {
+    "az_deg": 149.0,
+    "required_search_km": 224.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.4229468645753403,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 321.6659046765417
+   },
+   {
+    "az_deg": 150.0,
+    "required_search_km": 223.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.4140111207158161,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 322.86740847397596
+   },
+   {
+    "az_deg": 151.0,
+    "required_search_km": 223.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.4098978302088383,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 324.1763738770969
+   },
+   {
+    "az_deg": 152.0,
+    "required_search_km": 223.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.4055104284036655,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 325.5948997689411
+   },
+   {
+    "az_deg": 153.0,
+    "required_search_km": 223.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.4008703461921026,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 327.12528321519494
+   },
+   {
+    "az_deg": 154.0,
+    "required_search_km": 223.2,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3959987031323666,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 328.77002877695486
+   },
+   {
+    "az_deg": 155.0,
+    "required_search_km": 222.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3909162774661885,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 330.53185881348327
+   },
+   {
+    "az_deg": 156.0,
+    "required_search_km": 222.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3856434757413785,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 332.4137248583138
+   },
+   {
+    "az_deg": 157.0,
+    "required_search_km": 222.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3802003042041158,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 334.4188201557845
+   },
+   {
+    "az_deg": 158.0,
+    "required_search_km": 222.24,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3746063396861095,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 336.5505934669636
+   },
+   {
+    "az_deg": 159.0,
+    "required_search_km": 222.24,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3688807025949115,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 338.81276425439864
+   },
+   {
+    "az_deg": 160.0,
+    "required_search_km": 222.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.363042029066698,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 341.209339376539
+   },
+   {
+    "az_deg": 161.0,
+    "required_search_km": 221.76,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3571084453338018,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 343.74463143898174
+   },
+   {
+    "az_deg": 162.0,
+    "required_search_km": 221.52,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3510975419767344,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 346.4232789664529
+   },
+   {
+    "az_deg": 163.0,
+    "required_search_km": 221.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3450263494483246,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 349.2502685743384
+   },
+   {
+    "az_deg": 164.0,
+    "required_search_km": 221.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3389113142599331,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 352.2309593562968
+   },
+   {
+    "az_deg": 165.0,
+    "required_search_km": 219.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2847492564630476,
+    "coarse_horizon_at_km": 154.08,
+    "edge_80S_km": 355.3711097165942
+   },
+   {
+    "az_deg": 166.0,
+    "required_search_km": 215.76,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1942137621270337,
+    "coarse_horizon_at_km": 152.88,
+    "edge_80S_km": 358.67690691165626
+   },
+   {
+    "az_deg": 167.0,
+    "required_search_km": 213.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.126643276657857,
+    "coarse_horizon_at_km": 153.6,
+    "edge_80S_km": 362.1549996086396
+   },
+   {
+    "az_deg": 168.0,
+    "required_search_km": 207.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9523930028030705,
+    "coarse_horizon_at_km": 152.4,
+    "edge_80S_km": 365.812533786986
+   },
+   {
+    "az_deg": 169.0,
+    "required_search_km": 207.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.958856396085356,
+    "coarse_horizon_at_km": 152.64,
+    "edge_80S_km": 369.6571923834272
+   },
+   {
+    "az_deg": 170.0,
+    "required_search_km": 204.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.8947545149840812,
+    "coarse_horizon_at_km": 152.88,
+    "edge_80S_km": 373.6972391116433
+   },
+   {
+    "az_deg": 171.0,
+    "required_search_km": 205.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9198623715416097,
+    "coarse_horizon_at_km": 154.08,
+    "edge_80S_km": 377.9415669525042
+   },
+   {
+    "az_deg": 172.0,
+    "required_search_km": 210.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0347278093580066,
+    "coarse_horizon_at_km": 153.36,
+    "edge_80S_km": 382.3997518965043
+   },
+   {
+    "az_deg": 173.0,
+    "required_search_km": 212.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.119022631092717,
+    "coarse_horizon_at_km": 164.64,
+    "edge_80S_km": 387.0821125777438
+   },
+   {
+    "az_deg": 174.0,
+    "required_search_km": 207.6,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9712945707695368,
+    "coarse_horizon_at_km": 161.04,
+    "edge_80S_km": 391.9997765594162
+   },
+   {
+    "az_deg": 175.0,
+    "required_search_km": 204.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.8816817645810279,
+    "coarse_horizon_at_km": 158.4,
+    "edge_80S_km": 397.16475411644205
+   },
+   {
+    "az_deg": 176.0,
+    "required_search_km": 208.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9907999794880648,
+    "coarse_horizon_at_km": 148.8,
+    "edge_80S_km": 402.59002051642165
+   },
+   {
+    "az_deg": 177.0,
+    "required_search_km": 217.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.244715248865246,
+    "coarse_horizon_at_km": 144.0,
+    "edge_80S_km": 408.2896079248749
+   },
+   {
+    "az_deg": 178.0,
+    "required_search_km": 217.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2563405652640522,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 414.2787082702853
+   },
+   {
+    "az_deg": 179.0,
+    "required_search_km": 216.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2193828323377793,
+    "coarse_horizon_at_km": 137.28,
+    "edge_80S_km": 420.5737885790877
+   },
+   {
+    "az_deg": 180.0,
+    "required_search_km": 217.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2459500980745948,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 427.19272057851776
+   },
+   {
+    "az_deg": 181.0,
+    "required_search_km": 217.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2409452831024004,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 434.15492662321776
+   },
+   {
+    "az_deg": 182.0,
+    "required_search_km": 217.2,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2360717415207607,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 441.48154438007623
+   },
+   {
+    "az_deg": 183.0,
+    "required_search_km": 216.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.231331675621634,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 438.68936749873683
+   },
+   {
+    "az_deg": 184.0,
+    "required_search_km": 216.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2267264513373592,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 431.45693183364347
+   },
+   {
+    "az_deg": 185.0,
+    "required_search_km": 216.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2222565971706303,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 424.58362824935466
+   },
+   {
+    "az_deg": 186.0,
+    "required_search_km": 216.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.21792180595623,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 418.04872169625014
+   },
+   {
+    "az_deg": 187.0,
+    "required_search_km": 216.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2137209359582253,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 411.8331547547132
+   },
+   {
+    "az_deg": 188.0,
+    "required_search_km": 216.24,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.209652015353894,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 405.9193871454336
+   },
+   {
+    "az_deg": 189.0,
+    "required_search_km": 216.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2057122458310683,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 400.2912534615025
+   },
+   {
+    "az_deg": 190.0,
+    "required_search_km": 216.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2018980085731723,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 394.9338367721066
+   },
+   {
+    "az_deg": 191.0,
+    "required_search_km": 215.76,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.198204872021433,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 389.83335609408095
+   },
+   {
+    "az_deg": 192.0,
+    "required_search_km": 215.76,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1946275985837758,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 384.97706600185484
+   },
+   {
+    "az_deg": 193.0,
+    "required_search_km": 215.52,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1911601552851157,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 380.3531668963842
+   },
+   {
+    "az_deg": 194.0,
+    "required_search_km": 215.52,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1877957236971042,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 375.950724653434
+   },
+   {
+    "az_deg": 195.0,
+    "required_search_km": 215.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.184526711478111,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 371.7595985373482
+   },
+   {
+    "az_deg": 196.0,
+    "required_search_km": 215.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1813447657453031,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 367.770376435481
+   },
+   {
+    "az_deg": 197.0,
+    "required_search_km": 215.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.178240786280719,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 363.97431656206027
+   },
+   {
+    "az_deg": 198.0,
+    "required_search_km": 215.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1752049410686154,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 360.3632949190214
+   },
+   {
+    "az_deg": 199.0,
+    "required_search_km": 214.8,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1722266824434628,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 356.92975787073374
+   },
+   {
+    "az_deg": 200.0,
+    "required_search_km": 214.8,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1692947639039042,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 353.66667928313836
+   },
+   {
+    "az_deg": 201.0,
+    "required_search_km": 214.8,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1663972588134812,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 350.5675217374228
+   },
+   {
+    "az_deg": 202.0,
+    "required_search_km": 214.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1635215789899782,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 347.6262013958767
+   },
+   {
+    "az_deg": 203.0,
+    "required_search_km": 214.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1606544959026581,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 344.8370561390184
+   },
+   {
+    "az_deg": 204.0,
+    "required_search_km": 214.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.157782160814259,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 342.1948166466318
+   },
+   {
+    "az_deg": 205.0,
+    "required_search_km": 214.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.154890127863526,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 339.69458013167605
+   },
+   {
+    "az_deg": 206.0,
+    "required_search_km": 214.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1519633764806367,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 337.33178646164015
+   },
+   {
+    "az_deg": 207.0,
+    "required_search_km": 214.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1489863356883416,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 335.1021964494139
+   },
+   {
+    "az_deg": 208.0,
+    "required_search_km": 213.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1459429085681634,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 333.0018721022643
+   },
+   {
+    "az_deg": 209.0,
+    "required_search_km": 213.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1428164983900178,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 331.0271586533636
+   },
+   {
+    "az_deg": 210.0,
+    "required_search_km": 213.6,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.139590034351622,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 329.1746682152152
+   },
+   {
+    "az_deg": 211.0,
+    "required_search_km": 213.6,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1362459994250877,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 327.44126491388306
+   },
+   {
+    "az_deg": 212.0,
+    "required_search_km": 213.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1327664573690954,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 325.8240513750352
+   },
+   {
+    "az_deg": 213.0,
+    "required_search_km": 213.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1291330822366086,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 324.3203564537689
+   },
+   {
+    "az_deg": 214.0,
+    "required_search_km": 213.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1253271866040517,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 322.92772410530597
+   },
+   {
+    "az_deg": 215.0,
+    "required_search_km": 213.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1213297520739796,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 321.643903309945
+   },
+   {
+    "az_deg": 216.0,
+    "required_search_km": 212.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.117121459442728,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 320.4668389689177
+   },
+   {
+    "az_deg": 217.0,
+    "required_search_km": 212.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1126827190880968,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 319.39466370781884
+   },
+   {
+    "az_deg": 218.0,
+    "required_search_km": 212.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1079937033532044,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 318.4256905205548
+   },
+   {
+    "az_deg": 219.0,
+    "required_search_km": 212.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.103034376986039,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 317.5584062016569
+   },
+   {
+    "az_deg": 220.0,
+    "required_search_km": 212.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0977845307965168,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 316.7914655157365
+   },
+   {
+    "az_deg": 221.0,
+    "required_search_km": 211.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0922238132031048,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 316.123686064966
+   },
+   {
+    "az_deg": 222.0,
+    "required_search_km": 211.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0863317634988734,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 315.55404381873086
+   },
+   {
+    "az_deg": 223.0,
+    "required_search_km": 211.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.080087845061225,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 315.0816692668013
+   },
+   {
+    "az_deg": 224.0,
+    "required_search_km": 211.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0746019239005042,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 314.7058441801928
+   },
+   {
+    "az_deg": 225.0,
+    "required_search_km": 211.2,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.069492615622339,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 314.4259989471175
+   },
+   {
+    "az_deg": 226.0,
+    "required_search_km": 210.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0633114131702623,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 314.2417104691267
+   },
+   {
+    "az_deg": 227.0,
+    "required_search_km": 210.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0560393234903551,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 314.1527006076649
+   },
+   {
+    "az_deg": 228.0,
+    "required_search_km": 210.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.047657647533388,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 314.158835161943
+   },
+   {
+    "az_deg": 229.0,
+    "required_search_km": 211.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0789542340549172,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 314.26012337813154
+   },
+   {
+    "az_deg": 230.0,
+    "required_search_km": 215.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.180566674360276,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 314.4567179833539
+   },
+   {
+    "az_deg": 231.0,
+    "required_search_km": 218.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2808987209244007,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 314.74891574447975
+   },
+   {
+    "az_deg": 232.0,
+    "required_search_km": 222.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.381825781824637,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 315.13715855777264
+   },
+   {
+    "az_deg": 233.0,
+    "required_search_km": 226.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.482565865040771,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 315.62203507404774
+   },
+   {
+    "az_deg": 234.0,
+    "required_search_km": 230.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.5823860119276927,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 316.2042828728445
+   },
+   {
+    "az_deg": 235.0,
+    "required_search_km": 228.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.5224542925169156,
+    "coarse_horizon_at_km": 40.8,
+    "edge_80S_km": 316.88479119958356
+   },
+   {
+    "az_deg": 236.0,
+    "required_search_km": 221.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3445893623698242,
+    "coarse_horizon_at_km": 41.28,
+    "edge_80S_km": 317.6646042820066
+   },
+   {
+    "az_deg": 237.0,
+    "required_search_km": 216.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2205944786805139,
+    "coarse_horizon_at_km": 41.52,
+    "edge_80S_km": 318.5449252552353
+   },
+   {
+    "az_deg": 238.0,
+    "required_search_km": 213.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.142579453258144,
+    "coarse_horizon_at_km": 41.76,
+    "edge_80S_km": 319.52712071686983
+   },
+   {
+    "az_deg": 239.0,
+    "required_search_km": 212.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1117068273887876,
+    "coarse_horizon_at_km": 41.76,
+    "edge_80S_km": 320.61272594705224
+   },
+   {
+    "az_deg": 240.0,
+    "required_search_km": 214.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1636497325046922,
+    "coarse_horizon_at_km": 41.52,
+    "edge_80S_km": 321.8034508302808
+   },
+   {
+    "az_deg": 241.0,
+    "required_search_km": 219.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3098356453189144,
+    "coarse_horizon_at_km": 41.76,
+    "edge_80S_km": 323.101186521817
+   },
+   {
+    "az_deg": 242.0,
+    "required_search_km": 221.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.3452667593735417,
+    "coarse_horizon_at_km": 39.84,
+    "edge_80S_km": 324.50801291223615
+   },
+   {
+    "az_deg": 243.0,
+    "required_search_km": 223.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.4103218800465478,
+    "coarse_horizon_at_km": 39.6,
+    "edge_80S_km": 326.02620693389326
+   },
+   {
+    "az_deg": 244.0,
+    "required_search_km": 224.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.4364896082057586,
+    "coarse_horizon_at_km": 38.4,
+    "edge_80S_km": 327.65825178753585
+   },
+   {
+    "az_deg": 245.0,
+    "required_search_km": 223.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.4156557327461,
+    "coarse_horizon_at_km": 38.16,
+    "edge_80S_km": 329.4068471477367
+   },
+   {
+    "az_deg": 246.0,
+    "required_search_km": 228.48,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.5401853656778635,
+    "coarse_horizon_at_km": 38.16,
+    "edge_80S_km": 331.27492043655366
+   },
+   {
+    "az_deg": 247.0,
+    "required_search_km": 235.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7316028256661395,
+    "coarse_horizon_at_km": 38.16,
+    "edge_80S_km": 333.26563924597576
+   },
+   {
+    "az_deg": 248.0,
+    "required_search_km": 242.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.9101681721434431,
+    "coarse_horizon_at_km": 37.2,
+    "edge_80S_km": 335.3824250199832
+   },
+   {
+    "az_deg": 249.0,
+    "required_search_km": 247.2,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.0129227015411613,
+    "coarse_horizon_at_km": 37.2,
+    "edge_80S_km": 337.62896810425445
+   },
+   {
+    "az_deg": 250.0,
+    "required_search_km": 254.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.1957934518262188,
+    "coarse_horizon_at_km": 36.96,
+    "edge_80S_km": 340.00924429437146
+   },
+   {
+    "az_deg": 251.0,
+    "required_search_km": 259.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.3166262482284923,
+    "coarse_horizon_at_km": 38.4,
+    "edge_80S_km": 342.52753302361816
+   },
+   {
+    "az_deg": 252.0,
+    "required_search_km": 264.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.4215081076264355,
+    "coarse_horizon_at_km": 36.96,
+    "edge_80S_km": 345.18843735568225
+   },
+   {
+    "az_deg": 253.0,
+    "required_search_km": 266.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.4794649718201165,
+    "coarse_horizon_at_km": 85.68,
+    "edge_80S_km": 347.99690596433356
+   },
+   {
+    "az_deg": 254.0,
+    "required_search_km": 261.6,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.36903207069433,
+    "coarse_horizon_at_km": 86.88,
+    "edge_80S_km": 350.95825730310753
+   },
+   {
+    "az_deg": 255.0,
+    "required_search_km": 262.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.390490808489272,
+    "coarse_horizon_at_km": 85.2,
+    "edge_80S_km": 354.07820620108396
+   },
+   {
+    "az_deg": 256.0,
+    "required_search_km": 267.6,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.506963721304025,
+    "coarse_horizon_at_km": 85.2,
+    "edge_80S_km": 357.36289314273745
+   },
+   {
+    "az_deg": 257.0,
+    "required_search_km": 269.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.5402147317642227,
+    "coarse_horizon_at_km": 61.68,
+    "edge_80S_km": 360.8189165331423
+   },
+   {
+    "az_deg": 258.0,
+    "required_search_km": 266.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.4798991690117123,
+    "coarse_horizon_at_km": 61.2,
+    "edge_80S_km": 364.45336828380823
+   },
+   {
+    "az_deg": 259.0,
+    "required_search_km": 266.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.4916910409183837,
+    "coarse_horizon_at_km": 87.6,
+    "edge_80S_km": 368.27387309540063
+   },
+   {
+    "az_deg": 260.0,
+    "required_search_km": 265.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.465140608084777,
+    "coarse_horizon_at_km": 72.48,
+    "edge_80S_km": 372.2886318815872
+   },
+   {
+    "az_deg": 261.0,
+    "required_search_km": 264.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.4408739679618283,
+    "coarse_horizon_at_km": 72.24,
+    "edge_80S_km": 376.50646981969476
+   },
+   {
+    "az_deg": 262.0,
+    "required_search_km": 263.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.407969284722323,
+    "coarse_horizon_at_km": 66.48,
+    "edge_80S_km": 380.9368895958178
+   },
+   {
+    "az_deg": 263.0,
+    "required_search_km": 258.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.294368379325067,
+    "coarse_horizon_at_km": 66.72,
+    "edge_80S_km": 385.5901304911822
+   },
+   {
+    "az_deg": 264.0,
+    "required_search_km": 253.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.169135457611107,
+    "coarse_horizon_at_km": 66.72,
+    "edge_80S_km": 390.4772340450436
+   },
+   {
+    "az_deg": 265.0,
+    "required_search_km": 253.2,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.1657213294343185,
+    "coarse_horizon_at_km": 66.24,
+    "edge_80S_km": 395.6101171481423
+   },
+   {
+    "az_deg": 266.0,
+    "required_search_km": 253.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.170805420951556,
+    "coarse_horizon_at_km": 66.48,
+    "edge_80S_km": 401.00165353761986
+   },
+   {
+    "az_deg": 267.0,
+    "required_search_km": 253.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.167252368677869,
+    "coarse_horizon_at_km": 66.24,
+    "edge_80S_km": 406.6657648310065
+   },
+   {
+    "az_deg": 268.0,
+    "required_search_km": 252.24,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.138944049024289,
+    "coarse_horizon_at_km": 59.52,
+    "edge_80S_km": 412.617522389628
+   },
+   {
+    "az_deg": 269.0,
+    "required_search_km": 248.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.0462430192789256,
+    "coarse_horizon_at_km": 59.76,
+    "edge_80S_km": 418.8732615355402
+   },
+   {
+    "az_deg": 270.0,
+    "required_search_km": 245.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.9650605464002417,
+    "coarse_horizon_at_km": 59.52,
+    "edge_80S_km": 425.4507098761387
+   },
+   {
+    "az_deg": 271.0,
+    "required_search_km": 247.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.0299925116864856,
+    "coarse_horizon_at_km": 60.0,
+    "edge_80S_km": 421.7587920529768
+   },
+   {
+    "az_deg": 272.0,
+    "required_search_km": 247.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.019009633897824,
+    "coarse_horizon_at_km": 59.52,
+    "edge_80S_km": 414.2855190145783
+   },
+   {
+    "az_deg": 273.0,
+    "required_search_km": 247.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.0333071541830545,
+    "coarse_horizon_at_km": 57.6,
+    "edge_80S_km": 407.1923150452785
+   },
+   {
+    "az_deg": 274.0,
+    "required_search_km": 251.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.1096790088428024,
+    "coarse_horizon_at_km": 56.64,
+    "edge_80S_km": 400.4559731883928
+   },
+   {
+    "az_deg": 275.0,
+    "required_search_km": 254.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.195715565653874,
+    "coarse_horizon_at_km": 56.64,
+    "edge_80S_km": 394.055243213661
+   },
+   {
+    "az_deg": 276.0,
+    "required_search_km": 256.08,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.2307337204509343,
+    "coarse_horizon_at_km": 58.56,
+    "edge_80S_km": 387.9706350173801
+   },
+   {
+    "az_deg": 277.0,
+    "required_search_km": 260.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.3474123049414333,
+    "coarse_horizon_at_km": 56.64,
+    "edge_80S_km": 382.18424538103864
+   },
+   {
+    "az_deg": 278.0,
+    "required_search_km": 264.24,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.4296805567950184,
+    "coarse_horizon_at_km": 59.76,
+    "edge_80S_km": 376.6796049471013
+   },
+   {
+    "az_deg": 279.0,
+    "required_search_km": 267.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.5015125478511715,
+    "coarse_horizon_at_km": 59.28,
+    "edge_80S_km": 371.44154272042215
+   },
+   {
+    "az_deg": 280.0,
+    "required_search_km": 270.24,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.568954539955048,
+    "coarse_horizon_at_km": 58.56,
+    "edge_80S_km": 366.45606582053006
+   },
+   {
+    "az_deg": 281.0,
+    "required_search_km": 273.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.6414384894931167,
+    "coarse_horizon_at_km": 58.32,
+    "edge_80S_km": 361.7102525308728
+   },
+   {
+    "az_deg": 282.0,
+    "required_search_km": 277.2,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.7345682291740867,
+    "coarse_horizon_at_km": 58.56,
+    "edge_80S_km": 357.1921569798142
+   },
+   {
+    "az_deg": 283.0,
+    "required_search_km": 279.6,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.789535329441567,
+    "coarse_horizon_at_km": 98.64,
+    "edge_80S_km": 352.8907240158878
+   },
+   {
+    "az_deg": 284.0,
+    "required_search_km": 280.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.8094377936714534,
+    "coarse_horizon_at_km": 48.24,
+    "edge_80S_km": 348.79571304516867
+   },
+   {
+    "az_deg": 285.0,
+    "required_search_km": 281.52,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.8308990580197864,
+    "coarse_horizon_at_km": 48.48,
+    "edge_80S_km": 344.89762976486236
+   },
+   {
+    "az_deg": 286.0,
+    "required_search_km": 277.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.7424559734328646,
+    "coarse_horizon_at_km": 51.12,
+    "edge_80S_km": 341.1876648631878
+   },
+   {
+    "az_deg": 287.0,
+    "required_search_km": 274.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.6652067804909354,
+    "coarse_horizon_at_km": 51.36,
+    "edge_80S_km": 337.65763889439404
+   },
+   {
+    "az_deg": 288.0,
+    "required_search_km": 275.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.681469851364231,
+    "coarse_horizon_at_km": 51.6,
+    "edge_80S_km": 334.2999526229687
+   },
+   {
+    "az_deg": 289.0,
+    "required_search_km": 278.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.7749436522924906,
+    "coarse_horizon_at_km": 51.6,
+    "edge_80S_km": 331.10754223167896
+   },
+   {
+    "az_deg": 290.0,
+    "required_search_km": 279.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.785877347103945,
+    "coarse_horizon_at_km": 55.44,
+    "edge_80S_km": 328.07383886771277
+   },
+   {
+    "az_deg": 291.0,
+    "required_search_km": 277.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.7386044875693623,
+    "coarse_horizon_at_km": 55.2,
+    "edge_80S_km": 325.1927320510149
+   },
+   {
+    "az_deg": 292.0,
+    "required_search_km": 279.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.7815810887232257,
+    "coarse_horizon_at_km": 55.92,
+    "edge_80S_km": 322.45853654900566
+   },
+   {
+    "az_deg": 293.0,
+    "required_search_km": 278.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.7557154030930664,
+    "coarse_horizon_at_km": 61.2,
+    "edge_80S_km": 319.86596234934404
+   },
+   {
+    "az_deg": 294.0,
+    "required_search_km": 276.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.7031873028339715,
+    "coarse_horizon_at_km": 61.2,
+    "edge_80S_km": 317.41008742246777
+   },
+   {
+    "az_deg": 295.0,
+    "required_search_km": 276.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.719691599854185,
+    "coarse_horizon_at_km": 61.92,
+    "edge_80S_km": 315.0863329884596
+   },
+   {
+    "az_deg": 296.0,
+    "required_search_km": 278.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.762534372703427,
+    "coarse_horizon_at_km": 61.92,
+    "edge_80S_km": 312.89044105028734
+   },
+   {
+    "az_deg": 297.0,
+    "required_search_km": 285.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.9152610406649972,
+    "coarse_horizon_at_km": 54.72,
+    "edge_80S_km": 310.8184539685026
+   },
+   {
+    "az_deg": 298.0,
+    "required_search_km": 284.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.9017739651047565,
+    "coarse_horizon_at_km": 47.52,
+    "edge_80S_km": 308.8666958892718
+   },
+   {
+    "az_deg": 299.0,
+    "required_search_km": 283.2,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.872857214612271,
+    "coarse_horizon_at_km": 54.48,
+    "edge_80S_km": 307.03175585670397
+   },
+   {
+    "az_deg": 300.0,
+    "required_search_km": 282.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.8653855735769524,
+    "coarse_horizon_at_km": 48.72,
+    "edge_80S_km": 305.3104724492878
+   },
+   {
+    "az_deg": 301.0,
+    "required_search_km": 283.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.8819708397116712,
+    "coarse_horizon_at_km": 48.72,
+    "edge_80S_km": 303.69991981750354
+   },
+   {
+    "az_deg": 302.0,
+    "required_search_km": 285.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.9175569806248083,
+    "coarse_horizon_at_km": 49.68,
+    "edge_80S_km": 302.1973949922249
+   },
+   {
+    "az_deg": 303.0,
+    "required_search_km": 290.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -3.0290877910475813,
+    "coarse_horizon_at_km": 51.12,
+    "edge_80S_km": 300.80040636705235
+   },
+   {
+    "az_deg": 304.0,
+    "required_search_km": 296.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -3.1615557534027037,
+    "coarse_horizon_at_km": 49.2,
+    "edge_80S_km": 299.50666325259954
+   },
+   {
+    "az_deg": 305.0,
+    "required_search_km": 293.52,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -3.104069506811646,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 298.31406642030925
+   },
+   {
+    "az_deg": 306.0,
+    "required_search_km": 290.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -3.0374622489489043,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 297.22069956734776
+   },
+   {
+    "az_deg": 307.0,
+    "required_search_km": 287.52,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.9691810550240505,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 296.2248216243461
+   },
+   {
+    "az_deg": 308.0,
+    "required_search_km": 284.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.899293844362234,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 295.3248598612845
+   },
+   {
+    "az_deg": 309.0,
+    "required_search_km": 281.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.8278697060353655,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 294.51940373005345
+   },
+   {
+    "az_deg": 310.0,
+    "required_search_km": 278.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.754978820758306,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 293.80719939712435
+   },
+   {
+    "az_deg": 311.0,
+    "required_search_km": 275.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.680692381948224,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 293.1871449383907
+   },
+   {
+    "az_deg": 312.0,
+    "required_search_km": 271.68,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.605082515386737,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 292.65828614728525
+   },
+   {
+    "az_deg": 313.0,
+    "required_search_km": 268.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.5282221973704826,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 292.21981293242425
+   },
+   {
+    "az_deg": 314.0,
+    "required_search_km": 265.2,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.4501851719593013,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 291.87105628475547
+   },
+   {
+    "az_deg": 315.0,
+    "required_search_km": 261.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.3710458671035632,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 291.61148578161374
+   },
+   {
+    "az_deg": 316.0,
+    "required_search_km": 256.8,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.2490374335756402,
+    "coarse_horizon_at_km": 44.88,
+    "edge_80S_km": 291.4407076211646
+   },
+   {
+    "az_deg": 317.0,
+    "required_search_km": 249.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.0687261274135005,
+    "coarse_horizon_at_km": 45.36,
+    "edge_80S_km": 291.3584631639533
+   },
+   {
+    "az_deg": 318.0,
+    "required_search_km": 247.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -2.031834456156793,
+    "coarse_horizon_at_km": 46.32,
+    "edge_80S_km": 291.3646279820241
+   },
+   {
+    "az_deg": 319.0,
+    "required_search_km": 244.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.9463447487780519,
+    "coarse_horizon_at_km": 46.8,
+    "edge_80S_km": 291.45921139931306
+   },
+   {
+    "az_deg": 320.0,
+    "required_search_km": 240.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.8568552541972847,
+    "coarse_horizon_at_km": 47.52,
+    "edge_80S_km": 291.64235652564093
+   },
+   {
+    "az_deg": 321.0,
+    "required_search_km": 232.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6432551542322558,
+    "coarse_horizon_at_km": 47.52,
+    "edge_80S_km": 291.91434078570455
+   },
+   {
+    "az_deg": 322.0,
+    "required_search_km": 231.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.605933374216321,
+    "coarse_horizon_at_km": 47.76,
+    "edge_80S_km": 292.275576940272
+   },
+   {
+    "az_deg": 323.0,
+    "required_search_km": 233.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6582495726437851,
+    "coarse_horizon_at_km": 48.24,
+    "edge_80S_km": 292.7266146126203
+   },
+   {
+    "az_deg": 324.0,
+    "required_search_km": 235.92,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.7298416146590372,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 293.2681423295289
+   },
+   {
+    "az_deg": 325.0,
+    "required_search_km": 233.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.6605613699764137,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 293.90099008986726
+   },
+   {
+    "az_deg": 326.0,
+    "required_search_km": 230.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.591009796716993,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 294.6261324766092
+   },
+   {
+    "az_deg": 327.0,
+    "required_search_km": 227.76,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.5212611493614805,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 295.4446923378855
+   },
+   {
+    "az_deg": 328.0,
+    "required_search_km": 225.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.451389195251882,
+    "coarse_horizon_at_km": 0.24,
+    "edge_80S_km": 296.3579450636171
+   },
+   {
+    "az_deg": 329.0,
+    "required_search_km": 221.52,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.351155791324768,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 297.36732348194346
+   },
+   {
+    "az_deg": 330.0,
+    "required_search_km": 217.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.2442572444106417,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 298.4744234182872
+   },
+   {
+    "az_deg": 331.0,
+    "required_search_km": 213.6,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.1376836508675712,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 299.6810099533759
+   },
+   {
+    "az_deg": 332.0,
+    "required_search_km": 209.76,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -1.0315296912756944,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 300.98902442632243
+   },
+   {
+    "az_deg": 333.0,
+    "required_search_km": 206.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.9258888343340894,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 302.4005922395736
+   },
+   {
+    "az_deg": 334.0,
+    "required_search_km": 202.56,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.8208532273128225,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 303.9180315192789
+   },
+   {
+    "az_deg": 335.0,
+    "required_search_km": 198.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.7165135900378403,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 305.5438627046533
+   },
+   {
+    "az_deg": 336.0,
+    "required_search_km": 195.36,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.6129591102106974,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 307.2808191361837
+   },
+   {
+    "az_deg": 337.0,
+    "required_search_km": 192.0,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.510277341857574,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 309.131858734414
+   },
+   {
+    "az_deg": 338.0,
+    "required_search_km": 188.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.4085541058113376,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 311.1001768587157
+   },
+   {
+    "az_deg": 339.0,
+    "required_search_km": 185.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.30787339270787184,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 313.18922046152875
+   },
+   {
+    "az_deg": 340.0,
+    "required_search_km": 182.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.2083172694452255,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 315.40270365122706
+   },
+   {
+    "az_deg": 341.0,
+    "required_search_km": 179.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.10996578816153493,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 317.74462480889633
+   },
+   {
+    "az_deg": 342.0,
+    "required_search_km": 176.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": -0.012896898337107592,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 320.21928540756926
+   },
+   {
+    "az_deg": 343.0,
+    "required_search_km": 173.28,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.08281363760110945,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 322.8313107090071
+   },
+   {
+    "az_deg": 344.0,
+    "required_search_km": 170.4,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.17709232607662728,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 325.58567253360525
+   },
+   {
+    "az_deg": 345.0,
+    "required_search_km": 167.76,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.26986802002818566,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 328.48771432740614
+   },
+   {
+    "az_deg": 346.0,
+    "required_search_km": 165.12,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.3610719932175332,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 331.54317877069116
+   },
+   {
+    "az_deg": 347.0,
+    "required_search_km": 162.72,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.45063801151627375,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 334.7582382191904
+   },
+   {
+    "az_deg": 348.0,
+    "required_search_km": 161.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.5079057400480846,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 338.13952828757465
+   },
+   {
+    "az_deg": 349.0,
+    "required_search_km": 160.32,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.5363787798864715,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 341.69418495707214
+   },
+   {
+    "az_deg": 350.0,
+    "required_search_km": 159.6,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.5637816197674423,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 345.4298856020905
+   },
+   {
+    "az_deg": 351.0,
+    "required_search_km": 158.88,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.5900794505096864,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 349.3548944313079
+   },
+   {
+    "az_deg": 352.0,
+    "required_search_km": 158.16,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.6152397302853291,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 353.47811286197975
+   },
+   {
+    "az_deg": 353.0,
+    "required_search_km": 157.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.6392322238264386,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 357.809135469608
+   },
+   {
+    "az_deg": 354.0,
+    "required_search_km": 156.96,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.6620290388581495,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 362.3583122016862
+   },
+   {
+    "az_deg": 355.0,
+    "required_search_km": 156.24,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.6836046592102887,
+    "coarse_horizon_at_km": 0.48,
+    "edge_80S_km": 367.136817692779
+   },
+   {
+    "az_deg": 356.0,
+    "required_search_km": 155.04,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.7305148521806781,
+    "coarse_horizon_at_km": 0.72,
+    "edge_80S_km": 372.1567286066711
+   },
+   {
+    "az_deg": 357.0,
+    "required_search_km": 153.84,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.7773178862730394,
+    "coarse_horizon_at_km": 0.72,
+    "edge_80S_km": 377.4311101064086
+   },
+   {
+    "az_deg": 358.0,
+    "required_search_km": 152.64,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8216424609357779,
+    "coarse_horizon_at_km": 0.72,
+    "edge_80S_km": 382.97411270299926
+   },
+   {
+    "az_deg": 359.0,
+    "required_search_km": 151.44,
+    "exits_75S_file_before_stop_km": null,
+    "coarse_horizon_deg": 0.8634557724513253,
+    "coarse_horizon_at_km": 0.72,
+    "edge_80S_km": 388.80108095658943
+   }
+  ]
+ },
+ "seam_check": {
+  "points": [],
+  "vs_75S_60M": null,
+  "vs_75S_240M": null,
+  "note": "No sampled planning ray needed a seam comparison"
+ }
+}

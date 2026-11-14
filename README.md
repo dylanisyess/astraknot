@@ -4,7 +4,7 @@ A NASA Space Apps prototype that shows when the Sun and Earth are above the
 horizon from lunar south-polar sites. It is an educational planning tool, not
 flight-qualified analysis.
 
-**Milestone 4A complete (pipeline site isolation):** mission windows for one documented
+**Milestone 4B complete (second-site terrain preparation):** mission windows for one documented
 site (IM-2 Athena landing point, 84.7906° S, 29.1957° E) with a **terrain
 horizon** computed from the LOLA terrain model (20 m pixels), and the smooth 0° horizon kept as a
 comparison mode. The data is 60 days (2026-12-01 to 2027-01-30 UTC) of real
@@ -13,7 +13,10 @@ observer 1 m above the LOLA surface. You can pick a baseline arrival and
 duration, compare +1/+3/+7-day slips, switch Smooth/Terrain, and see a horizon
 panorama, visibility timelines, an elevation chart and readouts that share one
 cursor. This is regional DEM-based visibility, not a reconstruction of
-Athena's actual conditions. See [docs/STATUS.md](docs/STATUS.md).
+Athena's actual conditions. A second point, NASA's notional Connecting Ridge CR1
+study location (89.468 S, 222.6 E), is configured with cached coverage/elevation
+evidence; it has no fetched positions or final horizon yet. See
+[docs/SECOND_SITE.md](docs/SECOND_SITE.md) and [docs/STATUS.md](docs/STATUS.md).
 
 ## Layout
 
@@ -53,23 +56,23 @@ From the repository root:
 ```sh
 # 1. Data: the raw responses and exported files are committed, so this step
 #    is only needed to change the site or interval, or to re-verify.
-python pipeline/fetch.py          # uses the cache; fetches only what is missing
-python pipeline/export.py         # writes app/public/data/*.json
-python pipeline/validate.py       # prints PASS/FAIL per check
+python pipeline/fetch.py --site im2-athena          # uses the cache; fetches only what is missing
+python pipeline/export.py --site im2-athena         # writes app/public/data/*.json
+python pipeline/validate.py --site im2-athena       # prints PASS/FAIL per check
 python -m unittest discover -s pipeline/tests -v
-python pipeline/terrain_check.py  # LOLA product/coverage check: downloads ~44 MB
+python pipeline/terrain_check.py --site im2-athena  # LOLA product/coverage check: downloads ~44 MB
                                   # to data/raw/lola/, rest via byte-range reads
-python pipeline/site_elevation.py # surface elevation vs LOLA shots (cached query)
-python pipeline/compare_altitude.py
-python pipeline/crosscheck_metrics.py 2026-12-05T00:00:00Z 14
-python pipeline/crosscheck_metrics.py 2026-12-05T00:00:00Z 14 --terrain
+python pipeline/site_elevation.py --site im2-athena # surface elevation vs LOLA shots (cached query)
+python pipeline/compare_altitude.py --site im2-athena
+python pipeline/crosscheck_metrics.py --site im2-athena 2026-12-05T00:00:00Z 14
+python pipeline/crosscheck_metrics.py --site im2-athena 2026-12-05T00:00:00Z 14 --terrain
 
 # Terrain horizon (only to recompute it; the results are committed):
-python pipeline/fetch_terrain.py          # 3.47 GB of LOLA data -> data/raw/lola/ (git-ignored)
-python pipeline/fetch_terrain.py --check --rehash
-python pipeline/terrain_horizon.py        # ~10 s profile + ~5 min sensitivity
-python pipeline/horizon_crosscheck.py     # cross-checks (LOLA shot queries cached)
-python pipeline/export.py && python pipeline/validate.py
+python pipeline/fetch_terrain.py --site im2-athena          # 3.47 GB of LOLA data -> data/raw/lola/ (git-ignored)
+python pipeline/fetch_terrain.py --site im2-athena --check --rehash
+python pipeline/terrain_horizon.py --site im2-athena        # ~10 s profile + ~5 min sensitivity
+python pipeline/horizon_crosscheck.py --site im2-athena     # cross-checks (LOLA shot queries cached)
+python pipeline/export.py --site im2-athena && python pipeline/validate.py --site im2-athena
 
 # 2. Frontend
 cd app
@@ -86,13 +89,24 @@ All pipeline entry points accept `--site ID`, for example:
 python pipeline/fetch.py --site im2-athena
 python pipeline/export.py --site im2-athena
 python pipeline/validate.py --site im2-athena
-python pipeline/crosscheck_metrics.py 2026-12-05T00:00:00Z 14 --terrain --site im2-athena
+python pipeline/crosscheck_metrics.py --site im2-athena 2026-12-05T00:00:00Z 14 --terrain
 ```
 
 Fetch, export and validation default to all configured sites. The other commands
 use the sole configured site by default; with multiple sites, specify `--site`.
 IDs must be unique lowercase letters/digits separated by hyphens. Unknown IDs
-are errors. Only Athena is configured; the frontend still displays one site.
+are errors. Two sites are configured, but only Athena has app data; the frontend still
+displays Athena. Use explicit IDs while CR1 is awaiting position retrieval.
+
+Repeat CR1 preparation without network access:
+
+```sh
+python pipeline/terrain_check.py --site connecting-ridge-cr1 --offline
+python pipeline/site_elevation.py --site connecting-ridge-cr1 --offline --dem-only
+```
+
+The latter omits local laser-shot checks and marks uncached product comparisons
+unavailable. These commands do not create a final horizon or request positions.
 
 Reports are `data/terrain/<site_id>_{lola_coverage_report,site_elevation_report,
 terrain_horizon,horizon_crosscheck}.json` and
@@ -118,9 +132,9 @@ The scenario is kept in the URL, for example
   exact query parameters, with a `.meta.json` next to it holding the request
   URL, parameters, HTTP status, response headers, API signature, retrieval time
   and sha256.
-- `python pipeline/fetch.py --print-urls` prints the exact query URLs. Each can
+- `python pipeline/fetch.py --site im2-athena --print-urls` prints the exact query URLs. Each can
   be reproduced with `curl -sS "<url>"`.
-- `python pipeline/fetch.py --refresh` re-downloads everything.
+- `python pipeline/fetch.py --site im2-athena --refresh` re-downloads Athena responses.
 - Failed requests are never turned into data. The error, the saved failed
   body (`*.FAILED.json`) and a reproducible `curl` command are printed instead.
   `export.py` only reads the cache and never goes to the network.
