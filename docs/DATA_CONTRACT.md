@@ -4,7 +4,9 @@
 The pipeline owns scientific calculations and visibility states.
 The frontend owns display, selected-window aggregation, and interaction.
 
-Changes to this contract require both teammates to agree.
+Dylan owns both sides of this contract (sole developer).
+Changes must be recorded in the changelog at the end of this file and
+reflected in both pipeline/export.py and app/src/types.ts in the same commit.
 Do not silently rename fields or change units.
 
 ## Files
@@ -144,3 +146,72 @@ start or end of the selected mission window.
 
 Synthetic fixtures test code behavior; they do not validate
 real lunar conditions.
+
+## Clarifications and changelog
+
+### 2026-11-14, milestone 1 (schema_version stays "1.0", additive only)
+- Site file layout: `{schema_version, site: {<site metadata>}, sources,
+  position_conventions, samples, horizon, visibility_method,
+  visibility_intervals}`. Site metadata is nested under `site`.
+- Added optional `site.altitude_conversion_note`: how
+  `observer_height_above_surface_m` became `horizons_site_altitude_km`.
+- Horizons source entries also carry `horizons_query_params`,
+  `http_status`, `http_response_headers`, `api_signature`, and
+  `ephemeris_header` (convention lines echoed by Horizons). This satisfies
+  "preserve query parameters and raw response headers".
+- `retrieved_at_utc` is a full timestamp for API responses. For web pages
+  consulted by hand it is a date only (`YYYY-MM-DD`), because the time was not
+  recorded.
+- Raw Horizons responses are cached byte-for-byte in `data/horizons/`
+  (committed; small). `data/raw/` stays git-ignored for large terrain products.
+- Milestone 1 exports `horizon.model = "smooth"` (0° everywhere) and its
+  midpoint-classified `visibility_intervals` so files are contract-complete;
+  the UI does not yet display intervals or metrics.
+- Horizons conventions used (verified in the response header):
+  observer `coord@301` with `COORD_TYPE=GEODETIC`, `SITE_COORD = E-lon, lat, alt(km)`,
+  frame `MEAN_ME (high precision) {East-longitude positive}`, reference sphere
+  1737.4 km, quantity 4 airless apparent AZ/EL of the target center, `TIME_TYPE=UT`
+  (UTC after 1962). Targets: Sun `10`, Earth `399` (body center, not barycenter `3`).
+
+### 2026-11-14, terrain product selection (no schema change)
+- Terrain sources: LDEM_80S_20M (near field) and LDEM_75S_60M (far field),
+  PDS LRO-L-LOLA-4-GDR-V1.0 V2.0. Selection evidence and processing metadata
+  (projection, height reference, scale, actual bounds, resolution, coverage,
+  missing-data handling) are in `data/terrain/lola_coverage_report.json`.
+- LOLA LDEM products have no missing-data value; every pixel is interpolated
+  where no shot exists. Shot counts come from the matching LDEC products.
+  A terrain horizon must record the LDEC count of the pixel that sets each
+  azimuth. Terrain beyond the selected files is unknown: such an azimuth gets
+  `elevation_deg: null`, never 0.
+- `processing_notes` for a terrain horizon must state the stopping rule and
+  the height bound used (global LOLA max 10 773 m + 100 m margin).
+
+### 2026-11-14, milestone 2 (schema_version stays "1.0", additive only)
+- Observer altitude: `site.surface_elevation_m` = LOLA surface height above
+  the 1737.4 km sphere; `site.observer_height_above_surface_m` = 1;
+  `site.horizons_site_altitude_km` = (surface + observer height) / 1000. All
+  three heights share the same 1737.4 km reference, so no datum conversion
+  is needed. Added `position_conventions.observer_altitude`.
+- Horizons sources are per chunk: ids `horizons-<target>-<n>` (n = 1…6 for
+  60 days in 10-day chunks), each with its exact query, headers and file.
+  Chunks share endpoint timestamps; the exporter merges them only if those
+  duplicate samples are identical.
+- File layout: one sample / interval per line (compact JSON). Field names,
+  units and semantics are unchanged.
+- Mission windows (frontend): `[start, end)`; delays are offsets of +1/+3/+7 d
+  from the baseline arrival, never cumulative; duration is unchanged by a
+  delay. A window is valid only if `coverage_start ≤ start` and
+  `end ≤ coverage_end`.
+- Metric details (frontend, version 1):
+  - A metric is unavailable if any relevant state in the window is null, or if
+    the window is not fully covered by intervals. It is never shown as 0.
+  - Darkness runs join adjacent intervals with `sun_visible: false`, even when
+    Earth's state differs. A null interval breaks a run.
+  - Ties for the longest run go to the earliest.
+  - A run touching a window boundary is flagged. The app also reports the
+    run's full extent in the data, and says when that extent reaches the edge
+    of the coverage.
+  - "Next change" searches to coverage end and otherwise reports "not found
+    in available data".
+- Smooth horizon = 0° local horizontal plane (ignores the ~0.06° dip for a
+  1 m observer over a smooth surface).

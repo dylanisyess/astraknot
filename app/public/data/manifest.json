@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "m2-athena-2026-12-01-60d",
+  "generated_at_utc": "2026-11-14T18:17:22Z",
+  "coverage_start_utc": "2026-12-01T00:00:00Z",
+  "coverage_end_utc": "2027-01-30T00:00:00Z",
+  "sample_step_seconds": 600,
+  "sites": [
+    {
+      "id": "im2-athena",
+      "name": "IM-2 Athena landing point (Mons Mouton region)",
+      "file": "im2-athena.json"
+    }
+  ],
+  "is_synthetic": false
+}

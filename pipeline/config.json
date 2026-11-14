@@ -1,0 +1,47 @@
+{
+  "dataset_id": "m2-athena-2026-12-01-60d",
+  "coverage_start_utc": "2026-12-01T00:00:00Z",
+  "coverage_end_utc": "2027-01-30T00:00:00Z",
+  "sample_step_seconds": 600,
+  "sites": [
+    {
+      "id": "im2-athena",
+      "name": "IM-2 Athena landing point (Mons Mouton region)",
+      "latitude_deg": -84.7906,
+      "longitude_deg_east": 29.1957,
+      "coordinate_frame": "Lunar Mean Earth/polar axis (ME) body-fixed frame, planetocentric latitude, east-positive longitude. ASSUMED: the LROC page does not name its frame; LRO products use the ME frame by project convention. Horizons interprets the submitted coordinates in MOON_ME (DE421-based).",
+      "coordinate_source_url": "https://lroc.im-ldi.com/images/1408",
+      "coordinate_source_title": "LROC: IM-2 Athena Seen Obliquely (M. Robinson, 10 March 2025) - gives 84.7906° S, 29.1957° E",
+      "observer_height_above_surface_m": 1,
+      "surface_elevation_m": 5321.9,
+      "surface_elevation_reference": "Height above the 1737.4 km LOLA reference sphere, LDEM_80S_20M (PDS LRO-L-LOLA-4-GDR-V1.0 V2.0) bilinear at the site; verified against 1131 LOLA RDR shots (DEM - shot mean -0.26 m, sd 0.67 m). See data/terrain/site_elevation_report.json.",
+      "horizons_site_altitude_km": 5.3229,
+      "horizons_altitude_reference": "Height above the Horizons reference body for the Moon: a 1737.4 km sphere (response header 'Center radii'), the same reference as LOLA heights.",
+      "altitude_conversion_note": "horizons_site_altitude_km = (surface_elevation_m + observer_height_above_surface_m) / 1000 = (5321.9 m + 1 m) / 1000 = 5.3229 km. Both heights are relative to the same 1737.4 km sphere, so no datum conversion is needed. Surface value uncertainty: ~1 m for the stated coordinates; ~+/-5 m if the site coordinate is uncertain by 100 m (terrain within 100 m spans -4.4 to +4.6 m).",
+      "horizon_model": "smooth"
+    }
+  ],
+  "terrain": {
+    "source": "PDS Geosciences Node, LRO-L-LOLA-4-GDR-V1.0, polar products V2.0 (LOLA data through 2017-02-02)",
+    "near_field_product": "LDEM_80S_20M",
+    "near_field_counts": "LDEC_80S_20M",
+    "far_field_product": "LDEM_75S_60M",
+    "far_field_counts": "LDEC_75S_60M",
+    "planning_product": "LDEM_75S_240M",
+    "selection_evidence": "data/terrain/lola_coverage_report.json (python pipeline/terrain_check.py)",
+    "rule": "Use LDEM_80S_20M wherever the ray is inside it; continue rays that leave it (azimuths ~320-351 deg, 165-190 km) in LDEM_75S_60M. Stop a ray only when terrain at the global LOLA maximum height (+100 m) could no longer exceed the running horizon. If a ray leaves every file first, that azimuth's horizon is null (unknown), never flat."
+  },
+  "targets": [
+    {
+      "key": "sun",
+      "command": "10",
+      "name": "Sun (body center)"
+    },
+    {
+      "key": "earth",
+      "command": "399",
+      "name": "Earth (body center, not Earth-Moon barycenter)"
+    }
+  ],
+  "horizons_chunk_days": 10
+}

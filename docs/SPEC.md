@@ -24,7 +24,9 @@ landing, power, thermal, or communications analysis tool.
 - Only allow scenarios fully covered by the dataset.
 - UTC throughout the application.
 
-Exact sites and dataset dates are pending data-owner selection.
+Site A: IM-2 Athena landing point, 84.7906° S, 29.1957° E (LROC).
+Supported interval (milestone 2): 2026-12-01T00:00Z to 2027-01-30T00:00Z.
+Site B is still to be selected.
 Choose points with suitable terrain coverage and document sources.
 
 ## Required user experience
@@ -81,12 +83,14 @@ Event times are estimates; do not imply finer validated accuracy.
 - No database, accounts, or AI inference inside the app.
 
 ## Ownership
-Dylan: interface, visualization, integration, deployment.
-Partner: source data, terrain processing, visibility generation.
-Both: data contract, validation, demo, documentation.
+Dylan is the sole developer and owns all work: interface, visualization,
+integration, deployment, source data, terrain processing, visibility
+generation, data contract, validation, demo, and documentation.
+(Updated 2026-11-14; earlier drafts split this with a partner.)
 
 ## Deferred features
-- Arbitrary user-selected terrain coordinates.
+- Curated list of additional documented sites (backlog).
+- Arbitrary user-selected (custom) coordinates and terrain (backlog).
 - Live calculation server.
 - Battery sizing or link budgets.
 - Automatic overall "best site" score.
