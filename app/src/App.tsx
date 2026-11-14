@@ -153,6 +153,7 @@ function Workspace({ ds }: { ds: Dataset }) {
   if (effDelay) groups.push({ key: "delayed", label: `Delay +${effDelay} d`, window: actW, longestDark: dark(actM) });
 
   const meta = site.site;
+  const terrainEye = site.terrain_horizon?.observer ? site.terrain_horizon.observer.eye_above_dem_surface_m.toFixed(2) : null;
   const synthetic = manifest.is_synthetic || meta.is_synthetic;
   const arrivalDate = utcDateString(arrival);
   const latestDate = utcDateString(bounds.latest);
@@ -210,7 +211,9 @@ function Workspace({ ds }: { ds: Dataset }) {
           <dt>Surface elevation</dt>
           <dd className="num">{meta.surface_elevation_m?.toFixed(1)} m above the 1737.4 km sphere (LOLA)</dd>
           <dt>Observer</dt>
-          <dd className="num">{meta.observer_height_above_surface_m} m above the modeled surface</dd>
+          <dd className="num">
+            {meta.observer_height_above_surface_m} m above the modeled surface (nominal; {terrainEye ? `${terrainEye} m after rounding the surface to 0.1 m` : "surface rounded to 0.1 m"})
+          </dd>
           <dt>Horizons altitude</dt>
           <dd className="num">{meta.horizons_site_altitude_km} km above the 1737.4 km sphere</dd>
           <dt>Data coverage</dt>
@@ -686,7 +689,11 @@ function HorizonFacts({ site, mode }: { site: SiteData; mode: HorizonMode }) {
         <dt>Source</dt>
         <dd>LOLA gridded terrain, PDS LRO-L-LOLA-4-GDR-V1.0 V2.0 (LDEM_80S_20M, LDEM_75S_60M beyond its edge)</dd>
         <dt>Observer</dt>
-        <dd>{obsH} m above the LOLA surface at {fmtLat(site.site.latitude_deg)}, {fmtLonEast(site.site.longitude_deg_east)}</dd>
+        <dd>
+          {obsH} m (nominal) above the LOLA surface at {fmtLat(site.site.latitude_deg)}, {fmtLonEast(site.site.longitude_deg_east)}. The
+          Horizons altitude was formed from the surface rounded to 0.1 m, so the eye is {obsEye} m above the interpolated surface; Sun,
+          Earth and skyline all use that same point. Effect of the extra {t.observer ? (t.observer.eye_above_dem_surface_m - obsH).toFixed(4) : "0.02"} m: at most 0.0034° on the skyline and one 10-minute step at the 2026-12-30 sunset.
+        </dd>
         <dt>Terrain pixels</dt>
         <dd className="num">{pix} (the terrain detail the model can represent)</dd>
         <dt>Ray sampling</dt>

@@ -256,8 +256,10 @@ def terrain_block(cfg: dict, site: dict, samples: list[dict]) -> tuple[dict | No
     notes = (
         f"Terrain horizon (Stage 2) from LOLA {m['products_priority'][0]} (pixel spacing 20 m at the pole, "
         f"{near_pix:.2f} m at the site) and {m['products_priority'][1]} (60 m pixels, used only where a ray leaves the "
-        f"20 m product). Observer {site['observer_height_above_surface_m']} m above the LOLA surface (Horizons "
-        f"altitude {site['horizons_site_altitude_km']} km above the 1737.4 km sphere). Geometry: great-circle rays "
+        f"20 m product). Observer {site['observer_height_above_surface_m']} m (nominal) above the LOLA surface: "
+        f"Horizons altitude {site['horizons_site_altitude_km']} km above the 1737.4 km sphere, formed from the "
+        f"surface rounded to 0.1 m, so the eye is {rep['site']['eye_above_dem_surface_m']:.4f} m above the bilinear "
+        f"DEM surface; the skyline uses that same point. Geometry: great-circle rays "
         f"every {step} deg in the Moon-fixed ME frame; apparent elevation atan2(r_t cos(theta) - r_o, r_t sin(theta)) "
         f"with exact sphere geometry, so lunar curvature is counted once; negative horizons are kept. Ray sampling "
         f"(distinct from the DEM pixel spacing): the DEM is bilinearly interpolated at points every "

@@ -75,6 +75,37 @@ App (`app/src/`):
   Do not use the separately printed inverse in `dsmap_polar.cat` literally.
 - **Actual grid bounds:** compute from LINES × MAP_SCALE (corners reach further
   than the label's MAXIMUM_LATITUDE).
+- **Observer height, nominal vs effective (traced 2026-11-14):** nominal 1 m.
+  `site_elevation.py:181` rounds the bilinear LDEM_80S_20M surface
+  5321.880448 m to 5321.9 m, and line 186 forms the Horizons altitude
+  (5321.9 + 1) / 1000 = 5.3229 km (echoed by Horizons: `Center geodetic …
+  5.3229`; |cylindric| = 1742.7228895 km, see "Echoed radius" below). `terrain_horizon.py:357` builds the
+  observer radius from that same altitude, r_o = 1 742 722.9 m, and the
+  terrain foot under it is the same bilinear value 5321.880448 m (the
+  range-read and memory-mapped readers agree to 1e-12 m). Eye above the
+  interpolated surface = 1 742 722.9 − 1 737 400 − 5321.880448 = **1.019552 m**.
+  Cause: rounding only, not interpolation and not inconsistent inputs; Sun,
+  Earth and skyline share one observer point. Measured effect of the extra
+  0.0196 m (profile recomputed with the eye at exactly 1.000 m): skyline
+  higher by ≤ 0.00338° (az 255°, set 330 m away; mean 0.0008°), 1 of 8 640 Sun
+  steps changes (the 2026-12-30 sunset would be one step earlier, 01:10 instead
+  of 01:20 UTC), 0 Earth steps, no demo-window metric changes. On the Sun/Earth
+  directions it is ~3e-9° (scaled from the measured altitude parallax). Kept as
+  a documented approximation. No absolute vertical accuracy of the surface
+  value is claimed (see "Surface value: what the numbers mean" in the Observer
+  altitude section), and the coordinate's accuracy is unknown.
+  (`terrain_check.py`, planning only, used the unrounded surface + 1 m.)
+- **Echoed radius (0.0105 m):** every one of the 12 responses echoes
+  `Center cylindric: 29.1957, 158.23221, -1735.5246 km`, so |r| = 1742.7228895 km,
+  10.5 mm below the terrain observer radius 1742.7229000 km. Computing Dxy and Dz
+  exactly from the submitted latitude and 5.3229 km gives 158.2322069 and
+  −1735.5246109 km; printed to Horizons' 5 and 4 decimals they become exactly
+  the echoed values (residuals +3.1 mm and +10.9 mm, within ±5 mm and ±50 mm of
+  printed precision). Cause: output rounding of the echo. The echo is therefore
+  consistent with the submitted radius only to its printed precision (about
+  ±5 cm on |r|); it does not show exact agreement. `Center geodetic` echoes
+  5.3229 km to the digits submitted. `validate.py` now reports this difference
+  and uses a 0.1 m tolerance (was 1 m).
 - **Terrain horizon geometry:** ME frame; observer at r_o = 1737.4 km +
   Horizons altitude; local zenith = radial (sphere); north/east from d/dlat,
   d/dlon; azimuth clockwise from north. Great-circle ray at azimuth A; point at
@@ -493,12 +524,24 @@ Checks:
   85S_10M 5 322.00, 75S_60M 5 321.45, LDEM_64 (nearest) 5 323.00 m.
 - Sensitivity to the site coordinate: local slope 2.3°; height changes
   −1.5…+1.2 m within 30 m and −4.4…+4.6 m within 100 m. LROC does not state
-  the coordinate's accuracy, so the surface value is good to ~1 m **for the
-  stated coordinates**, and ~±5 m if the true point is up to 100 m away.
+  the coordinate's accuracy.
+- Surface value, what the numbers mean (corrected 2026-11-14; an earlier
+  version claimed "good to ~1 m" and "~±5 m" without a source): **no absolute
+  vertical accuracy is claimed.** The DEM − shot residuals (mean −0.26 m,
+  sd 0.67 m, max 4.71 m) are agreement with the DEM's own source data, and the
+  8 shots within 30 m spanning 5 321.75–5 322.69 m (0.94 m) are local spread;
+  neither is an accuracy. The −4.4…+4.6 m within 100 m is a height range
+  around the stated coordinate, not an uncertainty, because the coordinate's
+  accuracy is unknown. A published LOLA/LDEM vertical accuracy has not been
+  checked here.
+- Rounding: the surface is rounded to 0.1 m before forming the altitude, so the
+  submitted point is 1.0196 m above the interpolated surface (nominal 1 m);
+  traced and measured in "Start here → Verified conventions".
 - Horizons convention: GEODETIC altitude is height above the reference body;
-  for the Moon that is a 1737.4 km sphere (header `Center radii`). Verified in
-  all 12 responses: echoed `Center geodetic … 5.3229` and
-  |`Center cylindric`| = 1742.7229 km = 1737.4 + 5.3229.
+  for the Moon that is a 1737.4 km sphere (header `Center radii`). In all 12
+  responses: echoed `Center geodetic … 5.3229`, and |`Center cylindric`| =
+  1742.7228895 km, which equals 1737.4 + 5.3229 = 1742.7229 km to within the
+  echo's printed precision (difference 10.5 mm; see "Echoed radius").
 
 Measured effect of the correction (2026-12-01, 145 samples, 0 km vs 5.3229 km;
 `data/horizons/altitude_comparison.json`):
@@ -591,7 +634,7 @@ date | check | inputs | expected behavior | observed result | pass/fail
 2026-11-14 | LOLA orientation vs global grid | LDEM_75S_240M vs LDEM_64, 480 points | our mapping fits, mirrored does not | RMS 30 m vs 2 507 m | pass
 2026-11-14 | Seam 80S_20M vs 75S_60M | 20 points near the 80S edge | agree to resolution | mean +1.4 m, max 9.5 m | pass
 2026-11-14 | Surface elevation vs LOLA shots | 1 131 RDR shots within ~600 m | DEM − shot ≈ 0 | mean −0.26 m, sd 0.67 m; mirrored control −5 899 m | pass
-2026-11-14 | Horizons altitude convention | 12 responses | echo 5.3229; \|cylindric\| = 1737.4 + alt | 12/12: 1742.7229 km | pass
+2026-11-14 | Horizons altitude convention | 12 responses | echo 5.3229; \|cylindric\| ≈ 1737.4 + alt | 12/12: 1742.7228895 km, 10.5 mm below, within printed precision (±~50 mm) | pass
 2026-11-14 | Altitude effect | 2026-12-01, 0 vs 5.3229 km | Earth ~h/d ≈ 8 × 10⁻⁴°, Sun ~2 × 10⁻⁶° | Earth 8.04 × 10⁻⁴° (mean), Sun 2.07 × 10⁻⁶° | pass
 2026-11-14 | 60-day retrieval | 12 chunked requests | sequential, cached, complete | 12 live, then re-run 0 live; 6 × 1 441 rows per target | pass
 2026-11-14 | `validate.py` | raw cache + export | contract + raw checks | **50/50 pass**: per chunk sha256, HTTP 200, conventions, altitude, row counts, 0 `n.a.`; 5 identical boundaries per target; 8 641 samples, uniform 600 s, final endpoint; el −4.26…10.72°; export = raw 17 282/17 282; 10 contiguous intervals | pass
@@ -625,7 +668,12 @@ timeline itself is pointer-only).
 
 ## Unresolved issues and assumptions
 - Site coordinate frame assumed ME; LROC does not state the frame or the
-  coordinate's accuracy, which drives the ±5 m surface uncertainty.
+  coordinate's accuracy. Terrain within 100 m spans −4.4…+4.6 m (a height range,
+  not an uncertainty). No absolute vertical accuracy of the surface is claimed.
+- Centimetre-scale approximations kept by decision (no re-fetch): the
+  submitted point is 1.0196 m above the interpolated surface (0.1 m rounding),
+  and the echoed radius is 10.5 mm below the computed one (echo print
+  precision). Both are documented in "Start here → Verified conventions".
 - Terrain horizon (milestone 3) is regional DEM-based visibility for the
   published coordinate. In 100 m site-shift scenarios (N/E/S/W) the skyline
   changed by up to 2° in one direction; the coordinate's real accuracy is

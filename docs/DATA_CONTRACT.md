@@ -265,6 +265,14 @@ real lunar conditions.
   (`pipeline/fetch_terrain.py`). The committed evidence is
   `data/terrain/im2-athena_terrain_horizon.json` (every ray + sensitivity) and
   `data/terrain/im2-athena_horizon_crosscheck.json` (cross-checks).
+- Observer height (clarified after the milestone 3 review):
+  `observer_height_above_surface_m` = 1 is the nominal value. The submitted
+  `horizons_site_altitude_km` was formed from the surface rounded to 0.1 m
+  (5321.9 m vs the bilinear 5321.8804 m), so the actual point is 1.0196 m above
+  the interpolated DEM surface; `terrain_horizon.observer.eye_above_dem_surface_m`
+  records the exact value. Both the Sun/Earth directions and the terrain horizon
+  use this one point (r = 1737.4 km + 5322.9 m). Measured effect of the 0.0196 m
+  on the skyline: ≤ 0.0034°, one Sun 10-minute step in 60 days, no demo metric.
 - The app selects Smooth or Terrain. It uses that model's intervals for every
   metric, timeline and readout; arrival, delay, duration and the selected time
   do not depend on the mode. URL parameter `horizon=smooth|terrain`.

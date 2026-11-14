@@ -50,10 +50,13 @@ def _header_checks(tag: str, site: dict, tgt: dict, r: hz.CachedResponse, chunk:
     try:
         _, dxy, dz = (float(x) for x in cyl.split("{")[0].split(","))
         r_site = math.hypot(dxy, dz)
-        ok = abs(r_site - (1737.4 + site["horizons_site_altitude_km"])) < 1e-3
+        # Horizons prints Dxy to 1e-5 km and Dz to 1e-4 km, so |r| from the echo is only
+        # good to ~0.05 m; 0.1 m tolerance. This does not show agreement better than that.
+        ok = abs(r_site - (1737.4 + site["horizons_site_altitude_km"])) < 1e-4
     except ValueError:
         r_site, ok = float("nan"), False
-    out["altitude is height above 1737.4 km sphere (|cylindric| = R + alt)"] = (ok, f"|r| = {r_site:.4f} km")
+    out["altitude is height above 1737.4 km sphere (|cylindric| ~ R + alt, within printed precision)"] = (
+        ok, f"|r| = {r_site:.7f} km; R + alt - |r| = {(1737.4 + site['horizons_site_altitude_km'] - r_site) * 1e6:.1f} mm")
     out["lunar frame MEAN_ME, east-longitude positive"] = (
         "MEAN_ME" in h.get("Center pole/equ", "") and "East-longitude positive" in h.get("Center pole/equ", ""),
         h.get("Center pole/equ", ""))
