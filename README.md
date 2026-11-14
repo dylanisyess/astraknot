@@ -4,13 +4,16 @@ A NASA Space Apps prototype that shows when the Sun and Earth are above the
 horizon from lunar south-polar sites. It is an educational planning tool, not
 flight-qualified analysis.
 
-**Milestone 2 (current):** smooth-horizon mission windows for one documented
-site (IM-2 Athena landing point, 84.7906° S, 29.1957° E). The data is 60 days
-(2026-12-01 to 2027-01-30 UTC) of real JPL Horizons Sun and Earth
-azimuth/elevation at 10-minute steps, for an observer 1 m above the LOLA
-surface. You can pick a baseline arrival and duration, and compare +1/+3/+7-day
-slips. Visibility timelines, an elevation chart and the readouts all share one
-cursor. Terrain is **not yet included**. See [docs/STATUS.md](docs/STATUS.md).
+**Milestone 3 (current, under review):** mission windows for one documented
+site (IM-2 Athena landing point, 84.7906° S, 29.1957° E) with a **terrain
+horizon** computed from the LOLA terrain model (20 m pixels), and the smooth 0° horizon kept as a
+comparison mode. The data is 60 days (2026-12-01 to 2027-01-30 UTC) of real
+JPL Horizons Sun and Earth azimuth/elevation at 10-minute steps, for an
+observer 1 m above the LOLA surface. You can pick a baseline arrival and
+duration, compare +1/+3/+7-day slips, switch Smooth/Terrain, and see a horizon
+panorama, visibility timelines, an elevation chart and readouts that share one
+cursor. This is regional DEM-based visibility, not a reconstruction of
+Athena's actual conditions. See [docs/STATUS.md](docs/STATUS.md).
 
 ## Layout
 
@@ -27,11 +30,14 @@ pipeline/            Python data preparation (standard library only)
   site_elevation.py  verify LOLA surface elevation vs LOLA laser shots
   compare_altitude.py  0 km vs corrected-altitude angular differences
   crosscheck_metrics.py  independent reference for mission-window metrics
-  lola.py            LOLA PDS label parsing, polar projection, range reads
+  lola.py            LOLA PDS label parsing, polar projection, range reads, streaming download
   terrain_check.py   verify LOLA products, bounds, orientation, coverage
+  fetch_terrain.py   download the selected LOLA products -> data/raw/lola/ (3.47 GB)
+  terrain_horizon.py terrain horizon ray march (+ terrain_sensitivity.py)
+  horizon_crosscheck.py  pixel-sweep check (independent implementation), LOLA-shot consistency, azimuth sanity check
   tests/             unit tests (synthetic fixtures)
 data/horizons/       raw Horizons responses (byte-for-byte) + request metadata
-data/terrain/        LOLA PDS labels + terrain coverage report (committed)
+data/terrain/        LOLA PDS labels, coverage report, terrain horizon + cross-check reports (committed)
 data/raw/            large downloads (git-ignored)
 docs/                SPEC.md, DATA_CONTRACT.md, STATUS.md
 ```
@@ -56,6 +62,14 @@ python pipeline/terrain_check.py  # LOLA product/coverage check: downloads ~44 M
 python pipeline/site_elevation.py # surface elevation vs LOLA shots (cached query)
 python pipeline/compare_altitude.py
 python pipeline/crosscheck_metrics.py 2026-12-05T00:00:00Z 14
+python pipeline/crosscheck_metrics.py 2026-12-05T00:00:00Z 14 --terrain
+
+# Terrain horizon (only to recompute it; the results are committed):
+python pipeline/fetch_terrain.py          # 3.47 GB of LOLA data -> data/raw/lola/ (git-ignored)
+python pipeline/fetch_terrain.py --check --rehash
+python pipeline/terrain_horizon.py        # ~10 s profile + ~5 min sensitivity
+python pipeline/horizon_crosscheck.py     # cross-checks (LOLA shot queries cached)
+python pipeline/export.py && python pipeline/validate.py
 
 # 2. Frontend
 cd app
@@ -67,9 +81,9 @@ npm run preview                   # serve the built app on http://localhost:4173
 ```
 
 The scenario is kept in the URL, for example
-`http://localhost:5173/?arrival=2026-12-05T00:00Z&days=14&delay=3&t=2026-12-12T22:20:00Z`
+`http://localhost:5173/?arrival=2026-12-05T00:00Z&days=14&delay=3&t=2026-12-14T12:00:00Z&horizon=terrain`
 (`arrival` = baseline arrival in UTC, `days` = mission duration, `delay` = 0, 1, 3 or 7,
-`t` = cursor time).
+`t` = cursor time, `horizon` = `terrain` or `smooth`).
 
 ## Re-fetching from JPL Horizons
 - The coverage is split into 10-day chunks (`horizons_chunk_days`). Requests go
@@ -101,5 +115,8 @@ quantity 4 (airless apparent azimuth/elevation of the target center),
 
 ## Sources
 - Site coordinates: LROC, [IM-2 Athena Seen Obliquely](https://lroc.im-ldi.com/images/1408)
+- Terrain: LOLA gridded products LDEM/LDEC_80S_20M and LDEM/LDEC_75S_60M,
+  PDS Geosciences Node, [LRO-L-LOLA-4-GDR-V1.0 polar products](https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/);
+  individual LOLA RDR shots via the [ODE GDS service](https://oderest.rsl.wustl.edu/livegds/)
 - [JPL Horizons API](https://ssd-api.jpl.nasa.gov/doc/horizons.html) and
   [Horizons manual](https://ssd.jpl.nasa.gov/horizons/manual.html)

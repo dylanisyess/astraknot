@@ -12,6 +12,10 @@ interface Props {
   selected: number;
   onSelect: (index: number) => void;
   scale: TimeScale;
+  /** Terrain mode: horizon elevation at each body's azimuth, per sample index (null = unknown). */
+  horizonAtBody?: Record<Body, (number | null)[]> | null;
+  /** Text for the 0° line. */
+  zeroLabel: string;
 }
 
 const BODIES: { key: Body; label: string }[] = [
@@ -19,7 +23,7 @@ const BODIES: { key: Body; label: string }[] = [
   { key: "earth", label: "Earth" },
 ];
 
-export function ElevationChart({ samples, times, i0, i1, selected, onSelect, scale }: Props) {
+export function ElevationChart({ samples, times, i0, i1, selected, onSelect, scale, horizonAtBody = null, zeroLabel }: Props) {
   const [hover, setHover] = useState<number | null>(null);
   const narrow = scale.width < 560;
   const height = narrow ? 230 : 280;
@@ -29,9 +33,12 @@ export function ElevationChart({ samples, times, i0, i1, selected, onSelect, sca
 
   const [yLo, yHi] = useMemo(() => {
     const v: (number | null)[] = [];
-    for (let i = i0; i <= i1; i++) v.push(samples[i].sun_elevation_deg, samples[i].earth_elevation_deg);
+    for (let i = i0; i <= i1; i++) {
+      v.push(samples[i].sun_elevation_deg, samples[i].earth_elevation_deg);
+      if (horizonAtBody) v.push(horizonAtBody.sun[i], horizonAtBody.earth[i]);
+    }
     return elevationDomain(v);
-  }, [samples, i0, i1]);
+  }, [samples, i0, i1, horizonAtBody]);
   const y = (v: number) => top + ((yHi - v) / (yHi - yLo)) * ph;
   const x = scale.x;
 
@@ -46,6 +53,22 @@ export function ElevationChart({ samples, times, i0, i1, selected, onSelect, sca
       }
       paths[key] += `${pen ? "L" : "M"}${x(times[i]).toFixed(1)},${y(v).toFixed(1)}`;
       pen = true;
+    }
+  }
+
+  const hPaths: Record<Body, string> = { sun: "", earth: "" };
+  if (horizonAtBody) {
+    for (const { key } of BODIES) {
+      let pen = false;
+      for (let i = i0; i <= i1; i++) {
+        const v = horizonAtBody[key][i];
+        if (v === null) {
+          pen = false; // unknown horizon: a gap, never drawn as 0
+          continue;
+        }
+        hPaths[key] += `${pen ? "L" : "M"}${x(times[i]).toFixed(1)},${y(v).toFixed(1)}`;
+        pen = true;
+      }
     }
   }
 
@@ -82,7 +105,7 @@ export function ElevationChart({ samples, times, i0, i1, selected, onSelect, sca
           </g>
         ))}
         <text className="horizon-label" x={scale.left + 6} y={y(0) - 5}>
-          0° smooth horizon (terrain not included)
+          {zeroLabel}
         </text>
         {timeTicks(scale).map((tk) => (
           <g key={tk.t}>
@@ -104,6 +127,8 @@ export function ElevationChart({ samples, times, i0, i1, selected, onSelect, sca
         {hover !== null && hover !== selected && (
           <line className="crosshair" x1={hx} x2={hx} y1={top} y2={top + ph} />
         )}
+        {horizonAtBody &&
+          BODIES.map(({ key }) => <path key={`h-${key}`} className={`hseries hseries-${key}`} d={hPaths[key]} />)}
         {BODIES.map(({ key }) => (
           <path key={key} className={`series series-${key}`} d={paths[key]} />
         ))}
@@ -127,6 +152,14 @@ export function ElevationChart({ samples, times, i0, i1, selected, onSelect, sca
               <span className="num">{fmtDeg(elevation(hov, key))}</span>
             </div>
           ))}
+          {horizonAtBody &&
+            BODIES.map(({ key, label }) => (
+              <div key={`h-${key}`} className="tooltip-row muted">
+                <span className={`swatch swatch-h-${key}`} />
+                Skyline under {label}
+                <span className="num">{fmtDeg(horizonAtBody[key][hover], 2)}</span>
+              </div>
+            ))}
         </div>
       )}
     </div>

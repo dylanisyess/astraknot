@@ -1,0 +1,16 @@
+{
+  "request_url": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-84.801224&maxlat=-84.784736&westernlon=28.986011&easternlon=29.167699",
+  "params": {
+    "query": "lolardr",
+    "results": "v",
+    "output": "JSON",
+    "minlat": "-84.801224",
+    "maxlat": "-84.784736",
+    "westernlon": "28.986011",
+    "easternlon": "29.167699"
+  },
+  "http_status": 200,
+  "retrieved_at_utc": "2026-11-14T19:28:13Z",
+  "csv_url": "https://oderest.rsl.wustl.edu/output/20261114t132801089/LolaRDR_-85N-85N_29E29E_20261114T132805850_pts_csv.csv",
+  "label_url": "https://oderest.rsl.wustl.edu/output/20261114t132801089/LolaRDR_-85N-85N_29E29E_20261114T132805850_pts_csv.lbl"
+}

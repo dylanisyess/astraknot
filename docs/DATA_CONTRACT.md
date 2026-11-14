@@ -215,3 +215,56 @@ real lunar conditions.
     in available data".
 - Smooth horizon = 0° local horizontal plane (ignores the ~0.06° dip for a
   1 m observer over a smooth surface).
+
+### 2026-11-14, milestone 3: terrain horizon (schema_version stays "1.0", additive only)
+- The top-level `horizon` and `visibility_intervals` are unchanged: the smooth
+  0° model, byte-for-byte the milestone 2 result. `site.horizon_model` still
+  describes that top-level horizon (`"smooth"`).
+- New `site.available_horizon_models`: `["smooth"]` or `["smooth", "terrain"]`.
+  Absent in older files, meaning `["smooth"]`.
+- New optional top-level `terrain_horizon` (only when listed as available):
+  - `horizon`: the contract's horizon fields with `model: "terrain"`,
+    `azimuth_deg` (0.0 … 359.9 in 0.1° steps), `elevation_deg` (rounded to
+    1e-5°; `null` = unknown, never 0), `observer_height_above_surface_m`,
+    `interpolation: "linear_periodic"`, `processing_notes`, plus
+    `search_extent` (stopping rule, `h_max_m`, stop distances, number of
+    unknown azimuths) and `resolution` (azimuth step, radial steps, first
+    sample distance, DEM pixel size per product).
+  - `setting_points`: per-azimuth columns parallel to `azimuth_deg`:
+    `distance_km`, `height_m` (above 1737.4 km), `lat_deg`, `lon_deg_east`,
+    `product_index` (into `products`), `shot_count` (LDEC count of the nearest
+    pixel; 0 = interpolated height). All `null` where the elevation is `null`.
+    Shot counts are quality indicators, not accuracy guarantees.
+  - `products`: name, role, content, pixel size, URL, sha256 of each LOLA file.
+  - `observer`, `checks` (summary of the cross-checks and sensitivity).
+    `checks.site_shift_scenarios` lists the four 100 m observer displacements
+    (due N/E/S/W): skyline changes and demo-window metric changes relative to
+    the nominal point. They are sensitivity scenarios, not a measured
+    coordinate uncertainty or confidence interval. `checks.near_field` gives the
+    nearest skyline distance and the effect of ignoring terrain within 20–300 m.
+    `checks.lola_shots_note` / `azimuth_convention_note` state that those are a
+    consistency check (the DEM was built from the shots) and a gross-error
+    sanity check respectively. `horizon.resolution` separates the ray sampling
+    distance (`radial_step_m`) from the terrain pixel spacing (`dem_pixel_m`,
+    `near_dem_pixel_m_at_site`). (Added in the milestone 3 review; wording and
+    metadata only, no numerical result changed.)
+  - `visibility_method` and `visibility_intervals`: the same midpoint
+    classification as the smooth model, against this profile. They are
+    classified from the rounded profile that is exported, so a consumer
+    re-classifying the samples gets identical intervals (tested in
+    `validate.py` and `app/src/horizon.test.ts`).
+- Horizon lookup rule (pipeline and app): linear periodic between profile
+  azimuths; `null` if either bracketing value is `null`; exactly on a profile
+  azimuth, that sample's own value is returned.
+- Terrain geometry: great-circle rays in the ME frame from the observer at
+  radius 1737.4 km + Horizons site altitude; elevation
+  `atan2(r_t cos θ − r_o, r_t sin θ)`, so curvature is counted once; negative
+  horizons are kept. The stopping rule and the 10 773 m + 100 m bound are as
+  specified for terrain product selection; unknown = ray leaves every product first.
+- Raw terrain inputs stay in git-ignored `data/raw/lola/`
+  (`pipeline/fetch_terrain.py`). The committed evidence is
+  `data/terrain/im2-athena_terrain_horizon.json` (every ray + sensitivity) and
+  `data/terrain/im2-athena_horizon_crosscheck.json` (cross-checks).
+- The app selects Smooth or Terrain. It uses that model's intervals for every
+  metric, timeline and readout; arrival, delay, duration and the selected time
+  do not depend on the mode. URL parameter `horizon=smooth|terrain`.

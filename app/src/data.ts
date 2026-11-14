@@ -1,3 +1,4 @@
+import { terrainProblem } from "./horizon";
 import type { Dataset, Manifest, Sample, SiteData } from "./types";
 
 export class DataError extends Error {}
@@ -38,7 +39,11 @@ export async function loadDataset(base: string, fetchImpl: typeof fetch = fetch)
   if (!manifest.sites?.length) throw new DataError("manifest lists no sites");
   const site = await get<SiteData>(`data/${manifest.sites[0].file}`);
   const times = checkSite(manifest, site);
-  return { manifest, site, times };
+  // The terrain block is optional: if it is missing or fails a check, the
+  // smooth-horizon workflow stays fully usable and the reason is shown.
+  const problem = terrainProblem(site);
+  if (problem && site.terrain_horizon) delete site.terrain_horizon;
+  return { manifest, site, times, terrainProblem: problem };
 }
 
 /** Index of the sample nearest to t (ms). times must be ascending. */

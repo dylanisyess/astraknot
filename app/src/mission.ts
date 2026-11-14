@@ -1,7 +1,7 @@
 // Mission-window logic (DATA_CONTRACT.md "Selected-window metrics").
 // Pure functions: no React, no DOM. All times are epoch milliseconds, UTC.
 
-import type { SiteData } from "./types";
+import type { SiteData, VisibilityInterval } from "./types";
 
 export const HOUR_MS = 3_600_000;
 export const DAY_MS = 86_400_000;
@@ -23,8 +23,8 @@ export interface TimeWindow {
   end: number; // exclusive
 }
 
-export function parseIntervals(site: SiteData): Interval[] {
-  return site.visibility_intervals.map((iv) => ({
+export function parseIntervals(site: SiteData, list: VisibilityInterval[] = site.visibility_intervals): Interval[] {
+  return list.map((iv) => ({
     start: Date.parse(iv.start_utc),
     end: Date.parse(iv.end_utc),
     sun: iv.sun_visible,

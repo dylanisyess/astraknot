@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { ElevationChart } from "./ElevationChart";
+import { Panorama } from "./Panorama";
 import { Timeline, type TimelineGroup } from "./Timeline";
+import { horizonAt, horizonFor, intervalsFor } from "./horizon";
 import { timeScale, useWidth } from "./axis";
 import { azimuth, compass, elevation, fmtDeg, fmtLat, fmtLonEast, fmtUtc, loadDataset, nearestIndex } from "./data";
 import {
@@ -28,7 +30,7 @@ import {
   utcDateString,
   utcHour,
 } from "./mission";
-import type { Dataset } from "./types";
+import type { Dataset, HorizonMode, SiteData, TerrainHorizonBlock } from "./types";
 
 const DEFAULT_ARRIVAL = "2026-12-05T00:00:00Z";
 
@@ -64,7 +66,14 @@ function readUrlState() {
     const ms = v ? Date.parse(v) : NaN;
     return Number.isFinite(ms) ? ms : null;
   };
-  return { arrival: time("arrival"), days: num("days"), delay: num("delay"), t: time("t") };
+  const hz = q.get("horizon");
+  return {
+    arrival: time("arrival"),
+    days: num("days"),
+    delay: num("delay"),
+    t: time("t"),
+    horizon: hz === "smooth" || hz === "terrain" ? (hz as HorizonMode) : null,
+  };
 }
 
 const clampNum = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -74,10 +83,24 @@ const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
 function Workspace({ ds }: { ds: Dataset }) {
   const { manifest, site, times } = ds;
-  const intervals = useMemo(() => parseIntervals(site), [site]);
+  const init = useMemo(readUrlState, []);
+  const terrainAvailable = !!site.terrain_horizon;
+  // Default: terrain when it passed the loader checks; smooth stays available for comparison.
+  const [mode, setMode] = useState<HorizonMode>(() =>
+    terrainAvailable ? (init.horizon ?? "terrain") : "smooth",
+  );
+  const terrainRequestedButMissing = init.horizon === "terrain" && !terrainAvailable;
+  const horizon = horizonFor(site, mode)!;
+  const intervals = useMemo(() => parseIntervals(site, intervalsFor(site, mode)), [site, mode]);
+  // Horizon elevation under each body at every sample (terrain mode, for the chart and readouts).
+  const horizonAtBody = useMemo(() => {
+    if (mode !== "terrain") return null;
+    const sun = site.samples.map((x) => (x.sun_azimuth_deg === null ? null : horizonAt(horizon, x.sun_azimuth_deg)));
+    const earth = site.samples.map((x) => (x.earth_azimuth_deg === null ? null : horizonAt(horizon, x.earth_azimuth_deg)));
+    return { sun, earth };
+  }, [site, mode, horizon]);
   const cov = { start: times[0], end: times[times.length - 1] };
   const maxDays = Math.floor((cov.end - cov.start) / DAY_MS);
-  const init = useMemo(readUrlState, []);
 
   const [days, setDays] = useState(() => clampNum(Math.round(init.days ?? DEFAULT_DURATION_DAYS), 1, maxDays));
   const durationMs = days * DAY_MS;
@@ -118,10 +141,12 @@ function Workspace({ ds }: { ds: Dataset }) {
     url.searchParams.set("days", String(days));
     url.searchParams.set("delay", String(effDelay));
     url.searchParams.set("t", site.samples[cursor].time_utc);
+    url.searchParams.set("horizon", mode);
     window.history.replaceState(null, "", url);
-  }, [arrival, days, effDelay, cursor, site.samples]);
+  }, [arrival, days, effDelay, cursor, site.samples, mode]);
 
   const [wrapRef, width] = useWidth<HTMLDivElement>();
+  const [panoRef, panoWidth] = useWidth<HTMLDivElement>();
   const scale = timeScale(domain.start, domain.end, width);
   const dark = (m: typeof baseM) => (m.longestDark.ok ? m.longestDark.value : null);
   const groups: TimelineGroup[] = [{ key: "baseline", label: "Baseline", window: baseW, longestDark: dark(baseM) }];
@@ -139,7 +164,7 @@ function Workspace({ ds }: { ds: Dataset }) {
     <main className="page">
       <header className="masthead">
         <div>
-          <p className="eyebrow">Lunar Visibility Navigator · Smooth-horizon mission windows</p>
+          <p className="eyebrow">Lunar Visibility Navigator · Mission windows · {mode === "terrain" ? "Terrain horizon" : "Smooth horizon"}</p>
           <h1>Sun and Earth visibility at the IM-2 Athena site</h1>
         </div>
         <div className="badges">
@@ -152,12 +177,28 @@ function Workspace({ ds }: { ds: Dataset }) {
         </div>
       </header>
 
-      <div className="banner" role="note">
-        <strong>⚠ Smooth horizon: terrain not yet included.</strong> “Visible” means the body’s center is above the
-        local horizontal plane (0°). Real crater walls and massifs can hide the Sun or Earth when this view says
-        visible. Earth visible is a geometric opportunity, not a guaranteed radio link. Sun visible is not
-        electrical power output.
-      </div>
+      {mode === "terrain" ? (
+        <div className="banner banner-terrain" role="note" data-mode="terrain">
+          <strong>Terrain horizon (regional LOLA elevation model).</strong> “Visible” means the body’s center is above
+          the skyline computed from the LOLA terrain model (20 m pixel spacing; 60 m beyond ~165 km) for an observer
+          1 m above the modeled surface. This is regional DEM-based visibility, not a reconstruction of Athena’s actual
+          conditions: rocks, the lander itself and features narrower than about one to two pixels are not resolved.
+          Earth visible is a geometric opportunity, not a guaranteed radio link. Sun visible is not electrical power
+          output.
+        </div>
+      ) : (
+        <div className="banner" role="note" data-mode="smooth">
+          <strong>⚠ Smooth horizon: terrain ignored (comparison mode).</strong> “Visible” means the body’s center is
+          above the local horizontal plane (0°). Real crater walls and massifs can hide the Sun or Earth when this view
+          says visible{terrainAvailable ? "; switch to Terrain to include them" : ""}. Earth visible is a geometric
+          opportunity, not a guaranteed radio link. Sun visible is not electrical power output.
+        </div>
+      )}
+      {terrainRequestedButMissing && (
+        <div className="notice notice-error" role="alert">
+          Terrain horizon requested but not available: {ds.terrainProblem}. Showing the smooth horizon.
+        </div>
+      )}
 
       <section className="card site-card" aria-labelledby="site-h">
         <p className="label">Site</p>
@@ -181,6 +222,32 @@ function Workspace({ ds }: { ds: Dataset }) {
 
       <section className="card controls-card" aria-labelledby="ctl-h">
         <h2 id="ctl-h">Mission window</h2>
+        <fieldset className="delays horizon-mode">
+          <legend>Horizon model</legend>
+          <div className="segmented" role="radiogroup" aria-label="Horizon model">
+            {(["smooth", "terrain"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={mode === m}
+                className={mode === m ? "seg-btn active" : "seg-btn"}
+                disabled={m === "terrain" && !terrainAvailable}
+                title={m === "terrain" && !terrainAvailable ? `Unavailable: ${ds.terrainProblem}` : undefined}
+                onClick={() => setMode(m)}
+                data-mode={m}
+              >
+                {m === "smooth" ? "Smooth (0°)" : "Terrain (LOLA)"}
+              </button>
+            ))}
+          </div>
+          <p className="muted small">
+            {mode === "terrain"
+              ? "Skyline from the LOLA terrain model (20 m pixels). Switch to Smooth to compare with the flat 0° horizon; arrival, delay, duration and selected time stay the same."
+              : "Flat 0° horizon, terrain ignored. Kept for comparison; arrival, delay, duration and selected time stay the same."}
+            {!terrainAvailable && ` Terrain unavailable: ${ds.terrainProblem}.`}
+          </p>
+        </fieldset>
         <div className="controls">
           <label className="field">
             <span>Baseline arrival date (UTC)</span>
@@ -225,7 +292,7 @@ function Workspace({ ds }: { ds: Dataset }) {
             Earliest arrival
           </button>
           <button type="button" onClick={() => setArrival(bounds.latest)} disabled={arrival === bounds.latest}>
-            Latest arrival
+            Latest arrival without delay
           </button>
           <span className="small">
             Baseline arrival: <strong className="num">{fmtUtc(arrival)}</strong>
@@ -307,14 +374,15 @@ function Workspace({ ds }: { ds: Dataset }) {
         <DarkNotes label="Baseline" m={baseM.longestDark} />
         {delayedLabel && <DarkNotes label={delayedLabel} m={actM.longestDark} />}
         <p className="muted small">
-          Percentages are shares of elapsed window time. Darkness means the Sun’s center is below the 0° smooth
-          horizon. Boundaries are estimates at the modeled 10-minute resolution ({site.visibility_method}).
+          Percentages are shares of elapsed window time, for the{" "}
+          <strong>{mode === "terrain" ? "terrain" : "smooth 0°"} horizon</strong>. Darkness means the Sun’s center is
+          below that horizon. Boundaries are estimates at the modeled 10-minute resolution ({site.visibility_method}).
         </p>
       </section>
 
       <section className="card viz-card" aria-labelledby="viz-h">
         <div className="chart-head">
-          <h2 id="viz-h">Timeline</h2>
+          <h2 id="viz-h">Selected time, horizon panorama and timeline</h2>
           <ul className="legend" aria-label="Legend">
             <li><span className="chip chip-sun" />Sun visible</li>
             <li><span className="chip chip-earth" />Earth visible</li>
@@ -325,7 +393,32 @@ function Workspace({ ds }: { ds: Dataset }) {
           </ul>
         </div>
 
-        <Readouts ds={ds} intervals={intervals} index={cursor} />
+        <Readouts ds={ds} intervals={intervals} index={cursor} mode={mode} horizonAtBody={horizonAtBody} />
+
+        <div className="chart-head sub">
+          <h3 id="pano-h">Horizon panorama at the selected time</h3>
+          <ul className="legend" aria-label="Panorama legend">
+            <li><span className={`chip chip-terrain chip-terrain-${mode}`} />{mode === "terrain" ? "Terrain (below skyline)" : "Below 0° horizon"}</li>
+            <li><span className="marker-key marker-key-sun" />Sun</li>
+            <li><span className="marker-key marker-key-earth" />Earth</li>
+            <li><span className="marker-key marker-key-hidden" />Hidden (below horizon)</li>
+          </ul>
+        </div>
+        <div ref={panoRef} className="plots">
+          <Panorama
+            width={panoWidth}
+            mode={mode}
+            horizon={horizon}
+            terrain={site.terrain_horizon ?? null}
+            samples={site.samples}
+            i0={i0}
+            i1={i1}
+            selected={cursor}
+            selectedTime={cursorT}
+          />
+        </div>
+        {mode === "terrain" && site.terrain_horizon && <SiteShiftNote t={site.terrain_horizon} />}
+        <HorizonFacts site={site} mode={mode} />
 
         <div ref={wrapRef} className="plots">
           <Timeline scale={scale} intervals={intervals} groups={groups} cursor={cursorT} onSelect={(t) => setCursor(clampNum(nearestIndex(times, t), i0, i1))} />
@@ -334,7 +427,9 @@ function Workspace({ ds }: { ds: Dataset }) {
             <ul className="legend" aria-label="Elevation legend">
               <li><span className="swatch swatch-sun" />Sun</li>
               <li><span className="swatch swatch-earth" />Earth</li>
-              <li><span className="swatch swatch-horizon" />0° smooth horizon</li>
+              <li><span className="swatch swatch-horizon" />0° {mode === "terrain" ? "(smooth comparison)" : "smooth horizon"}</li>
+              {mode === "terrain" && <li><span className="swatch swatch-h-sun" />Skyline under the Sun</li>}
+              {mode === "terrain" && <li><span className="swatch swatch-h-earth" />Skyline under the Earth</li>}
             </ul>
           </div>
           <ElevationChart
@@ -345,6 +440,8 @@ function Workspace({ ds }: { ds: Dataset }) {
             selected={cursor}
             onSelect={setCursor}
             scale={scale}
+            horizonAtBody={horizonAtBody}
+            zeroLabel={mode === "terrain" ? "0° (smooth-horizon comparison; terrain skyline dashed in color)" : "0° smooth horizon (terrain ignored)"}
           />
         </div>
         <div className="slider-row">
@@ -363,7 +460,7 @@ function Workspace({ ds }: { ds: Dataset }) {
         </div>
         <p className="muted small">
           Drag on the timeline or chart, or use the slider (arrow keys step 10 minutes). The cursor, readouts,
-          timeline and chart always show the same UTC time.
+          panorama, timeline and chart always show the same UTC time.
         </p>
 
         <IntervalTables groups={groups} intervals={intervals} />
@@ -377,7 +474,8 @@ function Workspace({ ds }: { ds: Dataset }) {
             <ul>
               <li>Sun and Earth positions: JPL Horizons airless apparent azimuth/elevation of each body’s center, every 10 minutes, seen from {meta.horizons_site_altitude_km} km above the 1737.4 km lunar reference sphere.</li>
               <li>Observer: LOLA surface elevation {meta.surface_elevation_m?.toFixed(1)} m + {meta.observer_height_above_surface_m} m observer height.</li>
-              <li>Each 10-minute interval is classified at its midpoint: visible when the center’s elevation is strictly above 0°. Event times are estimates at that resolution.</li>
+              <li>Each 10-minute interval is classified at its midpoint: visible when the center’s elevation is strictly above the horizon at the center’s azimuth ({mode === "terrain" ? "terrain skyline" : "0° in smooth mode"}). Event times are estimates at that resolution.</li>
+              <li>Terrain horizon: for every 0.1° of azimuth, the highest apparent elevation of LOLA terrain along a great-circle ray from the observer, using exact sphere geometry (lunar curvature counted once). Rays continue until even the highest lunar terrain could not rise above the skyline found so far (62–190 km here). Directions the data cannot reach would be shown as unknown, never as clear.</li>
               <li>Delays shift the whole window by +1, +3 or +7 days from the baseline arrival; the duration is unchanged.</li>
               <li>Unknown data is never counted as darkness or as visible; a metric is shown as unavailable instead.</li>
             </ul>
@@ -397,6 +495,13 @@ function Workspace({ ds }: { ds: Dataset }) {
               </li>
               <li>Surface elevation: LOLA LDEM_80S_20M (PDS Geosciences Node), checked against individual LOLA laser shots.</li>
               {site.sources
+                .filter((x) => x.id.startsWith("lola-"))
+                .map((x) => (
+                  <li key={x.id}>
+                    <a href={x.url} target="_blank" rel="noreferrer">{x.title}</a>
+                  </li>
+                ))}
+              {site.sources
                 .filter((x) => x.id === "horizons-api-doc" || x.id === "horizons-manual")
                 .map((x) => (
                   <li key={x.id}><a href={x.url} target="_blank" rel="noreferrer">{x.title}</a></li>
@@ -407,7 +512,16 @@ function Workspace({ ds }: { ds: Dataset }) {
           <div>
             <h3>Limitations</h3>
             <ul>
-              <li><strong>Terrain not yet included.</strong> The 0° line is the local horizontal plane, not the real horizon.</li>
+              {mode === "smooth" ? (
+                <li><strong>Smooth mode ignores terrain.</strong> The 0° line is the local horizontal plane, not the real horizon.</li>
+              ) : (
+                <>
+                  <li><strong>Regional terrain, not the lander’s actual view.</strong> LOLA terrain pixels are 20 m apart (60 m beyond ~165 km); the skyline rays sample that surface every 5–10 m, but sampling finer than a pixel adds no terrain detail. Boulders, small craters, the lander and its tilt are not resolved.</li>
+                  <li>Where no LOLA shot fell in a pixel, its height is interpolated between ground tracks; about a quarter of the skyline points are such pixels. Shot counts indicate data density, not accuracy.</li>
+                  <li>The published coordinate’s accuracy is not stated. Sensitivity scenarios that move the observer 100 m north, east, south or west change the skyline by up to 2° in one direction; these are test scenarios, not a measured uncertainty.</li>
+                  <li>Comparisons with LOLA laser shots are consistency checks: the terrain model was built from those shots, so they do not validate it independently.</li>
+                </>
+              )}
               <li>Body centers only: no partial-disk Sun, no refraction (the Moon has no atmosphere).</li>
               <li>Earth visible is a geometric opportunity, not a guaranteed communications link.</li>
               <li>Sun visible is not electrical power output.</li>
@@ -453,24 +567,160 @@ function DarkCell({ m }: { m: Availability<DarkRun | null> }) {
 function DarkNotes({ label, m }: { label: string; m: Availability<DarkRun | null> }) {
   if (!m.ok || !m.value || !(m.value.touchesStart || m.value.touchesEnd)) return null;
   const d = m.value;
+  const where = d.touchesStart && d.touchesEnd ? "both window edges" : d.touchesStart ? "the window start" : "the window end";
   return (
-    <p className="note small">
-      ⚠ {label}: the longest darkness ({fmtUtc(d.start)} → {fmtUtc(d.end)})
-      {d.touchesStart && (
-        <>
-          {" "}touches the window start, so it may have begun before arrival (in the data it began{" "}
-          {d.fullStartAtCoverageEdge ? `at or before the start of available data, ${fmtUtc(d.fullStart)}` : `at ${fmtUtc(d.fullStart)}`})
-        </>
-      )}
-      {d.touchesStart && d.touchesEnd && " and"}
-      {d.touchesEnd && (
-        <>
-          {" "}touches the window end, so it may continue after departure (in the data it lasts until{" "}
-          {d.fullEndAtCoverageEdge ? `at least the end of available data, ${fmtUtc(d.fullEnd)}` : fmtUtc(d.fullEnd)})
-        </>
-      )}
-      . Its full length may exceed the value shown.
-    </p>
+    <details className="note small dark-note">
+      <summary>
+        ⚠ {label}: longest darkness touches {where}; its full length may be longer than shown.
+      </summary>
+      <p>
+        In the window: {fmtUtc(d.start)} → {fmtUtc(d.end)}.{" "}
+        {d.touchesStart && (
+          <>
+            It may have begun before arrival: in the data it began{" "}
+            {d.fullStartAtCoverageEdge ? `at or before the start of available data, ${fmtUtc(d.fullStart)}` : `at ${fmtUtc(d.fullStart)}`}.{" "}
+          </>
+        )}
+        {d.touchesEnd && (
+          <>
+            It may continue after departure: in the data it lasts until{" "}
+            {d.fullEndAtCoverageEdge ? `at least the end of available data, ${fmtUtc(d.fullEnd)}` : fmtUtc(d.fullEnd)}.
+          </>
+        )}
+      </p>
+    </details>
+  );
+}
+
+const WINDOW_LABEL: Record<string, string> = { "+0d": "baseline", "+1d": "+1 d", "+3d": "+3 d", "+7d": "+7 d" };
+const pp = (v: number | null) => (v === null ? "n/a" : fmtSigned(v, "pp", 2));
+
+function SiteShiftNote({ t }: { t: TerrainHorizonBlock }) {
+  const sc = t.checks.site_shift_scenarios;
+  if (!sc || !sc.rows.length) return null;
+  const rows = sc.rows;
+  const maxSky = Math.max(...rows.map((r) => r.skyline_max_abs_change_deg));
+  const worst = rows.reduce((a, r) => (Math.min(...r.earth_pct_change_pp) < Math.min(...a.earth_pct_change_pp) ? r : a));
+  const earthWorst = Math.min(...worst.earth_pct_change_pp);
+  return (
+    <div className="site-shift small" data-testid="site-shift">
+      <p>
+        <strong>Site-position sensitivity (test scenarios, not an uncertainty range):</strong> moving the observer 100 m
+        due north, east, south or west of the published point changed the skyline by up to {maxSky.toFixed(1)}° (in one
+        direction; typically under 0.1°) and the demo-window Earth-visible share by up to {pp(earthWorst)} relative to the
+        nominal point ({worst.direction} scenario).
+      </p>
+      <details>
+        <summary>Scenario details</summary>
+        <p className="muted">{sc.note}</p>
+        <div className="table-scroll plain">
+          <table className="shift-table">
+            <thead>
+              <tr>
+                <th scope="col">Observer moved 100 m</th>
+                <th scope="col">Largest skyline change</th>
+                <th scope="col">Median change</th>
+                <th scope="col">Sun % change ({rows[0].demo_windows.map((w) => WINDOW_LABEL[w] ?? w).join(" / ")})</th>
+                <th scope="col">Earth % change</th>
+                <th scope="col">Longest darkness change</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.direction}>
+                  <th scope="row">{r.direction}</th>
+                  <td className="num">
+                    {r.skyline_max_abs_change_deg.toFixed(2)}° at az {r.skyline_max_change_at_azimuth_deg.toFixed(1)}°
+                  </td>
+                  <td className="num">{r.skyline_median_abs_change_deg.toFixed(2)}°</td>
+                  <td className="num">{r.sun_pct_change_pp.map(pp).join(" / ")}</td>
+                  <td className="num">{r.earth_pct_change_pp.map(pp).join(" / ")}</td>
+                  <td className="num">{r.longest_dark_change_h.map((h) => (h === null ? "n/a" : fmtSigned(h, "h", 2))).join(" / ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="muted">
+          Windows: 14 days from 2026-12-05 00:00 UTC with the four demo delays, not the window selected above. Four directions
+          only; other directions and distances were not tested. The surface heights at the moved points are in the scenario
+          descriptions of <code>data/terrain/im2-athena_terrain_horizon.json</code>.
+        </p>
+      </details>
+    </div>
+  );
+}
+
+function HorizonFacts({ site, mode }: { site: SiteData; mode: HorizonMode }) {
+  const t = site.terrain_horizon;
+  const obsH = site.site.observer_height_above_surface_m;
+  if (mode === "smooth" || !t) {
+    return (
+      <details className="facts-box small">
+        <summary>About this horizon: smooth 0° model</summary>
+        <dl className="facts">
+          <dt>Model</dt>
+          <dd>0° at every azimuth (the local horizontal plane); terrain ignored</dd>
+          <dt>Observer</dt>
+          <dd>{obsH} m above the surface (the ~0.06° dip of a smooth sphere is also ignored)</dd>
+          <dt>Use</dt>
+          <dd>Comparison with the terrain horizon; not a prediction of real visibility</dd>
+        </dl>
+      </details>
+    );
+  }
+  const h = t.horizon;
+  const se = h.search_extent;
+  const rs = h.resolution;
+  const el = h.elevation_deg.filter((v): v is number => v !== null);
+  const sp = t.setting_points;
+  const zero = sp.shot_count.filter((c) => c === 0).length;
+  const known = sp.shot_count.filter((c) => c !== null).length;
+  const pix = Object.entries(rs.dem_pixel_m).map(([k, v]) => `${k} ${v} m`).join(", then ");
+  const nf = t.checks.near_field;
+  const obsEye = t.observer ? t.observer.eye_above_dem_surface_m.toFixed(2) : String(obsH);
+  return (
+    <details className="facts-box small" open>
+      <summary>About this horizon: terrain model, source and limits</summary>
+      <dl className="facts">
+        <dt>Source</dt>
+        <dd>LOLA gridded terrain, PDS LRO-L-LOLA-4-GDR-V1.0 V2.0 (LDEM_80S_20M, LDEM_75S_60M beyond its edge)</dd>
+        <dt>Observer</dt>
+        <dd>{obsH} m above the LOLA surface at {fmtLat(site.site.latitude_deg)}, {fmtLonEast(site.site.longitude_deg_east)}</dd>
+        <dt>Terrain pixels</dt>
+        <dd className="num">{pix} (the terrain detail the model can represent)</dd>
+        <dt>Ray sampling</dt>
+        <dd className="num">
+          {rs.azimuth_step_deg}° in azimuth; along each ray the terrain surface is interpolated every {rs.radial_step_m[0]} m to {rs.radial_step_change_km} km, then every {rs.radial_step_m[1]} m. Finer sampling than the pixel spacing does not add detail.
+        </dd>
+        <dt>Near the observer</dt>
+        <dd className="num">
+          The observer stands on the same interpolated surface that is sampled (eye {obsEye} m above it); sampling starts at {rs.first_sample_m} m.
+          {nf ? ` The nearest skyline point is ${nf.min_setting_distance_m} m away, and ignoring all terrain within 20–300 m changes the skyline by ${nf.max_change_ignoring_terrain_within_20_to_300m_deg.toFixed(3)}°.` : ""}{" "}
+          This concerns the modeled surface only; rocks or relief smaller than a pixel next to the lander could still block low directions.
+        </dd>
+        <dt>Search</dt>
+        <dd className="num">
+          {se.stop_distance_km_min_median_max[0].toFixed(0)}–{se.stop_distance_km_min_median_max[2].toFixed(0)} km per ray (stops when even {se.h_max_m.toFixed(0)} m terrain could not appear higher); unknown directions: {se.unknown_azimuths}
+        </dd>
+        <dt>Skyline</dt>
+        <dd className="num">
+          {fmtDeg(Math.min(...el), 2)} to {fmtDeg(Math.max(...el), 2)}; negative values are real (the ground falls away and the Moon curves)
+        </dd>
+        <dt>Data density</dt>
+        <dd className="num">
+          {zero} of {known} skyline points lie in pixels without a LOLA shot (interpolated). Shot counts are quality indicators, not accuracy guarantees.
+        </dd>
+        <dt>Checks</dt>
+        <dd>
+          Synthetic geometry tests; numerical sensitivity runs; an independently implemented pixel-by-pixel check on the same terrain
+          model; consistency checks against the LOLA laser shots the model was built from (not independent validation); and an
+          azimuth-convention sanity check against the mean Earth direction, which can only catch gross (tens of degrees) errors.
+        </dd>
+        <dt>Limits</dt>
+        <dd>Regional DEM-based visibility for the published coordinate, not Athena’s actual operating conditions. Features narrower than about one to two pixels, rocks and the lander are not resolved. See the site-position scenarios above.</dd>
+      </dl>
+    </details>
   );
 }
 
@@ -478,13 +728,26 @@ function stateText(s: Tri) {
   return s === null ? "Unknown" : s ? "Visible" : "Not visible";
 }
 
-function changeText(body: string, c: NextChange) {
+function changeText(body: string, c: NextChange, mode: HorizonMode) {
   if (!c.found) return `Next change: not found in available data (searched through ${fmtUtc(c.searchedUntil)})`;
-  const verb = c.to === null ? "becomes unknown" : c.to ? "rises above the smooth horizon" : "drops below the smooth horizon";
+  const hz = mode === "terrain" ? "terrain horizon" : "smooth horizon";
+  const verb = c.to === null ? "becomes unknown" : c.to ? `rises above the ${hz}` : `drops below the ${hz}`;
   return `${body} ${verb} ≈ ${fmtUtc(c.at)} (estimate at 10-minute resolution)`;
 }
 
-function Readouts({ ds, intervals, index }: { ds: Dataset; intervals: Interval[]; index: number }) {
+function Readouts({
+  ds,
+  intervals,
+  index,
+  mode,
+  horizonAtBody,
+}: {
+  ds: Dataset;
+  intervals: Interval[];
+  index: number;
+  mode: HorizonMode;
+  horizonAtBody: Record<"sun" | "earth", (number | null)[]> | null;
+}) {
   const s = ds.site.samples[index];
   const t = ds.times[index];
   const iv = intervalAt(intervals, t);
@@ -513,8 +776,10 @@ function Readouts({ ds, intervals, index }: { ds: Dataset; intervals: Interval[]
                 <dd className="num" data-field="elevation">{fmtDeg(el)}</dd>
                 <dt>Azimuth</dt>
                 <dd className="num" data-field="azimuth">{fmtDeg(az)} <span className="muted">{compass(az)}</span></dd>
+                <dt>{mode === "terrain" ? "Skyline there" : "Horizon"}</dt>
+                <dd className="num" data-field="horizon">{mode === "terrain" ? fmtDeg(horizonAtBody ? horizonAtBody[key][index] : null) : fmtDeg(0, 3)}</dd>
               </dl>
-              <p className="readout-note" data-field="next">{changeText(label, nextChange(intervals, t, key))}</p>
+              <p className="readout-note" data-field="next">{changeText(label, nextChange(intervals, t, key), mode)}</p>
             </div>
           );
         })}
@@ -524,7 +789,7 @@ function Readouts({ ds, intervals, index }: { ds: Dataset; intervals: Interval[]
             Both
             <span className={`state state-${bothState(sun, earth) === null ? "unknown" : bothState(sun, earth) ? "on" : "off"}`} data-field="state">{stateText(bothState(sun, earth))}</span>
           </p>
-          <p className="readout-note">State of the 10-minute interval starting at this time (smooth horizon).</p>
+          <p className="readout-note">State of the 10-minute interval starting at this time ({mode === "terrain" ? "terrain" : "smooth"} horizon).</p>
         </div>
       </div>
     </div>

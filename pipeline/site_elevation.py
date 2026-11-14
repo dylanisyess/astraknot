@@ -1,11 +1,12 @@
 """Verify the LOLA surface elevation at the site and derive the Horizons altitude.
 
-Independent check: individual LOLA RDR laser shots (planetocentric lat/lon and
+Consistency check: individual LOLA RDR laser shots (planetocentric lat/lon and
 radius from the Moon's center, in km) from the PDS Geosciences ODE GDS service
 are compared with the gridded LDEM_80S_20M value interpolated at each shot.
-This tests DN scaling, the 1737.4 km reference, projection orientation, pixel
+This tests our DN scaling, 1737.4 km reference, projection orientation, pixel
 selection and interpolation together. The mirrored east/west projection is
-evaluated as a control.
+evaluated as a control. The LDEM was gridded from these shots, so this is not
+an independent check of the terrain heights themselves.
 
 Also compares the site value across LOLA products and estimates how sensitive
 the elevation is to the site-coordinate uncertainty (local slope).
@@ -104,7 +105,7 @@ def main() -> int:
     mfi, mfj = lola.polar_inverse(dem, lat, lon, east_right=False)
     mwin = lola.Window(dem, round(mfi), round(mfj), 50)
 
-    # Independent LOLA RDR shots: ~90 m box and ~600 m box around the site.
+    # LOLA RDR shots (the DEM's source data): ~90 m box and ~600 m box around the site.
     dlat_s, dlon_s = 0.0015, 0.015
     dlat_m, dlon_m = 0.0100, 0.100
     small, small_meta = gds_points("site_box_90m", lat - dlat_s, lat + dlat_s, lon - dlon_s, lon + dlon_s)

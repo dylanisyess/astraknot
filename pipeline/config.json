@@ -14,7 +14,7 @@
       "coordinate_source_title": "LROC: IM-2 Athena Seen Obliquely (M. Robinson, 10 March 2025) - gives 84.7906° S, 29.1957° E",
       "observer_height_above_surface_m": 1,
       "surface_elevation_m": 5321.9,
-      "surface_elevation_reference": "Height above the 1737.4 km LOLA reference sphere, LDEM_80S_20M (PDS LRO-L-LOLA-4-GDR-V1.0 V2.0) bilinear at the site; verified against 1131 LOLA RDR shots (DEM - shot mean -0.26 m, sd 0.67 m). See data/terrain/site_elevation_report.json.",
+      "surface_elevation_reference": "Height above the 1737.4 km LOLA reference sphere, LDEM_80S_20M (PDS LRO-L-LOLA-4-GDR-V1.0 V2.0) bilinear at the site; consistent with 1131 LOLA RDR shots within ~600 m (DEM - shot mean -0.26 m, sd 0.67 m). The DEM was gridded from LOLA RDR shots, so this checks our reading of the product (scaling, reference, projection, interpolation), not the terrain independently. See data/terrain/site_elevation_report.json.",
       "horizons_site_altitude_km": 5.3229,
       "horizons_altitude_reference": "Height above the Horizons reference body for the Moon: a 1737.4 km sphere (response header 'Center radii'), the same reference as LOLA heights.",
       "altitude_conversion_note": "horizons_site_altitude_km = (surface_elevation_m + observer_height_above_surface_m) / 1000 = (5321.9 m + 1 m) / 1000 = 5.3229 km. Both heights are relative to the same 1737.4 km sphere, so no datum conversion is needed. Surface value uncertainty: ~1 m for the stated coordinates; ~+/-5 m if the site coordinate is uncertain by 100 m (terrain within 100 m spans -4.4 to +4.6 m).",

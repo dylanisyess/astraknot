@@ -151,6 +151,68 @@ def validate_export(cfg: dict, site: dict, raw: dict[str, list[hz.AzElRow]]) -> 
           "intervals: contiguous and cover the advertised range exactly", f"{len(iv)} interval(s)")
     check(d["horizon"]["model"] == "smooth" and m["horizon_model"] == "smooth",
           "horizon: explicitly labeled smooth model")
+    models = m.get("available_horizon_models", ["smooth"])
+    check(models[0] == "smooth" and set(models) <= {"smooth", "terrain"}, "site: available_horizon_models",
+          str(models))
+    if "terrain" in models:
+        validate_terrain(d, m, s, times)
+    else:
+        check("terrain_horizon" not in d, "terrain: no terrain block when not listed as available")
+
+
+def validate_terrain(d: dict, m: dict, s: list[dict], times: list[str]) -> None:
+    t = d.get("terrain_horizon")
+    check(t is not None, "terrain: block present")
+    if t is None:
+        return
+    h = t["horizon"]
+    az, el = h["azimuth_deg"], h["elevation_deg"]
+    check(h["model"] == "terrain" and h["interpolation"] == "linear_periodic", "terrain: model and interpolation")
+    check(len(az) == len(el) == 3600 and az == sorted(set(az)) and 0 <= az[0] and az[-1] < 360,
+          "terrain: 3600 ascending unique azimuths in [0, 360)", f"{len(az)} azimuths")
+    check(all(e is None or -90 <= e <= 90 for e in el), "terrain: elevations in [-90, 90] or null",
+          f"{sum(e is None for e in el)} null; min {min(e for e in el if e is not None):.3f}, "
+          f"max {max(e for e in el if e is not None):.3f}")
+    check(any(e is not None and e < 0 for e in el), "terrain: negative horizons kept (not clamped to 0)",
+          f"{sum(e is not None and e < 0 for e in el)} negative")
+    check(h["observer_height_above_surface_m"] == m["observer_height_above_surface_m"],
+          "terrain: observer height matches site")
+    se = h.get("search_extent", {})
+    check(se.get("h_max_m") and se.get("stop_distance_km_min_median_max") and
+          "Search extent" in h["processing_notes"] and h.get("resolution", {}).get("azimuth_step_deg"),
+          "terrain: search extent, stopping rule and resolution recorded")
+    sp = t["setting_points"]
+    cols = ("distance_km", "height_m", "lat_deg", "lon_deg_east", "product_index", "shot_count")
+    check(all(len(sp[c]) == len(az) for c in cols), "terrain: one setting point per azimuth")
+    check(all((e is None) == (sp["distance_km"][i] is None) for i, e in enumerate(el)),
+          "terrain: unknown elevation <-> no setting point")
+    # equals the pipeline report (rounded) and was computed for this site
+    rep = json.loads((hz.REPO_ROOT / "data" / "terrain" / "im2-athena_terrain_horizon.json").read_text("utf-8"))
+    same = [None if r["elevation_deg"] is None else round(r["elevation_deg"], 5) for r in rep["rays"]] == el
+    check(same and rep["site"]["horizons_site_altitude_km"] == m["horizons_site_altitude_km"],
+          "terrain: export == data/terrain report (rounded 1e-5 deg), same site altitude")
+    iv = t["visibility_intervals"]
+    contiguous = all(a["end_utc"] == b["start_utc"] for a, b in zip(iv, iv[1:]))
+    check(iv[0]["start_utc"] == times[0] and iv[-1]["end_utc"] == times[-1] and contiguous,
+          "terrain intervals: contiguous and cover the advertised range exactly", f"{len(iv)} interval(s)")
+    check(vis.classify(s, h) == iv, "terrain intervals: re-classified from samples + exported profile (exact)")
+    unknown = sum(x["sun_visible"] is None or x["earth_visible"] is None for x in iv)
+    check(True, "terrain intervals: unknown states", f"{unknown} interval(s) with an unknown state")
+    # product files: label-implied size and recorded sha256 (when the downloads are present)
+    srcs = {x["id"] for x in d["sources"]}
+    check(all(f"lola-{p['name'].lower().replace('_', '-')}" in srcs for p in t["products"]),
+          "terrain: every LOLA product listed in sources")
+    n_ok = n_missing = 0
+    for p in t["products"]:
+        meta_path = hz.REPO_ROOT / "data" / "raw" / "lola" / p["name"].lower() / "download.meta.json"
+        img = meta_path.parent / f"{p['name'].lower()}.img"
+        if not (meta_path.exists() and img.exists()):
+            n_missing += 1
+            continue
+        meta = json.loads(meta_path.read_text("utf-8"))
+        n_ok += (meta["sha256"] == p["sha256"] and img.stat().st_size == meta["bytes"] == meta["label_implied_bytes"])
+    check(n_ok + n_missing == len(t["products"]), "terrain: local LOLA files match recorded size and sha256",
+          f"{n_ok} match, {n_missing} not downloaded (run pipeline/fetch_terrain.py --check --rehash)")
 
 
 def main() -> int:

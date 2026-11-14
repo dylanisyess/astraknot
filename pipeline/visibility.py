@@ -2,6 +2,7 @@
 (DATA_CONTRACT.md, "Horizon" and "Visibility intervals")."""
 from __future__ import annotations
 
+from bisect import bisect_right
 from datetime import datetime, timedelta, timezone
 
 METHOD = "10-minute midpoint classification"
@@ -27,7 +28,33 @@ def interp_azimuth(a0: float, a1: float, f: float) -> float:
 
 
 def horizon_elevation(az: float, h_az: list[float], h_el: list[float | None]) -> float | None:
-    """Linear periodic interpolation of a horizon profile. None = unknown sector."""
+    """Linear periodic interpolation of a horizon profile (ascending azimuths in
+    [0, 360)). None = unknown sector: if either bracketing value is None the
+    result is None, never a guess; exactly on a profile azimuth the sample's
+    own value is returned. Binary search; same result as the linear reference
+    below except on exact profile azimuths next to an unknown sample (tested)."""
+    n = len(h_az)
+    if n == 0:
+        return None
+    if n == 1:
+        return h_el[0]
+    az = norm360(az)
+    i = bisect_right(h_az, az) - 1  # h_az[i] <= az < h_az[i+1]; -1 = before the first
+    if i < 0:
+        i = n - 1  # wraps: between the last azimuth and the first + 360
+    a0, a1 = h_az[i], h_az[(i + 1) % n]
+    span = (a1 - a0) % 360.0 or 360.0
+    off = (az - a0) % 360.0
+    e0, e1 = h_el[i], h_el[(i + 1) % n]
+    if off == 0.0:
+        return e0  # exactly on a profile sample: its own value (None if unknown)
+    if e0 is None or e1 is None:
+        return None
+    return e0 + (e1 - e0) * (off / span)
+
+
+def _horizon_elevation_linear(az: float, h_az: list[float], h_el: list[float | None]) -> float | None:
+    """Reference implementation (linear scan), kept for tests."""
     n = len(h_az)
     if n == 0:
         return None
