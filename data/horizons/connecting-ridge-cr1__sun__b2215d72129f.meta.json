@@ -1,0 +1,45 @@
+{
+  "site_id": "connecting-ridge-cr1",
+  "target_key": "sun",
+  "request_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&OBJ_DATA=%27YES%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27222.6%2C-89.468%2C1.9428%27&START_TIME=%272027-03-21%2000%3A00%3A00%27&STOP_TIME=%272027-03-31%2000%3A00%3A00%27&STEP_SIZE=%2710%20min%27&QUANTITIES=%274%27&APPARENT=%27AIRLESS%27&TIME_TYPE=%27UT%27&TIME_DIGITS=%27SECONDS%27&CAL_FORMAT=%27CAL%27&ANG_FORMAT=%27DEG%27&EXTRA_PREC=%27YES%27&CSV_FORMAT=%27YES%27&REF_SYSTEM=%27ICRF%27&ELEV_CUT=%27-90%27&SKIP_DAYLT=%27NO%27",
+  "request_params": {
+    "format": "json",
+    "COMMAND": "'10'",
+    "OBJ_DATA": "'YES'",
+    "MAKE_EPHEM": "'YES'",
+    "EPHEM_TYPE": "'OBSERVER'",
+    "CENTER": "'coord@301'",
+    "COORD_TYPE": "'GEODETIC'",
+    "SITE_COORD": "'222.6,-89.468,1.9428'",
+    "START_TIME": "'2027-03-21 00:00:00'",
+    "STOP_TIME": "'2027-03-31 00:00:00'",
+    "STEP_SIZE": "'10 min'",
+    "QUANTITIES": "'4'",
+    "APPARENT": "'AIRLESS'",
+    "TIME_TYPE": "'UT'",
+    "TIME_DIGITS": "'SECONDS'",
+    "CAL_FORMAT": "'CAL'",
+    "ANG_FORMAT": "'DEG'",
+    "EXTRA_PREC": "'YES'",
+    "CSV_FORMAT": "'YES'",
+    "REF_SYSTEM": "'ICRF'",
+    "ELEV_CUT": "'-90'",
+    "SKIP_DAYLT": "'NO'"
+  },
+  "retrieved_at_utc": "2026-11-15T08:27:30Z",
+  "http_status": 200,
+  "response_headers": {
+    "Server": "nginx",
+    "Date": "Sun, 15 Nov 2026 08:27:30 GMT",
+    "Content-Type": "application/json",
+    "Transfer-Encoding": "chunked",
+    "Connection": "close"
+  },
+  "api_signature": {
+    "version": "1.2",
+    "source": "NASA/JPL Horizons API"
+  },
+  "api_version_matches_documented": false,
+  "response_sha256": "edf85ef3a58d11d084ebf15ef1e69ddcb8318f58b0de5000ae7d43fe395685b6",
+  "response_file": "connecting-ridge-cr1__sun__b2215d72129f.response.json"
+}

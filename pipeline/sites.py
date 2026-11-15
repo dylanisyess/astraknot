@@ -61,6 +61,23 @@ def run(main) -> int:
         return 1
 
 
+DEFAULT_CONFIG = REPO_ROOT / "pipeline" / "config.json"
+
+
+def add_config_arg(ap: argparse.ArgumentParser, default: Path = DEFAULT_CONFIG) -> None:
+    ap.add_argument("--config", metavar="PATH", default=str(default),
+                    help="dataset config (default pipeline/config.json; the accepted 60-day release: pipeline/datasets/lvn-2026-12-01-60d.json)")
+
+
+def load_config(path: str | Path | None = None) -> dict:
+    return json.loads(Path(path or DEFAULT_CONFIG).read_text("utf-8"))
+
+
+def dataset_dir(cfg: dict) -> Path:
+    """Folder of a dataset's manifest and site files (legacy configs: app/public/data)."""
+    return REPO_ROOT / cfg.get("dataset_dir", "app/public/data")
+
+
 def report_path(site_id: str, kind: str) -> Path:
     folder = "horizons" if kind == "altitude_comparison" else "terrain"
     return REPO_ROOT / "data" / folder / f"{valid_id(site_id)}_{kind}.json"
@@ -92,7 +109,7 @@ def load_terrain_reports(site: dict) -> tuple[dict, dict]:
 
 
 def load_site_data(cfg: dict, site: dict, data_dir: Path | None = None, manifest: dict | None = None) -> dict:
-    data_dir = data_dir or REPO_ROOT / "app" / "public" / "data"
+    data_dir = data_dir or dataset_dir(cfg)
     filename = f"{valid_id(site['id'])}.json"
     if manifest is not None:
         entries = [e for e in manifest["sites"] if e["id"] == site["id"]]

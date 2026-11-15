@@ -76,6 +76,8 @@ export interface TerrainHorizonBlock {
       azimuth_step_deg: number;
       radial_step_m: [number, number];
       radial_step_change_km: number;
+      /** Generic pipeline: actual radial segments, when more than two are used. */
+      radial_segments?: { to_km: number; step_m: number }[];
       first_sample_m: number;
       dem_pixel_m: Record<string, number>;
     };
@@ -138,10 +140,60 @@ export interface SiteEntry {
   terrainProblem: string | null;
 }
 
+// ------------------------------------------------------------ catalog (release 6; not contract data)
+// catalog.json next to a manifest (pipeline/catalog.py): site list, location type and measured
+// data capabilities, so the app can list sites without loading their time series.
+
+export type LocationType = "actual_landing_point" | "intended_landing_target" | "study_location";
+
+export type Capability<T = Record<string, never>> = ({ available: true } & T) | { available: false; reason: string };
+
+export interface CatalogSite {
+  id: string;
+  name: string;
+  short_name: string;
+  latitude_deg: number;
+  longitude_deg_east: number;
+  location_type: LocationType;
+  location_label: string;
+  file: string;
+  file_sha256_lf: string;
+  file_bytes_lf: number;
+  capabilities: {
+    positions: { available: boolean; coverage_start_utc: string; coverage_end_utc: string; sample_step_seconds: number; samples: number };
+    smooth_visibility: { available: boolean };
+    terrain_horizon: Capability<{ products: string[]; near_pixel_m: number; unknown_azimuths: number; covers_positions: boolean }>;
+    terrain_3d: Capability<{ source_product: string; bytes: number; near_spacing_m: number }>;
+    slope_screening: Capability<{ source_product: string; dem_pixel_m: number; baseline_m: number; radius_m: number }>;
+    /** Provisional-result note, or null. */
+    provisional: string | null;
+  };
+}
+
+export interface Catalog {
+  catalog_version: string;
+  dataset_id: string;
+  sites: CatalogSite[];
+}
+
 export interface Dataset {
   manifest: Manifest;
-  /** In manifest order. Every site shares exactly the same sample times. */
+  /** Site list and capabilities (catalog.json). */
+  catalog: Catalog;
+  /** Site files already loaded and checked (a subset of the manifest sites; tests may preload all). */
   sites: SiteEntry[];
-  /** Parsed sample times in epoch milliseconds, identical for every site. */
+  /** Sample times in epoch milliseconds from the manifest coverage and step; every site file must match them exactly. */
   times: number[];
+  /** Loads and checks one more site file (lazy). Absent in tests that preload everything. */
+  loadSite?: (id: string) => Promise<SiteEntry>;
+  /** Version choice resolved before any site is loaded. */
+  selection?: { index: DatasetIndex; legacyLink: boolean };
+}
+
+export interface DatasetChoice { id: string; label: string; dir: string }
+export interface DatasetIndex {
+  index_version: string;
+  default_dataset_id: string;
+  legacy_dataset_id: string;
+  datasets: DatasetChoice[];
 }

@@ -1,0 +1,238 @@
+{
+ "asset_version": "render-context-1",
+ "is_rendering_asset": true,
+ "note": "Wide context terrain for orientation: coarse rings around the detailed mesh, sampled bilinearly from the cached local DEMs (<=100 m pixels) by source priority. No invented detail, no vertical exaggeration; curvature once. Never used for visibility, metrics or the skyline; Horizon view clips it to the exported profile.",
+ "site": {
+  "id": "im2-athena",
+  "name": "IM-2 Athena landing point (Mons Mouton region)",
+  "latitude_deg": -84.7906,
+  "longitude_deg_east": 29.1957,
+  "horizons_site_altitude_km": 5.3229
+ },
+ "observer": {
+  "observer_radius_m": 1742722.9,
+  "eye_above_dem_surface_m": 1.019551511237296
+ },
+ "reference_radius_m": 1737400.0,
+ "frame": {
+  "axes": "x = east, y = up, z = -north, origin at the observer eye (same frame as the detailed mesh)",
+  "grid": "local gnomonic plane at the site: unit = normalize(up + east * x / R - north * z / R), R = 1737.4 km",
+  "position": "q = sqrt(1 + (x^2 + z^2) / R^2); position = ((R + h) x / (R q), (R + h) / q - observer_radius_m, (R + h) z / (R q))",
+  "heights": "float32 little-endian, metres above the 1737.4 km sphere, row-major j * nx + i, x = (i - c) * spacing, z = (j - c) * spacing, c = (nx - 1) / 2; NaN = no local DEM"
+ },
+ "sources_used": [
+  "LDEM_80S_20M"
+ ],
+ "source_registry_sha256": "dbbc41fb07c2155ceb80409cc2f60d6226294f9926435d27e253d4e2fd637645",
+ "source_sha256": {
+  "LDEM_80S_20M": null
+ },
+ "detailed_mesh": {
+  "file": "im2-athena.terrain.json",
+  "bin_sha256": "f557f9d3e0de9b25ca07bd57738626cf400780af329c72739587d93803c8ceb4",
+  "outer_half_width_m": 30720.0,
+  "relation": "The renderer omits context cells lying inside the detailed mesh and keeps the detailed mesh on top where they meet."
+ },
+ "levels": [
+  {
+   "index": 0,
+   "spacing_m": 60,
+   "half_width_m": 7680,
+   "nx": 257,
+   "ny": 257,
+   "hole_cells": null,
+   "nodata_vertices": 0,
+   "sources_used": [
+    "LDEM_80S_20M"
+   ],
+   "rim_vertices_snapped": 768,
+   "byte_offset": 0,
+   "byte_length": 264196,
+   "vertex_count": 66049,
+   "height_range_m": [
+    4869.415575850059,
+    5632.785954152216
+   ]
+  },
+  {
+   "index": 1,
+   "spacing_m": 240,
+   "half_width_m": 30720,
+   "nx": 257,
+   "ny": 257,
+   "hole_cells": [
+    96,
+    160,
+    96,
+    160
+   ],
+   "nodata_vertices": 0,
+   "sources_used": [
+    "LDEM_80S_20M"
+   ],
+   "rim_vertices_snapped": 768,
+   "byte_offset": 264196,
+   "byte_length": 264196,
+   "vertex_count": 66049,
+   "height_range_m": [
+    -903.4321309331311,
+    7025.242815911785
+   ]
+  },
+  {
+   "index": 2,
+   "spacing_m": 960,
+   "half_width_m": 92160,
+   "nx": 193,
+   "ny": 193,
+   "hole_cells": [
+    64,
+    128,
+    64,
+    128
+   ],
+   "nodata_vertices": 0,
+   "sources_used": [
+    "LDEM_80S_20M"
+   ],
+   "rim_vertices_snapped": 0,
+   "byte_offset": 528392,
+   "byte_length": 148996,
+   "vertex_count": 37249,
+   "height_range_m": [
+    -4193.582273594076,
+    7025.242815911785
+   ]
+  }
+ ],
+ "counts": {
+  "vertices": 169347,
+  "bin_bytes": 677388
+ },
+ "outer_half_width_m": 92160,
+ "check_points": [
+  {
+   "level": 0,
+   "i": 0,
+   "j": 0,
+   "local_m": [
+    -7701.6244,
+    -430.9381,
+    -7701.6244
+   ]
+  },
+  {
+   "level": 0,
+   "i": 256,
+   "j": 128,
+   "local_m": [
+    7702.941,
+    -133.0994,
+    -0.0
+   ]
+  },
+  {
+   "level": 0,
+   "i": 128,
+   "j": 256,
+   "local_m": [
+    0.0,
+    -204.7422,
+    7702.6243
+   ]
+  },
+  {
+   "level": 0,
+   "i": 36,
+   "j": 85,
+   "local_m": [
+    -5536.8647,
+    -14.8008,
+    -2587.8824
+   ]
+  },
+  {
+   "level": 1,
+   "i": 0,
+   "j": 0,
+   "local_m": [
+    -30735.0641,
+    -4470.9358,
+    -30735.0641
+   ]
+  },
+  {
+   "level": 1,
+   "i": 256,
+   "j": 128,
+   "local_m": [
+    30831.8734,
+    1004.2091,
+    0.0
+   ]
+  },
+  {
+   "level": 1,
+   "i": 128,
+   "j": 256,
+   "local_m": [
+    0.0,
+    -2848.7639,
+    30763.7467
+   ]
+  },
+  {
+   "level": 1,
+   "i": 36,
+   "j": 85,
+   "local_m": [
+    -22125.8414,
+    -1715.799,
+    -10341.4259
+   ]
+  },
+  {
+   "level": 2,
+   "i": 0,
+   "j": 0,
+   "local_m": [
+    -91934.3659,
+    -9576.5524,
+    -91934.3659
+   ]
+  },
+  {
+   "level": 2,
+   "i": 192,
+   "j": 96,
+   "local_m": [
+    92085.0259,
+    -6736.3117,
+    0.0
+   ]
+  },
+  {
+   "level": 2,
+   "i": 96,
+   "j": 192,
+   "local_m": [
+    0.0,
+    -10463.8694,
+    91887.2984
+   ]
+  },
+  {
+   "level": 2,
+   "i": 27,
+   "j": 64,
+   "local_m": [
+    -66098.1326,
+    -9043.9209,
+    -30654.2064
+   ]
+  }
+ ],
+ "reproduce": "python pipeline/context_terrain.py --site im2-athena",
+ "bin_file": "im2-athena.context.bin",
+ "bin_sha256": "ce11715793ae87a891e004ef1669f513e8a9c8dc6f628f29cf8ceffce777657e"
+}

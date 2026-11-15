@@ -7,7 +7,11 @@ import { ElevationChart } from "./ElevationChart";
 import { Panorama } from "./Panorama";
 import { Timeline, type TimelineGroup, type TimelineTrack } from "./Timeline";
 import { timeScale, useWidth } from "./axis";
-import { compass, fmtDeg, fmtLat, fmtLonEast, fmtUtc, loadDataset, nearestIndex } from "./data";
+import { compass, fmtDeg, fmtLat, fmtLonEast, fmtUtc, nearestIndex } from "./data";
+import { Locator } from "./Locator";
+import { DatasetBar } from "./DatasetBar";
+import { loadIndexedDataset } from "./datasets";
+import { MixedTerrainNotice, PendingCard, SiteChips, pendingText } from "./SiteCatalog";
 import {
   type Availability,
   type DarkRun,
@@ -28,9 +32,6 @@ import {
 import {
   type SiteProfile,
   horizonUnderBodies,
-  polarXY,
-  profileFor,
-  surfaceDistanceKm,
   terrainFacts,
   terrainModelLabel,
 } from "./sites";
@@ -43,24 +44,26 @@ import {
   stateLabel,
   unknownText,
 } from "./status";
-import type { Dataset, HorizonMode, SiteData, SiteEntry, TerrainHorizonBlock } from "./types";
-import { type Scenario, type SiteView, clampNum, useScenario } from "./scenario";
-import type { View } from "./urlState";
+import type { Dataset, HorizonMode, SiteData, TerrainHorizonBlock } from "./types";
+import { type ReadyScenario, type Scenario, type SiteView, clampNum, isReady, useScenario } from "./scenario";
+import { type View, writeUrlState } from "./urlState";
 
 export function App() {
   const [ds, setDs] = useState<Dataset | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    loadDataset(import.meta.env.BASE_URL)
-      .then(setDs)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+    let live = true;
+    loadIndexedDataset(import.meta.env.BASE_URL, window.location.search)
+      .then((data) => { if (live) setDs(data); })
+      .catch((e: unknown) => { if (live) setError(e instanceof Error ? e.message : String(e)); });
+    return () => { live = false; };
   }, []);
   if (error) {
     return (
       <main className="page">
         <div className="notice notice-error" role="alert">
           <strong>Data could not be loaded.</strong> {error}
-          <p>No substitute data is shown. Run the pipeline (see README) and reload.</p>
+          <p>No substitute data is shown. <a href="?ds=lvn-2026-12-01-120d">Open the current dataset</a> or reload to retry.</p>
         </div>
       </main>
     );
@@ -78,19 +81,49 @@ const HOURS = Array.from({ length: 24 }, (_, h) => h);
  *  so Analysis and the status stay usable if the renderer or an asset fails. */
 export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
   const sc = useScenario(ds, search);
+  // Render switch links from the current scenario, before replaceState's effect runs.
+  const currentSearch = writeUrlState(new URL(search ?? window.location.search, "http://localhost/"), {
+    arrival: sc.arrival, days: sc.days, delay: sc.effDelay, t: new Date(sc.selT).toISOString().replace(".000Z", "Z"),
+    horizon: sc.mode, sites: sc.selIds, site: sc.active, view: sc.view, mission: sc.mission, cam: sc.cam, layer: sc.layer, thr: sc.slopeThr,
+  }).search;
   return (
     <div className={sc.view === "explore" ? "app app-explore" : "app app-analysis"} data-view={sc.view}>
       <TopBar sc={sc} />
-      {sc.view === "explore" ? <Explore sc={sc} /> : <Analysis sc={sc} />}
+      <DatasetBar ds={ds} search={currentSearch} />
+      {sc.view === "explore" && <LinkNotices sc={sc} strip />}
+      {!isReady(sc) ? <ActivePending sc={sc} /> : sc.view === "explore" ? <Explore sc={sc} /> : <Analysis sc={sc} />}
     </div>
   );
 }
 
+/**
+ * The active site has no view yet (loading, failed, or no terrain horizon in Terrain mode).
+ * Nothing from another site is shown in its place; the shortlist stays usable.
+ */
+function ActivePending({ sc }: { sc: Scenario }) {
+  const p = sc.pending.find((x) => x.id === sc.active)!;
+  const t = pendingText(p);
+  return (
+    <main className={sc.view === "explore" ? "page pending-page explore-pending" : "page pending-page"} data-testid="active-pending" data-site={p.id} data-state={p.state}>
+      <section className="card" aria-labelledby="pending-h">
+        <h2 id="pending-h">{t.title}</h2>
+        <SiteChips sc={sc} theme="page" />
+        <MixedTerrainNotice sc={sc} />
+        <PendingCard sc={sc} p={p} />
+        <p className="muted small">
+          Scenario kept: arrival, duration, delay, model and time are unchanged while {p.short} {p.state === "loading" ? "loads" : "is unavailable"}. Choose another
+          site above to view it.
+        </p>
+      </section>
+    </main>
+  );
+}
+
 function TopBar({ sc }: { sc: Scenario }) {
-  const synthetic = sc.ds.manifest.is_synthetic || sc.ds.sites.some((s) => s.data.site.is_synthetic);
+  const synthetic = sc.ds.manifest.is_synthetic || Object.values(sc.loads).some((l) => l.state === "ready" && l.entry.data.site.is_synthetic);
   const tabs: { v: View; label: string; hint: string }[] = [
     { v: "explore", label: "Explore", hint: "3D terrain around the modeled observer" },
-    { v: "analysis", label: "Analysis", hint: "Two-site comparison dashboard" },
+    { v: "analysis", label: "Analysis", hint: "Multi-site comparison dashboard" },
   ];
   return (
     <header className="topbar">
@@ -126,9 +159,9 @@ function TopBar({ sc }: { sc: Scenario }) {
 
 // ------------------------------------------------------------------ analysis (the dashboard)
 
-export function Analysis({ sc }: { sc: Scenario }) {
+export function Analysis({ sc }: { sc: ReadyScenario }) {
   const {
-    ds, times, requested, selIds, toggleSite, active, setActive, avail, mode, setMode, terrainRequestedButMissing,
+    ds, times, selIds, active, setActive, avail, mode, setMode,
     cov, maxDays, days, setDays, durationMs, bounds, arrival, setArrival, delay, setDelay, options, chosen, effDelay,
     baseW, actW, domain, i0, i1, cursor, cursorT, setCursor, views, activeView, activeSite, horizon,
   } = sc;
@@ -138,7 +171,8 @@ export function Analysis({ sc }: { sc: Scenario }) {
     [activeSite, mode, horizon],
   );
   // 5C: both sites' screening assets, lazy; a failure leaves the rest of Analysis unaffected
-  const slope = useSlopeAssets(views.map((v) => v.data), true);
+  const slopeCap = (id: string) => sc.catalogSite(id).capabilities.slope_screening;
+  const slope = useSlopeAssets(views.filter((v) => slopeCap(v.entry.id).available).map((v) => v.data), true);
   const [wrapRef, width] = useWidth<HTMLDivElement>();
   const [panoRef, panoWidth] = useWidth<HTMLDivElement>();
   const scale = timeScale(domain.start, domain.end, width);
@@ -155,15 +189,16 @@ export function Analysis({ sc }: { sc: Scenario }) {
       groups,
     };
   });
-  const synthetic = manifest.is_synthetic || ds.sites.some((s) => s.data.site.is_synthetic);
+  const synthetic = manifest.is_synthetic || views.some((v) => v.data.site.is_synthetic);
   const arrivalDate = utcDateString(arrival);
+  const pendingNames = sc.pending.map((p) => `${p.short} (${p.state === "loading" ? "loading" : p.state === "error" ? "not loaded" : "no terrain horizon"})`);
 
   return (
     <main className="page" id="analysis">
       <header className="masthead">
         <div>
-          <p className="eyebrow">Lunar Visibility Navigator · Two-site comparison · {mode === "terrain" ? "Terrain horizon" : "Smooth horizon"}</p>
-          <h1>Sun and Earth visibility: {views.map((v) => v.profile.short).join(" and ")}</h1>
+          <p className="eyebrow">Lunar Visibility Navigator · {selIds.length}-site comparison · {mode === "terrain" ? "Terrain horizon" : "Smooth horizon"}</p>
+          <h1>Sun and Earth visibility: {joinNames(sc.selIds.map((id) => views.find((v) => v.entry.id === id)?.profile.short ?? sc.catalogSite(id).short_name))}</h1>
         </div>
         <div className="badges">
           {synthetic ? <span className="badge badge-warn">⚠ Synthetic data</span> : <span className="badge">Real data · JPL Horizons</span>}
@@ -174,7 +209,7 @@ export function Analysis({ sc }: { sc: Scenario }) {
       {mode === "terrain" ? (
         <div className="banner banner-terrain" role="note" data-mode="terrain">
           <strong>Terrain horizon for every site shown.</strong> “Visible” means the body’s center is above the skyline
-          computed from LOLA terrain for an observer 1 m above the modeled surface. This applies to both the Sun and Earth:
+          computed from each site’s terrain model (named on its card) for an observer 1 m above the modeled surface. This applies to both the Sun and Earth:
           part of either disk can still be above the skyline when its center is hidden. These are terrain-model results for
           published coordinates, not the conditions of an actual lander. Earth visible is a geometric opportunity, not a
           guaranteed radio link. Sun visible is not electrical power output.
@@ -187,35 +222,22 @@ export function Analysis({ sc }: { sc: Scenario }) {
           electrical power output.
         </div>
       )}
-      {terrainRequestedButMissing && (
-        <div className="notice notice-error" role="alert">
-          Terrain horizon requested but not available for {avail.missing.map((m) => `${m.id} (${m.reason})`).join(", ")}.
-          Showing the smooth horizon for all sites, so results are never mixed.
-        </div>
-      )}
-      {requested.unknown.length > 0 && (
-        <div className="notice notice-error" role="alert">
-          Unknown site ID in the link: {requested.unknown.join(", ")}. Showing the sites listed in the manifest instead.
-        </div>
-      )}
+      <MixedTerrainNotice sc={sc} />
+      <LinkNotices sc={sc} />
 
       <section className="card locator-card" aria-labelledby="loc-h">
         <h2 id="loc-h">Sites</h2>
-        <Locator views={ds.sites.map((e) => ({ entry: e, profile: profileFor(e.data), selected: selIds.includes(e.id) }))} />
-        <fieldset className="site-toggles">
-          <legend className="small">Compared sites</legend>
-          {ds.sites.map((e) => (
-            <label key={e.id} className="small">
-              <input
-                type="checkbox"
-                checked={selIds.includes(e.id)}
-                disabled={selIds.includes(e.id) && selIds.length === 1}
-                onChange={() => toggleSite(e.id)}
-              />{" "}
-              {profileFor(e.data).label}
-            </label>
-          ))}
-        </fieldset>
+        <SiteChips sc={sc} theme="page" />
+        <Locator
+          points={ds.catalog.sites.map((c) => ({
+            id: c.id,
+            short: views.find((v) => v.entry.id === c.id)?.profile.short ?? c.short_name,
+            latitude_deg: c.latitude_deg,
+            longitude_deg_east: c.longitude_deg_east,
+            selected: selIds.includes(c.id),
+            active: c.id === active,
+          }))}
+        />
       </section>
 
       <section className="card controls-card" aria-labelledby="ctl-h">
@@ -231,12 +253,11 @@ export function Analysis({ sc }: { sc: Scenario }) {
                 role="radio"
                 aria-checked={mode === m}
                 className={mode === m ? "seg-btn active" : "seg-btn"}
-                disabled={m === "terrain" && !avail.terrain}
-                title={m === "terrain" && !avail.terrain ? `Unavailable for ${avail.missing.map((x) => x.id).join(", ")}` : undefined}
+                title={m === "terrain" && !avail.terrain ? `No terrain horizon for ${avail.missing.map((x) => x.id).join(", ")}: those sites show no Terrain results` : undefined}
                 onClick={() => setMode(m)}
                 data-mode={m}
               >
-                {m === "smooth" ? "Smooth (0°)" : "Terrain (LOLA)"}
+                {m === "smooth" ? "Smooth (0°)" : "Terrain"}
               </button>
             ))}
           </div>
@@ -326,19 +347,26 @@ export function Analysis({ sc }: { sc: Scenario }) {
         </p>
       </section>
 
+      <AlignedMetrics sc={sc} delayedLabel={delayedLabel} />
+
       <section className="compare-grid" aria-label="Site comparison">
-        {views.map((v) => (
-          <SiteCard
-            key={v.entry.id}
-            v={v}
-            mode={mode}
-            delayedLabel={delayedLabel}
-            effDelay={effDelay}
-            cursorT={cursorT}
-            isActive={v.entry.id === active}
-            onShow={() => setActive(v.entry.id)}
-          />
-        ))}
+        {selIds.map((id) => {
+          const v = views.find((x) => x.entry.id === id);
+          const p = sc.pending.find((x) => x.id === id);
+          if (!v) return p ? <article key={id} className="card site-compare site-pending" data-site={id}><p className="label">{p.short}</p><PendingCard sc={sc} p={p} /></article> : null;
+          return (
+            <SiteCard
+              key={v.entry.id}
+              v={v}
+              mode={mode}
+              delayedLabel={delayedLabel}
+              effDelay={effDelay}
+              cursorT={cursorT}
+              isActive={v.entry.id === active}
+              onShow={() => setActive(v.entry.id)}
+            />
+          );
+        })}
         <p className="muted small compare-foot">
           Shares of elapsed window time; darkness means the Sun’s center is below the horizon of the model shown. These cards
           compare modeled visibility for the same windows only; they do not rank the sites, and neither point is presented as a
@@ -352,6 +380,10 @@ export function Analysis({ sc }: { sc: Scenario }) {
           short: v.profile.short,
           provisional: v.profile.provisionalTerrain,
           state: slope.states[v.entry.id] ?? { state: "idle" },
+          unavailable: (() => {
+            const c = slopeCap(v.entry.id);
+            return c.available ? null : c.reason;
+          })(),
           sun: pctText(effDelay ? v.act.sunPct : v.base.sunPct),
           earth: pctText(effDelay ? v.act.earthPct : v.base.earthPct),
         }))}
@@ -435,6 +467,7 @@ export function Analysis({ sc }: { sc: Scenario }) {
           <div className="chart-head sub">
             <h3>Visibility timelines (all compared sites, one UTC axis)</h3>
           </div>
+          {pendingNames.length > 0 && <p className="muted small" data-testid="timeline-missing">Not on the timeline: {pendingNames.join(", ")}.</p>}
           <Timeline scale={scale} tracks={tracks} cursor={cursorT} onSelect={(t) => setCursor(clampNum(nearestIndex(times, t), i0, i1))} />
           <div className="chart-head sub">
             <h3>Elevation of body centers: {activeView.profile.label}</h3>
@@ -489,8 +522,8 @@ export function Analysis({ sc }: { sc: Scenario }) {
           <li>Sun and Earth positions: JPL Horizons airless apparent azimuth/elevation of each body’s center, every 10 minutes, for each site’s own observer point (altitude above the 1737.4 km lunar reference sphere, listed per site below).</li>
           <li>Each 10-minute step is classified at its midpoint: visible when the center’s elevation is strictly above the horizon at the center’s azimuth ({mode === "terrain" ? "terrain skyline" : "0° in smooth mode"}). This uses the center of both the Sun and Earth, not their disks.</li>
           <li>10 minutes is the sampling and reporting resolution, not a guaranteed accuracy of event times. Rises, sets and darkness boundaries are placed on the 10-minute grid as estimates, and a crossing can fall anywhere within its step. At a selected time near a crossing, the body center can already be on the other side of the horizon while its step is still classified the other way; the app then says “Near estimated crossing” rather than changing either value.</li>
-          <li>Terrain horizon: for every 0.1° of azimuth, the highest apparent elevation of LOLA terrain along a great-circle ray from the observer, with exact sphere geometry (lunar curvature counted once); rays continue until even the highest lunar terrain could not rise above the skyline found so far. Directions the data cannot reach would be shown as unknown, never as clear.</li>
-          <li>Both sites always use the same horizon model, the same mission windows and the same UTC time. Delays shift the windows by +1, +3 or +7 days from the baseline arrival; the duration is unchanged.</li>
+          <li>Terrain horizon: for every 0.1° of azimuth, the highest apparent elevation of the site’s terrain model (named per site below) along a great-circle ray from the observer, with exact sphere geometry (lunar curvature counted once); rays continue until even the highest lunar terrain could not rise above the skyline found so far. Directions the data cannot reach would be shown as unknown, never as clear.</li>
+          <li>Every compared site always uses the same horizon model, the same mission windows and the same UTC time; a site without the chosen model shows no results rather than another model’s. Delays shift the windows by +1, +3 or +7 days from the baseline arrival; the duration is unchanged.</li>
           <li>Unknown data is never counted as darkness or as visible; a metric is shown as unavailable instead.</li>
         </ul>
         <div className="two-col">
@@ -506,7 +539,7 @@ export function Analysis({ sc }: { sc: Scenario }) {
           <li>No overall ranking: this tool compares modeled visibility and does not judge which site is a better landing site.</li>
           <li>Educational planning prototype, not a flight-qualified analysis tool.</li>
         </ul>
-        <p className="muted small">Dataset <code>{manifest.dataset_id}</code>, generated {manifest.generated_at_utc}.</p>
+        <p className="muted small">Dataset <code>{manifest.dataset_id}</code>, generated {manifest.generated_at_utc}; site list and capabilities from its catalog.</p>
       </section>
     </main>
   );
@@ -707,57 +740,98 @@ export function AssessmentPanel() {
   );
 }
 
-// ------------------------------------------------------------------ locator
+// ------------------------------------------------------------------ link notices and aligned metrics
 
-function Locator({ views }: { views: { entry: SiteEntry; profile: SiteProfile; selected: boolean }[] }) {
-  const pts = views.map((v) => ({ ...v, ...polarXY(v.entry.data.site.latitude_deg, v.entry.data.site.longitude_deg_east) }));
-  const maxR = Math.max(60, ...pts.map((p) => Math.hypot(p.x, p.y)));
-  const extent = Math.ceil((maxR * 1.25) / 30) * 30; // km from the pole to the plot edge
-  const size = 260;
-  const c = size / 2;
-  const k = (c - 30) / extent; // leave room outside the circle for longitude labels
-  const ringsLat = [89, 88, 86, 84, 82].filter((lat) => 2 * 1737.4 * Math.tan(((90 - lat) * Math.PI) / 360) <= extent);
-  const pair = views.length >= 2 ? surfaceDistanceKm(views[0].entry.data.site, views[1].entry.data.site) : null;
+const joinNames = (xs: string[]) => (xs.length <= 2 ? xs.join(" and ") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
+
+/** What the link asked for that could not be used, stated rather than silently dropped. */
+function LinkNotices({ sc, strip = false }: { sc: Scenario; strip?: boolean }) {
+  const r = sc.requested;
+  const lines: string[] = [];
+  const m = sc.arrivalMoved;
+  if (m) lines.push(`The link's arrival ${fmtUtc(m.from)} is outside this dataset's coverage for a ${sc.days}-day mission (data ${fmtUtc(sc.cov.start)} to ${fmtUtc(sc.cov.end)}); shown from ${fmtUtc(m.to)}, the nearest arrival that fits.`);
+  if (r.unknown.length) lines.push(`Unknown site ID in the link: ${r.unknown.join(", ")} (not in dataset ${sc.ds.manifest.dataset_id}); ${r.unknown.length === 1 ? "it is" : "they are"} not shown.`);
+  if (r.duplicates.length) lines.push(`Listed more than once in the link: ${r.duplicates.join(", ")}; compared once.`);
+  if (r.dropped.length) lines.push(`The link names more than 4 sites; not compared: ${r.dropped.join(", ")}.`);
+  if (!lines.length) return null;
   return (
-    <figure className="locator">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img"
-        aria-label={`South polar map: ${pts.map((p) => `${p.profile.short} at ${fmtLat(p.entry.data.site.latitude_deg)}, ${fmtLonEast(p.entry.data.site.longitude_deg_east)}`).join("; ")}`}>
-        <circle cx={c} cy={c} r={extent * k} className="loc-edge" />
-        {ringsLat.map((lat) => {
-          const r = 2 * 1737.4 * Math.tan(((90 - lat) * Math.PI) / 360) * k;
-          return (
-            <g key={lat}>
-              <circle cx={c} cy={c} r={r} className="loc-ring" />
-              <text x={c + r * Math.SQRT1_2 + 2} y={c + r * Math.SQRT1_2 + 9} className="loc-tick">{lat}° S</text>
-            </g>
-          );
-        })}
-        {[0, 90, 180, 270].map((lon) => {
-          const l = (lon * Math.PI) / 180;
-          const r = extent * k;
-          return (
-            <g key={lon}>
-              <line x1={c} y1={c} x2={c + r * Math.sin(l)} y2={c - r * Math.cos(l)} className="loc-ring" />
-              <text x={c + (r + 14) * Math.sin(l)} y={c - (r + 10) * Math.cos(l)} className="loc-tick" textAnchor="middle" dy="0.32em">
-                {lon === 0 ? "0°" : lon === 180 ? "180°" : `${lon}° E`}
-              </text>
-            </g>
-          );
-        })}
-        <path d={`M${c - 4},${c}H${c + 4}M${c},${c - 4}V${c + 4}`} className="loc-pole" />
-        {pts.map((p) => (
-          <g key={p.entry.id} className={p.selected ? "loc-site" : "loc-site loc-off"} data-site={p.entry.id}>
-            <circle cx={c + p.x * k} cy={c - p.y * k} r={4} />
-            <text x={c + p.x * k + (p.x >= 0 ? 7 : -7)} y={c - p.y * k} dy="0.32em" textAnchor={p.x >= 0 ? "start" : "end"}>{p.profile.short}</text>
-          </g>
-        ))}
-      </svg>
-      <figcaption className="muted small">
-        South polar stereographic projection (sphere 1737.4 km, true scale at the pole; 0° longitude up, 90° E right), {extent} km
-        from the pole to the edge. Positions are projected; labels are not to scale and no terrain is drawn.
-        {pair !== null && ` Distance between the two points: about ${pair.toFixed(0)} km over the surface.`}
-      </figcaption>
-    </figure>
+    <div className={strip ? "notice-strip" : "notice notice-error"} role="alert" data-testid="link-notice">
+      {lines.map((l) => <p key={l}>{l}</p>)}
+    </div>
+  );
+}
+
+function metricCell(base: Availability<number>, act: Availability<number> | null, delta: number | null) {
+  if (!act) return pctText(base);
+  return `${pctText(base)} → ${pctText(act)} (${delta === null ? "unavailable" : fmtSigned(delta, "pp")})`;
+}
+function darkCell(base: Availability<DarkRun | null>, act: Availability<DarkRun | null> | null, delta: number | null) {
+  const one = (m: Availability<DarkRun | null>) => (!m.ok ? "unavailable" : !m.value ? "none" : `${fmtHours(m.value.durationMs)}${m.value.touchesStart || m.value.touchesEnd ? " ⚠" : ""}`);
+  if (!act) return one(base);
+  return `${one(base)} → ${one(act)} (${delta === null ? "unavailable" : fmtSigned(delta, "h")})`;
+}
+
+/**
+ * Aligned metrics: one column per compared site, the same windows and model for all. Each cell
+ * is "baseline → delayed (change)" when a delay applies. Sites without a view say why; no cell
+ * ever holds another site's value or another model's value.
+ */
+function AlignedMetrics({ sc, delayedLabel }: { sc: ReadyScenario; delayedLabel: string | null }) {
+  const cols = sc.selIds.map((id) => ({ id, v: sc.views.find((x) => x.entry.id === id) ?? null, p: sc.pending.find((x) => x.id === id) ?? null }));
+  const rows: { k: string; field: string; f: (v: SiteView) => string }[] = [
+    { k: "Sun center visible", field: "sun", f: (v) => metricCell(v.base.sunPct, delayedLabel ? v.act.sunPct : null, v.cmp.sunPp) },
+    { k: "Earth center visible", field: "earth", f: (v) => metricCell(v.base.earthPct, delayedLabel ? v.act.earthPct : null, v.cmp.earthPp) },
+    { k: "Both visible", field: "both", f: (v) => metricCell(v.base.bothPct, delayedLabel ? v.act.bothPct : null, v.cmp.bothPp) },
+    { k: "Longest darkness", field: "dark", f: (v) => darkCell(v.base.longestDark, delayedLabel ? v.act.longestDark : null, v.cmp.darkHours) },
+  ];
+  return (
+    <section className="card aligned-card" aria-labelledby="aligned-h" data-testid="aligned-metrics">
+      <h2 id="aligned-h">Aligned comparison</h2>
+      <p className="muted small">
+        Same baseline window{delayedLabel ? ` and the same ${delayedLabel.toLowerCase()} window` : ""} ({fmtUtc(sc.baseW.start)} → {fmtUtc(sc.baseW.end)}
+        {delayedLabel ? `; ${fmtUtc(sc.actW.start)} → ${fmtUtc(sc.actW.end)}` : ""}) and the same {sc.mode === "terrain" ? "Terrain" : "Smooth (0°)"} model for every site.
+        {delayedLabel ? " Each cell: baseline → delayed (change)." : ""} Shares of elapsed time; body centers; estimates on the 10-minute grid. Not a ranking.
+      </p>
+      <div className="table-scroll plain">
+        <table className="aligned">
+          <thead>
+            <tr>
+              <th scope="col">Metric</th>
+              {cols.map((c) => (
+                <th scope="col" key={c.id} data-site={c.id}>
+                  {c.v?.profile.short ?? c.p?.short}
+                  {sc.mode === "terrain" && c.v?.profile.provisionalTerrain ? <span className="flag" title={c.v.profile.provisionalTerrain}> ⚠ provisional</span> : null}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.field} data-field={r.field}>
+                <th scope="row">{r.k}</th>
+                {cols.map((c) => (
+                  <td key={c.id} className="num" data-site={c.id}>
+                    {c.v ? r.f(c.v) : <span className="muted">{c.p?.state === "loading" ? "loading…" : c.p?.state === "error" ? "not loaded" : "no terrain horizon"}</span>}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {sc.mode === "terrain" && (
+              <tr data-field="model">
+                <th scope="row">Terrain model</th>
+                {cols.map((c) => <td key={c.id} className="small" data-site={c.id}>{c.v ? terrainModelLabel(c.v.data) : "—"}</td>)}
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {sc.mode === "terrain" && new Set(sc.views.map((v) => terrainModelLabel(v.data))).size > 1 && (
+        <p className="note small" data-testid="mixed-resolution">
+          Terrain models differ in source and pixel size between these sites (see “Terrain model”). Skylines from coarser terrain miss smaller relief, so
+          differences between sites partly reflect the data, not only the terrain.
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -778,11 +852,17 @@ function SiteSources({ v, mode }: { v: SiteView; mode: HorizonMode }) {
         <dt>Coordinates</dt>
         <dd className="num">{fmtLat(meta.latitude_deg)}, {fmtLonEast(meta.longitude_deg_east)}</dd>
         <dt>Surface</dt>
-        <dd className="num">{meta.surface_elevation_m?.toFixed(1)} m above the 1737.4 km sphere (LOLA, rounded to 0.1 m)</dd>
+        <dd className="num">{meta.surface_elevation_m?.toFixed(1)} m above the 1737.4 km sphere ({site.terrain_horizon ? Object.keys(site.terrain_horizon.horizon.resolution.dem_pixel_m)[0] : "DEM"}, rounded to 0.1 m)</dd>
         <dt>Observer</dt>
         <dd className="num">{meta.observer_height_above_surface_m} m nominal; Horizons altitude {meta.horizons_site_altitude_km} km
           {site.terrain_horizon?.observer ? `; eye ${site.terrain_horizon.observer.eye_above_dem_surface_m.toFixed(3)} m above the interpolated surface` : ""}</dd>
       </dl>
+      {meta.altitude_conversion_note && (
+        <details className="small" data-field="altitude-note">
+          <summary>How the observer altitude was formed</summary>
+          <p>{meta.altitude_conversion_note}</p>
+        </details>
+      )}
       <h4>Sources</h4>
       <ul className="sources">
         {coord && <li>Coordinates: <a href={coord.url} target="_blank" rel="noreferrer">{coord.title}</a></li>}
@@ -815,7 +895,7 @@ function SiteSources({ v, mode }: { v: SiteView; mode: HorizonMode }) {
               <li>The whole skyline is set by modeled relief {facts.settingDistanceM[0].toFixed(0)}–{facts.settingDistanceM[2].toFixed(0)} m from the point, while the Sun’s center stays only {facts.sunElevationRange[0].toFixed(2)}–{facts.sunElevationRange[1].toFixed(2)}° above the horizontal plane, so small terrain differences decide whole sunlit periods.</li>
             )}
             <li>Regional terrain, not the lander’s view: terrain pixels are {Object.values(site.terrain_horizon!.horizon.resolution.dem_pixel_m).join(" m, then ")} m apart; rocks, small craters and any lander are not resolved.</li>
-            <li>{facts.zeroShot} of {facts.known} skyline points lie in pixels without a LOLA shot (interpolated heights). Shot counts indicate data density, not accuracy.</li>
+            <li>{facts.known ? `${facts.zeroShot} of ${facts.known} skyline points lie in pixels without a LOLA shot (interpolated heights). Shot counts indicate data density, not accuracy.` : "Laser-shot counts at the skyline points have not been assessed; unknown counts are not zero."}</li>
             {maxShift !== null && <li>Moving the observer 100 m north, east, south or west changes the skyline by up to {maxShift.toFixed(1)}° (test scenarios, not a measured uncertainty).</li>}
             <li>Comparisons with LOLA laser shots are consistency checks: the terrain model was built from those shots.</li>
           </>
@@ -916,7 +996,7 @@ function HorizonFacts({ site, profile, mode }: { site: SiteData; profile: SitePr
         <dd>{terrainModelLabel(site)}{profile.provisionalTerrain ? ` — ${profile.provisionalTerrain.toLowerCase()}` : ""}</dd>
         <dt>Observer</dt>
         <dd>
-          {obsH} m (nominal) above the LOLA surface at {fmtLat(site.site.latitude_deg)}, {fmtLonEast(site.site.longitude_deg_east)}. The Horizons
+          {obsH} m (nominal) above the {Object.keys(rs.dem_pixel_m)[0]} surface at {fmtLat(site.site.latitude_deg)}, {fmtLonEast(site.site.longitude_deg_east)}. The Horizons
           altitude was formed from the surface rounded to 0.1 m, so the eye is {obsEye} m above the interpolated surface; Sun, Earth and skyline
           all use that same point.{profile.roundingEffect ? ` ${profile.roundingEffect}` : ""}
         </dd>
@@ -924,7 +1004,7 @@ function HorizonFacts({ site, profile, mode }: { site: SiteData; profile: SitePr
         <dd className="num">{pix} (the terrain detail the model can represent)</dd>
         <dt>Ray sampling</dt>
         <dd className="num">
-          {rs.azimuth_step_deg}° in azimuth; along each ray the terrain surface is interpolated every {rs.radial_step_m[0]} m to {rs.radial_step_change_km} km, then every {rs.radial_step_m[1]} m. Finer sampling than the pixel spacing does not add detail.
+          {rs.azimuth_step_deg}° in azimuth; {rs.radial_segments ? rs.radial_segments.map((s, k) => `${k ? "then " : ""}${s.step_m} m steps to ${s.to_km} km`).join(", ") : `along each ray the terrain surface is interpolated every ${rs.radial_step_m[0]} m to ${rs.radial_step_change_km} km, then every ${rs.radial_step_m[1]} m`}. Finer sampling than the pixel spacing does not add detail.
         </dd>
         <dt>Near the observer</dt>
         <dd className="num">
@@ -939,7 +1019,7 @@ function HorizonFacts({ site, profile, mode }: { site: SiteData; profile: SitePr
         <dt>Skyline</dt>
         <dd className="num">{fmtDeg(facts.elevationRange[0], 2)} to {fmtDeg(facts.elevationRange[1], 2)}; negative values are real (the ground falls away and the Moon curves)</dd>
         <dt>Data density</dt>
-        <dd className="num">{facts.zeroShot} of {facts.known} skyline points lie in pixels without a LOLA shot (interpolated).</dd>
+        <dd className="num">{t.setting_points.shot_count.every((n) => n === null) ? "Laser-shot counts at the skyline points have not been assessed; unknown counts are not zero." : `${facts.zeroShot} of ${facts.known} skyline points lie in pixels without a LOLA shot (interpolated).`}</dd>
         <dt>Limits</dt>
         <dd>{profile.realityNote} See the site-position scenarios above.</dd>
       </dl>

@@ -27,7 +27,9 @@ import {
   type TerrainLayer,
   fmtDistance,
   fmtPct,
+  fmtPixelM,
   fmtThreshold,
+  reproduceCommand,
   slopeSummary,
 } from "./slope";
 
@@ -51,7 +53,7 @@ function RowKey({ layer, thresholdDeg }: { layer: TerrainLayer; thresholdDeg: nu
     <div className="small ts-key" data-testid="row-key">
       <span className="ts-mini-bar" style={{ background: gradient }} aria-hidden="true" />
       <span className="num">0°</span><span className="muted">to</span><span className="num">30°+</span>
-      <span className="muted">· same scale at both sites</span>
+      <span className="muted">· same color scale at every site</span>
     </div>
   );
 }
@@ -116,7 +118,7 @@ export function ScreeningRow({ view, siteShort, layer, thresholdDeg, detailsOpen
 }
 
 /** Legend for the active overlay: fixed 0–30° scale, threshold mark, boundary, no-data and unassessed keys. */
-export function SlopeLegend({ layer, thresholdDeg }: { layer: TerrainLayer; thresholdDeg: number }) {
+export function SlopeLegend({ layer, thresholdDeg, cellM }: { layer: TerrainLayer; thresholdDeg: number; /** DEM cell size (m) of the shown asset */ cellM?: number }) {
   const t = Math.min(100, (thresholdDeg / LEGEND_MAX_DEG) * 100);
   return (
     <div className="slope-legend small" data-testid="slope-legend" data-layer={layer}>
@@ -133,14 +135,14 @@ export function SlopeLegend({ layer, thresholdDeg }: { layer: TerrainLayer; thre
           <div className="sl-ticks num" aria-hidden="true">
             {[0, 10, 20, 30].map((d) => <span key={d} style={{ left: `${(d / LEGEND_MAX_DEG) * 100}%` }}>{d === LEGEND_MAX_DEG ? `${d}°+` : `${d}°`}</span>)}
           </div>
-          <p className="sr-only">Slope color scale from 0° (light) to {LEGEND_MAX_DEG}° and above (dark violet); the same scale at both sites.</p>
+          <p className="sr-only">Slope color scale from 0° (light) to {LEGEND_MAX_DEG}° and above (dark violet); the same color scale at every site.</p>
         </>
       )}
       <div className="sl-keys">
         <span><i className="sl-ring" />500 m assessed area</span>
         <span><i className="sl-sw sl-out" />Outside: not assessed</span>
       </div>
-      <p className="muted sl-note">One flat color per 20 m DEM cell, unlit, {Math.round(OVERLAY_ALPHA * 100)} % opacity; same scale at both sites.</p>
+      <p className="muted sl-note">One flat color per {cellM ? `${Math.round(cellM)} m ` : ""}DEM cell, unlit, {Math.round(OVERLAY_ALPHA * 100)} % opacity; the same color scale at every site (the DEM scale can differ between sites).</p>
     </div>
   );
 }
@@ -234,7 +236,7 @@ export function TerrainDetails({ state, siteShort, provisional, layer, setLayer,
         <ThresholdInput id="slope-thr" value={thresholdDeg} onChange={setThreshold} />
         <p className="muted small ts-thr-note" id="slope-thr-note">{THRESHOLD_NOTE} Changes classifications only, never the measured slopes.</p>
       </div>
-      {layer !== "surface" && <SlopeLegend layer={layer} thresholdDeg={thresholdDeg} />}
+      {layer !== "surface" && <SlopeLegend layer={layer} thresholdDeg={thresholdDeg} cellM={state.state === "ready" ? (state.asset as SlopeAsset).method.cell_ground_m : undefined} />}
       {hasInspection && (
         <div className="ts-insp" data-testid="inspection" data-kind={inspection?.kind ?? "pending"}>
           <p className="ts-insp-h small"><span className="insp-mark" aria-hidden="true" /> Terrain inspection point</p>
@@ -266,15 +268,16 @@ export function TerrainDetails({ state, siteShort, provisional, layer, setLayer,
         <summary>Source, method and limits</summary>
         {a && (
           <p>
-            {a.source_dem.product} DEM, {a.source_dem.map_scale_m} m pixels. Slope of each cell from a Horn 3 × 3 gradient across about{" "}
+            {a.source_dem.product} DEM, {fmtPixelM(a.source_dem.map_scale_m)} m pixels. Slope of each cell from a Horn 3 × 3 gradient across about{" "}
             {Math.round(a.method.baseline_m)} m on true ground distances, relative to the local lunar horizontal, within {a.footprint.radius_m} m of the
-            modeled observer. Same method, radius and threshold at both sites; one fixed 0–{LEGEND_MAX_DEG}° color scale.
+            modeled observer. Same method, radius and threshold at every site; one fixed 0–{LEGEND_MAX_DEG}° color scale. Sites whose DEMs have
+            different pixel sizes measure slope over different baselines, so their values are not directly equivalent.
           </p>
         )}
-        <p>{SCOPE_NOTE} A 20 m DEM grid is not a 20 m landing-safety guarantee, and terrain that is not highlighted is not rated safe.</p>
-        <p>The DEM is interpolated where no laser shot fell{a ? ` (${Math.round(a.shot_quality.fraction_cells_with_lola_shot * 100)} % of analysed cells contain a LOLA shot)` : ""}.</p>
+        <p>{SCOPE_NOTE} A {a ? `${fmtPixelM(a.source_dem.map_scale_m)} m ` : ""}DEM grid is not a landing-safety guarantee at that scale, and terrain that is not highlighted is not rated safe.</p>
+        <p>The source surface includes interpolation between measurements{a?.shot_quality.fraction_cells_with_lola_shot != null ? ` (${Math.round(a.shot_quality.fraction_cells_with_lola_shot * 100)} % of analysed cells contain a LOLA shot)` : "; local laser-shot counts have not been assessed"}.</p>
         {provisional && <p className="note">CR1: {provisional}.</p>}
-        {a && <p>Reproduce: <code>{a.reproduce}</code></p>}
+        {a && <p>Reproduce: <code>{reproduceCommand(a.reproduce, a.site.id, `python pipeline/slope.py --site ${a.site.id}`)}</code></p>}
       </details>
     </div>
   );
@@ -290,7 +293,12 @@ export interface ComparisonSite {
   /** Existing availability results for the same sites (from computeMetrics). */
   sun: string;
   earth: string;
+  /** The site has no slope screening (catalog reason); nothing is loaded or shown for it. */
+  unavailable?: string | null;
 }
+
+/** Source DEM and measurement scale of a ready screening asset. */
+const scaleKey = (a: SlopeAsset) => `${a.source_dem.product}|${a.source_dem.map_scale_m}|${a.method.baseline_m}`;
 
 export function TerrainComparison({ sites, thresholdDeg, setThreshold, missionLabel, onRetry }: {
   sites: ComparisonSite[];
@@ -299,19 +307,34 @@ export function TerrainComparison({ sites, thresholdDeg, setThreshold, missionLa
   missionLabel: string;
   onRetry: () => void;
 }) {
-  const sum = sites.map((x) => (x.state.state === "ready" ? slopeSummary(x.state.asset as SlopeAsset, thresholdDeg) : null));
+  const assets = sites.map((x) => (!x.unavailable && x.state.state === "ready" ? (x.state.asset as SlopeAsset) : null));
+  const sum = assets.map((a) => (a ? slopeSummary(a, thresholdDeg) : null));
   const cell = (k: number, f: (s: NonNullable<(typeof sum)[number]>) => string) => {
     const s = sum[k];
     const st = sites[k].state;
+    if (sites[k].unavailable) return "no slope screening";
     if (s) return f(s);
     return st.state === "error" ? "not loaded" : "loading…";
   };
-  const anyError = sites.some((x) => x.state.state === "error");
+  const anyError = sites.some((x) => !x.unavailable && x.state.state === "error");
   const radius = sum.find((s) => s)?.radiusM;
+  // Different source DEMs measure slope over different baselines: never presented as equivalent.
+  const scales = [...new Set(assets.filter((a): a is SlopeAsset => a !== null).map(scaleKey))];
+  const mixedScale = scales.length > 1;
   return (
     <section className="card terrain-compare" aria-labelledby="tc-h" data-testid="terrain-compare">
       <h2 id="tc-h">{SCREENING_NAME}: matched {radius ?? 500} m footprint</h2>
-      <p className="muted small">{SCREENING_PURPOSE} Same DEM, slope method, radius and threshold at both sites. No single combined score ranks the sites: terrain steepness and Sun/Earth availability are shown side by side as tradeoffs.</p>
+      <p className="muted small">
+        {SCREENING_PURPOSE} {mixedScale ? "Same slope method, radius and threshold at every site, but not the same source DEM." : `Same DEM, slope method, radius and threshold at ${sites.length > 2 ? "every" : "both"} site${sites.length > 1 ? "s" : ""}.`}{" "}
+        No single combined score ranks the sites: terrain steepness and Sun/Earth availability are shown side by side as tradeoffs.
+      </p>
+      {mixedScale && (
+        <p className="note small" role="note" data-testid="mixed-scale">
+          ⚠ Different measurement scales: these sites’ slopes come from DEMs with different pixel sizes (see “Source DEM” and “Slope method”). A coarser DEM
+          measures slope over a longer baseline and smooths short steep slopes, so its median, 95th percentile and area above the threshold are not directly
+          equivalent to a finer DEM’s. Compare each site against its own scale, not the numbers against each other.
+        </p>
+      )}
       <div className="tc-thr">
         <label htmlFor="slope-thr-a">Screening threshold</label>
         <ThresholdInput id="slope-thr-a" value={thresholdDeg} onChange={setThreshold} />
@@ -329,6 +352,7 @@ export function TerrainComparison({ sites, thresholdDeg, setThreshold, missionLa
             <tr><th scope="col">Measure</th>{sites.map((x) => <th scope="col" key={x.id}>{x.short}{x.provisional ? " ⚠" : ""}</th>)}</tr>
           </thead>
           <tbody>
+            <tr data-row="dem"><th scope="row">Source DEM</th>{sites.map((x, k) => <td key={x.id}>{cell(k, () => `${assets[k]!.source_dem.product}, ${fmtPixelM(assets[k]!.source_dem.map_scale_m)} m pixels`)}</td>)}</tr>
             <tr><th scope="row">Analysis radius</th>{sites.map((x, k) => <td key={x.id} className="num">{cell(k, (s) => `${s.radiusM} m`)}</td>)}</tr>
             <tr><th scope="row">Slope method</th>{sites.map((x, k) => <td key={x.id}>{cell(k, (s) => `Horn 3×3, ${Math.round(s.cellM)} m cells, ~${Math.round(s.baselineM)} m baseline`)}</td>)}</tr>
             <tr data-row="median"><th scope="row">Median slope</th>{sites.map((x, k) => <td key={x.id} className="num">{cell(k, (s) => deg(s.medianDeg))}</td>)}</tr>
@@ -341,7 +365,7 @@ export function TerrainComparison({ sites, thresholdDeg, setThreshold, missionLa
           </tbody>
         </table>
       </div>
-      <p className="muted small">{SCOPE_NOTE} A 20 m DEM grid is not a 20 m landing-safety guarantee. Sun and Earth rows repeat the cards above for the same mission.</p>
+      <p className="muted small">{SCOPE_NOTE} A DEM grid is not a landing-safety guarantee at its pixel size. Sun and Earth rows repeat the cards above for the same mission.</p>
     </section>
   );
 }

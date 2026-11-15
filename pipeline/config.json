@@ -1,7 +1,7 @@
 {
-  "dataset_id": "lvn-2026-12-01-60d",
+  "dataset_id": "lvn-2026-12-01-120d",
   "coverage_start_utc": "2026-12-01T00:00:00Z",
-  "coverage_end_utc": "2027-01-30T00:00:00Z",
+  "coverage_end_utc": "2027-03-31T00:00:00Z",
   "sample_step_seconds": 600,
   "sites": [
     {
@@ -20,7 +20,13 @@
       "altitude_conversion_note": "horizons_site_altitude_km = (surface_elevation_m + observer_height_above_surface_m) / 1000 = (5321.9 m + 1 m) / 1000 = 5.3229 km. Both heights are relative to the same 1737.4 km sphere, so no datum conversion is needed. Rounding: the bilinear LDEM_80S_20M surface is 5321.8804 m; it was rounded to 0.1 m (5321.9 m) before forming the Horizons altitude, so the submitted point is 1.0196 m above the interpolated surface (nominal 1 m). The terrain horizon uses the same submitted point, so Sun/Earth directions and skyline refer to one observer. Measured effect of the 0.0196 m: skyline <= 0.0034 deg (nearest skyline point 330 m), 1 of 8640 Sun steps (2026-12-30 sunset, one 10-minute step), no demo-window metric change; Sun/Earth directions ~3e-9 deg. No absolute vertical accuracy of the surface value is claimed: LOLA RDR shots near the site (the DEM's own source data) agree with the DEM to mean -0.26 m, sd 0.67 m, max |4.71| m (1131 shots within ~600 m), and the 8 shots within 30 m span 5321.75-5322.69 m; these are consistency and local-spread figures, not an accuracy. Terrain within 100 m of the coordinate spans -4.4 to +4.6 m (a height range, not an uncertainty; the coordinate's accuracy is not stated). Horizons echo: Center geodetic 5.3229 km exactly; |Center cylindric| = 1742.7228895 km, 10.5 mm below 1737.4 + 5.3229 km, explained by the printed precision (Dz is given to 0.1 m), so the echo confirms the radius only to about +/-5 cm.",
       "horizon_model": "smooth",
       "coordinate_source_retrieved_at_utc": "2026-11-14",
-      "coordinate_source_product": "LROC featured image 1408"
+      "coordinate_source_product": "LROC featured image 1408",
+      "catalog": {
+        "short_name": "Athena",
+        "location_type": "actual_landing_point",
+        "location_label": "Intuitive Machines IM-2 Athena lander, landed 2025-03-06; point located in LROC imagery",
+        "provisional_note": null
+      }
     },
     {
       "id": "connecting-ridge-cr1",
@@ -42,7 +48,73 @@
       "horizons_altitude_reference": "Height above the Horizons reference body for the Moon: a 1737.4 km sphere (response header 'Center radii'), the same reference as LOLA heights. Submitted 2026-11-14 (milestone 4C).",
       "altitude_conversion_note": "horizons_site_altitude_km = (surface_elevation_m + observer_height_above_surface_m) / 1000 = (1941.8 m + 1 m) / 1000 = 1.9428 km. Both heights are relative to the same 1737.4 km sphere, so no datum conversion is needed. Rounding: the bilinear LDEM_80S_20M surface is 1941.8206 m; it was rounded to 0.1 m (1941.8 m) before forming the Horizons altitude, so the submitted point is 0.9794 m above the interpolated surface (nominal 1 m, 0.0206 m lower). The terrain horizon uses the same submitted point (r = 1737.4 km + 1942.8 m), so Sun/Earth directions and skyline refer to one observer. No absolute vertical accuracy of the surface value is claimed; no local LOLA RDR shot consistency check was made at the site point; the nearest 20 m DEM pixel has no LOLA shot (interpolated height). Horizons echo (all 12 responses): Center geodetic 222.6, -89.468, 1.9428 exactly; Center cylindric Dxy 16.14983 km and Dz -1739.268 km equal the submitted point rounded to the printed 5 and 3 decimals, so |r| (177 mm above 1737.4 + 1.9428 km as printed) confirms the radius only to about +/-0.5 m, the printed precision of Dz near the pole.",
       "horizon_model": "smooth",
-      "preparation_status": "positions fetched and terrain horizon computed in milestone 4C; shown in the two-site app since milestone 4D (merged in PR #2)"
+      "preparation_status": "positions fetched and terrain horizon computed in milestone 4C; shown in the two-site app since milestone 4D (merged in PR #2)",
+      "catalog": {
+        "short_name": "CR1",
+        "location_type": "study_location",
+        "location_label": "Assumed landing point in a notional NASA traverse study; not an actual or approved landing site",
+        "provisional_note": "Provisional: sensitive to terrain model"
+      }
+    },
+    {
+      "id": "im1-odysseus",
+      "name": "IM-1 Odysseus landing point (Malapert A region)",
+      "latitude_deg": -80.12759,
+      "longitude_deg_east": 1.44587,
+      "coordinate_frame": "MOON_ME body-fixed frame (the kernel's MOON_ME is an alias for MOON_ME_DE440_ME421, closely aligned with the DE421 mean Earth/polar axis frame), planetodetic coordinates on a 1737.4 km sphere (= planetocentric for a sphere), east-positive longitude. The kernel states the frame; it does not state the coordinate's source or accuracy.",
+      "coordinate_source_url": "https://naif.jpl.nasa.gov/pub/naif/pds/pds4/clps/clps_spice/spice_kernels/fk/clps_to2im_im1_v02.tf",
+      "coordinate_source_title": "NAIF CLPS IM-1 frames kernel clps_to2im_im1_v02.tf (Version 2, 2025-08-22): IM1_LANDING_SITE at latitude -80.12759, longitude 1.44587 deg, MOON_ME",
+      "coordinate_source_retrieved_at_utc": "2026-11-15",
+      "coordinate_source_product": "clps_to2im_im1_v02.tf (NAIF PDS4 CLPS SPICE archive); cross-check: LROC featured image 1360 (2024-02-26) gives 80.13 S, 1.44 E",
+      "point_type": "actual_landing_point",
+      "point_description": "where Intuitive Machines' IM-1 Odysseus lander came to rest on 2024-02-22 (it landed tilted on a slope)",
+      "coordinate_accuracy_note": "not stated by the kernel; LROC's two-decimal value agrees to its rounding (0.005 deg of latitude is about 150 m)",
+      "observer_height_above_surface_m": 1,
+      "surface_elevation_m": 2593.5,
+      "surface_elevation_reference": "Height above the 1737.4 km LOLA reference sphere, LDEM_80S_20M V2.0, bilinear at the kernel's point interpreted in ME. Rounded to 0.1 m. LDEM_75S_60M gives 2592.30 m. The point is about 4 km inside the 20 m product's edge. No local LOLA RDR shot consistency check performed. See data/terrain/im1-odysseus_site_elevation_report.json.",
+      "horizons_site_altitude_km": 2.5945,
+      "horizons_altitude_reference": "Height above the Horizons reference body for the Moon: a 1737.4 km sphere (response header 'Center radii'), the same reference as LOLA heights.",
+      "altitude_conversion_note": "horizons_site_altitude_km = (surface_elevation_m + observer_height_above_surface_m) / 1000 = (2593.5 m + 1 m) / 1000 = 2.5945 km. Both heights are relative to the 1737.4 km sphere, so no datum conversion is needed. Rounding: the bilinear LDEM_80S_20M surface is 2593.53 m; it was rounded to 0.1 m before forming the altitude, so the submitted point is 0.9716 m above the interpolated surface (nominal 1 m). The NAIF kernel lists an altitude of 2.583 km for its site point (10.5 m lower; its basis is not stated); it is not used. The generic terrain horizon and rendering use this same configured observer; no observer substitution is made.",
+      "horizon_model": "smooth",
+      "preparation_status": "Coordinate-driven offline terrain preparation; capabilities advertised only from validated complete bundle and published assets.",
+      "catalog": {
+        "short_name": "Odysseus",
+        "location_type": "actual_landing_point",
+        "location_label": "Intuitive Machines IM-1 Odysseus lander, came to rest 2024-02-22 (tilted); point from the NAIF CLPS frames kernel",
+        "provisional_note": null
+      },
+      "terrain_coordinate_frame": "MOON_ME_DE421",
+      "prepared_terrain": "data/prepared/0d4fc9cb2aff7a4806c0ba842a82718b01bde5e16c1f84c0bf8b054e3562d8c0"
+    },
+    {
+      "id": "apollo17-lm",
+      "name": "Apollo 17 lunar module (Taurus-Littrow valley)",
+      "latitude_deg": 20.1911,
+      "longitude_deg_east": 30.7723,
+      "coordinate_frame": "Lunar mean Earth/polar axis (ME) system, as stated by the source; planetocentric latitude, east-positive longitude. The source names no ephemeris realization; DE421 (as the DEM and Horizons MOON_ME) is assumed.",
+      "coordinate_source_url": "https://lroc.im-ldi.com/images/938",
+      "coordinate_source_title": "LROC: Spacecraft Related Coordinates - 2016 Update (M. Robinson, 25 November 2016): Apollo 17 LM 20.1911, 30.7723, elevation -2626 m (GLD100), uncertainty 3.5 m; see Wagner et al. 2017, Icarus 283, 92-103",
+      "coordinate_source_retrieved_at_utc": "2026-11-15",
+      "coordinate_source_product": "LROC featured image 938 table (means of multiple NAC images); Wagner et al. (2017) doi:10.1016/j.icarus.2016.05.011",
+      "point_type": "actual_landing_point",
+      "point_description": "the Apollo 17 lunar module descent stage, landed 1972-12-11, located in LROC NAC images",
+      "coordinate_accuracy_note": "table uncertainty 3.5 m (column not defined on the page); the page gives about +/-15 m for latitude/longitude in general",
+      "observer_height_above_surface_m": 1,
+      "surface_elevation_m": -2628.0,
+      "surface_elevation_reference": "Height above the 1737.4 km sphere, SLDEM2015 512 px/deg tile sldem2015_512_00n_30n_000_045_float (LOLA + SELENE TC, Barker et al. 2016), bilinear at the published point interpreted in ME. Rounded to 0.1 m. LROC's table gives -2626 m from GLD100 (a different shape model; 2.0 m higher). See data/terrain/apollo17-lm_site_elevation_report.json.",
+      "horizons_site_altitude_km": -2.627,
+      "horizons_altitude_reference": "Height above the Horizons reference body for the Moon: a 1737.4 km sphere (response header 'Center radii'), the same reference as SLDEM2015 heights.",
+      "altitude_conversion_note": "horizons_site_altitude_km = (surface_elevation_m + observer_height_above_surface_m) / 1000 = (-2628.0 m + 1 m) / 1000 = -2.627 km (negative: the site lies below the 1737.4 km sphere). Both heights are relative to the 1737.4 km sphere, so no datum conversion is needed. Rounding: the bilinear SLDEM2015 surface is -2627.9921 m; rounded to 0.1 m before forming the altitude, the submitted point is 0.9921 m above the interpolated surface (nominal 1 m). The generic terrain horizon and rendering use this same configured observer; no observer substitution is made.",
+      "horizon_model": "smooth",
+      "preparation_status": "Coordinate-driven offline terrain preparation; capabilities advertised only from validated complete bundle and published assets.",
+      "catalog": {
+        "short_name": "Apollo 17",
+        "location_type": "actual_landing_point",
+        "location_label": "Apollo 17 lunar module descent stage, landed 1972-12-11; point located in LROC NAC images",
+        "provisional_note": null
+      },
+      "terrain_coordinate_frame": "MOON_ME_DE421",
+      "prepared_terrain": "data/prepared/ffa37016303a8b91ff89c88dc7b63f050d306b23ad57e881db1c0c4a689c03e0"
     }
   ],
   "terrain": {
@@ -67,5 +139,8 @@
       "name": "Earth (body center, not Earth-Moon barycenter)"
     }
   ],
-  "horizons_chunk_days": 10
+  "horizons_chunk_days": 10,
+  "coverage_rule": "coverage_end_utc = coverage_start_utc + 120 days (computed: datetime(2026-12-01) + timedelta(days=120)); 10-minute samples, final sample at the end",
+  "dataset_dir": "app/public/data/lvn-2026-12-01-120d",
+  "dataset_status": "release 6 dataset; the accepted 60-day release stays in app/public/data/ (pipeline/datasets/lvn-2026-12-01-60d.json)"
 }

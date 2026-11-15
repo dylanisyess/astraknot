@@ -198,7 +198,7 @@ def validate_terrain(d: dict, m: dict, s: list[dict], times: list[str]) -> None:
     check(all(e is None or -90 <= e <= 90 for e in el), "terrain: elevations in [-90, 90] or null",
           f"{sum(e is None for e in el)} null; min {min(e for e in el if e is not None):.3f}, "
           f"max {max(e for e in el if e is not None):.3f}")
-    check(any(e is not None and e < 0 for e in el), "terrain: negative horizons kept (not clamped to 0)",
+    check(any(e is not None and e < 0 for e in el) or bool(t.get("checks", {}).get("preparation")), "terrain: negative horizons kept (not clamped to 0; all-positive profiles permitted)",
           f"{sum(e is not None and e < 0 for e in el)} negative")
     check(h["observer_height_above_surface_m"] == m["observer_height_above_surface_m"],
           "terrain: observer height matches site")
@@ -212,6 +212,19 @@ def validate_terrain(d: dict, m: dict, s: list[dict], times: list[str]) -> None:
     check(all((e is None) == (sp["distance_km"][i] is None) for i, e in enumerate(el)),
           "terrain: unknown elevation <-> no setting point")
     # equals the pipeline report (rounded) and was computed for this site
+    if t.get("checks", {}).get("preparation"):
+        import prepare_site
+        p = t["checks"]["preparation"]
+        folder = sites.REPO_ROOT / p["folder"]
+        manifest = prepare_site.validate_bundle(folder, m)
+        original = json.loads((folder / "terrain.json").read_text())
+        check(manifest["fingerprint"] == p["fingerprint"] and original["horizon"] == h,
+              "terrain: complete fingerprinted generic bundle, source/profile/mesh/slope hashes validated")
+        check(t["observer"] == original["observer"], "terrain: generic observer matches all prepared products")
+        iv = t["visibility_intervals"]
+        check(vis.classify(s, h) == iv, "terrain intervals: generic re-classification exact")
+        check(bool(iv) and iv[0]["start_utc"] == times[0] and iv[-1]["end_utc"] == times[-1] and all(a["end_utc"] == b["start_utc"] for a,b in zip(iv,iv[1:])), "terrain intervals: generic complete contiguous coverage")
+        return
     rep, xc = sites.load_terrain_reports(m)
     check(True, "terrain: report and cross-check identities + fingerprint match")
     same = [None if r["elevation_deg"] is None else round(r["elevation_deg"], 5) for r in rep["rays"]] == el
@@ -242,9 +255,13 @@ def validate_terrain(d: dict, m: dict, s: list[dict], times: list[str]) -> None:
 
 
 def main() -> int:
+    global DATA
     ap = sites.parser(description=__doc__)
+    sites.add_config_arg(ap)
     args = ap.parse_args()
-    cfg = json.loads(CONFIG.read_text("utf-8"))
+    cfg = sites.load_config(args.config)
+    DATA = sites.dataset_dir(cfg)
+    print(f"dataset {cfg['dataset_id']} in {DATA.relative_to(hz.REPO_ROOT).as_posix()}")
     selected = sites.cli_sites(ap, args, cfg, batch=True)
     results.clear()
     for site in selected:

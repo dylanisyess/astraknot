@@ -5,6 +5,327 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
+## Integration — 2026-11-15, approximately 04:40 Pacific
+
+At the user's request, the full candidate (31 modified + 231 new files; nothing excluded
+beyond .gitignore) was committed on `milestone-6-tracking-sites` and merged into `main`
+with `--no-ff`. Checks just before the commit: 343/343 frontend tests, production build,
+101+3 Python tests (104 total), `git diff --check`. Not pushed or deployed. The sections
+below record the acceptance evidence; their "no commit" statements describe the state at
+the time they were written.
+
+## Site overview "blocked here" point — 2026-11-15, approximately 04:30 Pacific
+
+User report: in Horizon view, CR1 (2026-12-22 08:30) and Odysseus (2026-12-18 06:50) show the
+Sun hidden by terrain, but Site overview did not show what blocks it.
+
+Diagnosis (measured from the exported data, not assumed):
+
+| Moment | Sun | Exported skyline | Setting terrain |
+|---|---|---|---|
+| CR1, 12-22 08:30 | el 0.74° | 1.90° | 140 m away |
+| Odysseus, 12-18 06:50 | el 4.96° | 5.57° | 340 m away |
+
+Both blockers are inside the detailed mesh and the 500 m ring; nothing was missing from the
+terrain. CR1's whole skyline is set within 0.48 km, and Odysseus's within 49 km (all
+inside the 92 km context terrain). The disparity is viewpoint: the occlusion is defined
+at the 1 m eye, while the overview camera is hundreds of metres up, so a 1–5° rise a few
+hundred metres away looks flat. The overview Sun marker is placed at the direction's
+vanishing point from the camera, so it appears above the distant horizon.
+
+Fix (display only; status unchanged): `app/src/explore/blocking.ts` locates the exported
+skyline-setting point at the body's azimuth (`setting_points.distance_km`, on the eye's line
+of sight at the exported skyline elevation). It applies only when the exported status is
+hidden in the Terrain model, not near a crossing. Site overview draws the eye-to-skyline
+sight line in the body's color and a ringed marker, labelled for example "Sun blocked here ·
+terrain 140 m away rises to 1.90°; Sun center 0.74°". Labels avoid the panels and the
+observer label, and the legend explains the viewpoint difference. Nothing is shown for
+visible bodies or in the Smooth model.
+
+Checked in headless Chrome on the rebuilt preview at both reported moments (labels, sight
+lines, layout), and confirmed no marker for visible Apollo or for Smooth mode.
+Tests: 343/343 frontend (4 new in `blocking.test.ts`).
+
+## 3D context terrain — 2026-11-15, approximately 04:05 Pacific
+
+User request: the new sites showed only a 1.92 km floating square in 3D, and no site showed
+enough surroundings to see nearby craters or massifs. Added wide context terrain for all
+four sites (display only), without changing any existing file's bytes.
+
+- `pipeline/context_terrain.py` (new, standalone; hashed processing modules untouched)
+  samples three gnomonic rings around each detailed mesh through the existing source
+  registry and bilinear sampler. The rings are 60 m to 7.68 km, 240 m to 30.72 km and
+  960 m to 92.16 km, local DEMs only, with crack-free nested rims. Output:
+  `app/public/render/<id>.context.{json,bin}`, heights only, 677,388 bytes per site
+  (2.71 MB total). Sources: Athena/CR1 LDEM_80S_20M; Odysseus LDEM_80S_20M + LDEM_75S_60M;
+  Apollo SLDEM2015 tile. Zero no-data points. The center height equals each site's DEM
+  surface.
+- `app/src/explore/contextTerrain.ts` (new) refuses an asset unless the site identity,
+  observer radius, reference sphere, layout and the exact detailed-mesh SHA-256 match. It
+  rebuilds positions with an exact closed form (checked against pipeline reference points
+  to < 5 cm, the float32 limit). Context cells inside the detailed footprint are omitted;
+  the joint overlap is lowered by ≤ 1 m + 0.05 % of distance, so the detailed mesh is
+  always on top.
+- `TerrainScene.tsx` loads it after the detailed mesh into a separate group: same material
+  (so the Horizon view still clips to the exported profile), not raycast (inspection
+  unchanged). The outline moves to the 92 km edge, and overview zoom-out reaches 230 km.
+  A missing or refused asset keeps the detailed mesh only and is reported in Details.
+- Explore text updated (legend, Details "Context terrain" section, observer-view note that
+  the coarse rings differ from the profile by more than the detailed mesh).
+  DATA_CONTRACT and README updated.
+
+Personally checked in headless Chrome on the rebuilt preview:
+- Odysseus, Apollo, Athena and CR1 show continuous terrain to the horizon, and craters are
+  visible zoomed out. Apollo's Horizon view now shows the massif as shaded terrain, still
+  clipped to the skyline.
+- No cracks or z-fighting at the joints in top-down views.
+- Rapid site switching leaves no stale context terrain.
+- A blocked context file falls back to the detailed mesh with a Details note.
+
+Tests: 339/339 frontend (15 new) and 104/104 Python (3 new) pass. Release check 136/136
+and 266/266. Generic acceptance passes with 166 protected files unchanged; no tracked file
+under `app/public` changed. Not checked on a hardware GPU (frame rate with about 0.5 M
+extra triangles not measured).
+
+Packaging delta: +12 files (8 render assets, 2 source, 2 tests). Status is now 31
+modified, 229 untracked, nothing staged. `dist` is 35 files, 39,858,903 bytes
+(render 21.9 MB).
+
+## Release acceptance — 2026-11-15, approximately 03:40 Pacific
+
+This section supersedes "Current recovery" below for browser acceptance, fixes and
+packaging; that section's data/terrain evidence still stands. Verified before acting:
+`C:/Users/dylan/GitHub/astraknots-m6`, branch `milestone-6-tracking-sites`, no upstream,
+HEAD `c5ea5c317b9e96636f8d8f4034acda453d832963`; preview PID 45668 on 4180 served this
+worktree's `app/dist`. No commit, push, merge or deployment. Original checkout/main and
+5173/5174 untouched. Final status: 31 modified tracked files (the earlier 29 plus
+`app/index.html`, `app/src/explore/slope.test.ts`), the same 217 untracked files, nothing
+staged, no deletions. `git diff --check` passes.
+
+**Browser method.** No browser-control tool was attached to this session, so Computer Use
+was not retried. An isolated headless Chrome (temporary profile, SwiftShader WebGL) was
+driven over the DevTools protocol against `localhost:4180` only, after each rebuild. DOM
+state, URLs and requests were checked, and screenshots were inspected in-session (not
+saved to the repository). This is real-browser evidence, but on a software GPU.
+
+### Acceptance checks personally performed (production preview)
+
+| Check | Result |
+|---|---|
+| Fresh load, reload | Pass. Fresh visit opens 120 d / 4 sites; reload keeps the URL, all four chips and the active site. |
+| Legacy 60-day links | Pass. A link with scenario keys and no `ds` loads `data/` only ("Original dataset retained", switch offer). Explicit `ds=…60d` matches. |
+| 120-day links | Pass. `ds=…120d` loads `data/lvn-2026-12-01-120d/` only. `ds=bogus` and `ds=` fail with "No different dataset was substituted". |
+| Dataset switching | Pass after fix. No mixed requests in either direction. Switching from a four-site February link to 60 days previously moved the arrival and dropped Odysseus/Apollo with no notice in Explore; now stated (see fixes). |
+| Four sites in Terrain | Pass. Each active site loads only its own slope/render assets. Overview and Horizon views render for Athena, CR1, Odysseus and Apollo 17, and status matches the timeline. |
+| Add/remove/switch, restoration | Pass. Add from catalog (auto-activates), full at four, switch active, remove active (falls back to first), remove to one (last removal disabled), reload restores. |
+| Tracking | Pass. Track Sun survives playback (+3 h), scrubbing and wheel zoom; mouse drag stops it; switching site clears it and returning does not reactivate. |
+| After Jan 30 / Mar 31 endpoint | Pass. Feb–Mar scenarios work. 14 d from 03-17 ends 03-31 00:00; at that time both bodies read "Unknown: final sample of the data". |
+| Mission/delay limits | Pass. +1/+3/+7 d disabled with a coverage explanation; date input max 03-17 for 14 d; `days=200` clamps to 120; arrival 03-29 clamps to 03-17 and is now stated. |
+| Explore/Analysis shared state | Pass. All scenario keys identical across tabs; threshold changed in Analysis (12°→20°) applies in Explore. |
+| Narrow (390×844) | Pass. No horizontal page scroll in Explore, Analysis or the notice strip; layout stacks. |
+| Keyboard | Pass. Logical Tab order through tabs, dataset link, camera/tracking, chips, add/remove, model, inputs. Enter on +10 min steps; arrows on the scrubber step; catalog opens by Enter, focus moves inside, Esc closes and returns focus. |
+| Missing assets / no WebGL | Pass. Blocked mesh shows a site-named error, keeps status and opens Analysis. Blocked slope asset shows "unavailable" plus Retry, which recovers. Blocked on-demand site file gives a per-site pending card with Retry and keeps the scenario. Disabled WebGL shows "The 3D view is unavailable", with status and Analysis working. |
+| Reduced motion | Partial. With `prefers-reduced-motion: reduce` emulated, tracking works without errors; animation reduction itself was not measured. |
+
+### Release fixes made in this pass (frontend/evidence only; no data or terrain regenerated)
+
+- Slope "Source, method and limits" and the Analysis Source DEM row showed raw floats
+  ("59.225293797166955 m pixels", "19.85192002049153 m"); now one decimal.
+- "Reproduce" for Apollo/Odysseus (slope panel and Details sheet) showed the unserved
+  placeholder "See complete.json command"; now the documented
+  `python pipeline/prepare_site.py --config pipeline/config.json --site <id>`. Asset files unchanged.
+- Explore now shows the existing link notices (unknown/duplicate/excess site IDs) as a strip
+  under the dataset bar. Both views also state when a link's arrival was moved into coverage.
+- Analysis site cards expose each site's existing `altitude_conversion_note` (collapsed). For
+  Odysseus this states the unused NAIF 2.583 km altitude, previously only in docs.
+- Whole-Moon locator: latitude labels were clipped, and the Odysseus/Athena labels overlapped
+  after adding four sites. Fixed with a left gutter and collision-free label placement.
+- `index.html` meta description said "two lunar south-pole points"; now four lunar sites.
+- `generic_acceptance.py` recorded absolute local paths (`C:\Users\…`, `C:\Python314`) in
+  release evidence; it now records `python` plus repo-relative paths. Rerun at 11:36Z: PASS,
+  166 protected files unchanged, missing coverage refused (exit 1), cached replay 3.6 s.
+  Hashes of all served, prepared, terrain and Horizons files are identical before and after.
+- `data/release/generic_{missing_coverage,third_coordinate}.txt` were UTF-16 console captures
+  (binary to Git); losslessly transcoded to UTF-8, content unchanged.
+
+New tests: pixel/reproduce labels, Explore link/arrival notices, Odysseus height
+disclosure, locator labels. Personally rerun after fixes: 324/324 frontend tests,
+production build (existing >500 kB lazy Three.js chunk warning only), 101/101 Python tests
+(`python -m unittest discover -s pipeline/tests`), `pipeline/release_check.py` PASS
+(60 d 136/136, 120 d 266/266; evidence changed only in `checked_at_utc`).
+
+### Limitations, confirmed as represented
+
+- Apollo mesh/profile: the Details sheet states max |Δ| 0.107°, 10 azimuths over the
+  proposed 0.05° target ("target not met everywhere"). Horizon view uses and clips to
+  the exported profile. Odysseus: 0.044°, 0 over target.
+- Odysseus height: the observer is 2.5945 km across Horizons, profile and render. The NAIF
+  2.583 km value is unused, and its basis is unresolved (Analysis note, COORDINATE_PIPELINE.md,
+  ADDITIONAL_SITE_TERRAIN.md).
+- Slope scales: Analysis shows "⚠ Different measurement scales" with per-site DEM/baseline
+  (Apollo 59.2 m / ~120 m; others ~20 m / ~40 m).
+- Nominal disks vs centers: Horizon view "Disks at nominal size"; status and timeline
+  "Body centers; not a go/no-go".
+
+### Packaging review
+
+Intended release (248 files, 45.3 MB): app source and tests (25), served datasets (8,
+13.3 MB), served render/screening assets for Apollo/Odysseus (6, 7.9 MB), pipeline
+code/config/tests (18), the Horizons response cache for the 72 new queries (144, 7.3 MB), three
+fingerprinted prepared bundles (30, 15.5 MB, including the unpublished smoke coordinate
+used as generic-pipeline evidence), terrain reports (3), release evidence (6), docs (6),
+`.gitattributes`/`.gitignore`. Excluded by `.gitignore` and absent from the candidate:
+`data/raw/` DEMs, `data/prepared/*/rays/`, five superseded bundles, `node_modules`, `dist`.
+No screenshots, logs, scratch scripts, browser drivers or secrets are in the tree. The only
+local paths left are this log's own worktree path and the owner's name in SPEC/DATA_CONTRACT.
+Clean-checkout test: exactly `git ls-files -co --exclude-standard` was copied to an empty
+folder, then `npm ci`, build and tests passed. `dist` was byte-identical to the worktree's
+(27 files, 37,122,992 bytes: JS/CSS 1.09 MB, data 16.7 MB, render 19.2 MB, screening
+0.13 MB). The served copy loaded Apollo/Odysseus Terrain and legacy links with no HTTP
+errors; the temporary 4181 server was stopped.
+
+### Remaining gaps (not blockers)
+
+- Not checked on a hardware GPU, in Firefox/Safari, with a screen reader, or with real touch
+  gestures. Browser performance was not measured.
+- A link naming a site whose file fails at startup shows the full-page "Data could not be
+  loaded" (fail-closed, with an "Open the current dataset" link) rather than a per-site
+  card. This behavior predates the branch.
+- Polar-detail ring labels crowd near the pole at the 390 km extent (readable; cosmetic).
+- Apollo DEM label is the raw tile name `sldem2015_512_00n_30n_000_045_float` (accurate).
+
+Next: user review of the candidate, then user-controlled commit and integration.
+
+## Current recovery — 2026-11-15, approximately 02:25 Pacific
+
+This section supersedes the historical start-here snapshot below. Changes are
+uncommitted in `C:/Users/dylan/GitHub/astraknots-m6`, branch
+`milestone-6-tracking-sites`, HEAD `c5ea5c317b9e96636f8d8f4034acda453d832963`,
+no upstream. No commit, push, merge or deployment was performed. No applicable
+AGENTS.md was found in the feature checkout or the checked parent locations.
+Original checkout/main and its Vite processes on 5173/5174 were left untouched.
+Inherited feature-worktree production preview on 4180 was reused, not terminated.
+Final `git status --porcelain=v1 --untracked-files=all`: 29 modified tracked files,
+217 untracked files, zero staged changes; no deletions or merge conflicts.
+`git diff --check` passes (Git reports only expected LF/CRLF conversion notices).
+
+Recovered Claude's completed fetch log (`b0q9180ru.output`): 72 live requests,
+exit 0. No Python fetch was running at inspection. Personally checked all 96
+expected cached queries offline (12 chunks x 2 bodies x 4 sites), including
+identity, query/body hashes, observer echo and shared endpoints. No new fetch.
+
+| Checkpoint | Observed implementation and remaining acceptance |
+|---|---|
+| 1. Continuous Sun/Earth tracking | Implemented. Personally inspected Chrome screenshots: centering, playback, stepping, scrubbing, wheel zoom preserving tracking, manual drag stopping tracking, Earth switching and reset. Rechecked the final site-return fix: switching away clears tracking and returning does not reactivate it. Narrow/reduced-motion browser acceptance remains open. |
+| 2. Catalog / up to four selected sites | Implemented. Rechecked body-portal dialog, loading/site coherence, add to four, active-site switch, remove to one, last removal disabled, retained catalog entries, four-site aligned Analysis and common Smooth/Terrain selection. Long source-name wrapping was subsequently fixed and built but its final browser recheck was blocked. Final URL reload, keyboard and narrow-layout acceptance remains open. |
+| 3. Two documented additional sites | Both now support Smooth and Terrain through the same coordinate-driven preprocessing entry point: complete horizons, local meshes and 500 m slope screening. Apollo uses cached SLDEM2015; Odysseus uses cached polar LOLA plus LDEM_64 distant fallback. Third unconfigured CLI coordinate passed with the same unchanged processing code. Known mesh/height/registration limits are below and in COORDINATE_PIPELINE.md. |
+| 4. Versioned 120 days | Four sites in app/public/data/lvn-2026-12-01-120d; 17,281 samples/site at 600 s, 2026-12-01T00:00:00Z through 2027-03-31T00:00:00Z. Dataset index and ds selection implemented. Legacy links retain the accepted 60-day dataset with explicit switch offer; current-scenario switch-link regression fixed. Data validation complete; browser acceptance deferred by the user's latest scope instruction. |
+| 5. Optional arrival finder | Not implemented. |
+
+Personally run: 317 frontend tests pass; production build passes; 101 Python
+tests pass. Fixed explicit-config export fixture tests and a Windows CRLF/LF
+text-asset fingerprint assertion (assets unchanged). One inherited Python
+ResourceWarning about an unclosed raster reader was emitted; tests pass.
+
+Completed offline release evidence is now confirmed in
+`data/release/m6_release_check.json` and `m6_validation_{60d,120d}.txt`:
+136/136 accepted-data checks and 266/266 expanded-data checks. Accepted files
+match `245adc6` under checkout EOL conversion; their actual checkout SHA-256
+values are recorded. The accepted files were not rewritten. Every original
+sample, smooth and terrain interval state over the entire old coverage,
+profile, observer and setting point is unchanged. Added frontend tests compare
+existing-window metrics and final-sample unknown behavior. The already cached
+1.416 GB Apollo SLDEM tile was rehashed successfully. One new resumable source
+download completed: global LOLA LDEM_64, 530,841,600 bytes, normal HTTPS
+certificate verification. Its label was already tracked. Raw DEM caches remain
+ignored; no accepted scientific files were replaced.
+
+### Generic terrain completion and evidence
+
+See [COORDINATE_PIPELINE.md](COORDINATE_PIPELINE.md) for exact commands, input
+conventions, adapters, cached coverage, acquisition/resume, source priorities,
+output schemas and limitations. No custom-coordinate browser UI was added.
+`pipeline/prepare_site.py` accepts config or CLI coordinates and uses
+`terrain_sources.py` for observer, horizon, mesh and slope; no site-name branches.
+Source/label hashes, actual processing-code hashes, observer, parameters and
+scenario form the cache identity. Validated `complete.json` is written last;
+catalog capabilities require complete products matching served assets.
+
+Current complete bundle fingerprints:
+
+- Apollo 17: `ffa37016303a8b91ff89c88dc7b63f050d306b23ad57e881db1c0c4a689c03e0`.
+- Odysseus: `0d4fc9cb2aff7a4806c0ba842a82718b01bde5e16c1f84c0bf8b054e3562d8c0`.
+- Unpublished CLI smoke point 20.25 N, 30.8 E:
+  `d029381f847ce1f0fc820596b1b698069abcc934718775ac7232c791c8c010ab`.
+  Observer, all 3,600 skyline rays, mesh and slope generated with no processing
+  code edits between the three runs. It is absent from config and catalog;
+  no ephemerides were fetched for it. Exact command/output in
+  `data/release/generic_third_coordinate.txt` and the generic acceptance report.
+
+`python pipeline/generic_acceptance.py` personally passed at 02:17 Pacific;
+`data/release/generic_acceptance.json` records bundle/product/source hashes,
+identical unchanged implementation hashes for all three coordinates, all 166
+original tracked scientific outputs/caches/evidence matching HEAD with checkout
+EOL handling, clean missing-coverage rejection at 40 N, 180 E (exit 1, no
+complete marker/catalog change), and valid cached replay in 2.98 seconds without
+horizon/mesh rebuilding. All four raw sources were rehashed. Ten focused new
+synthetic tests cover wrapping, nodata, adjacent tiles, registration, geometry,
+coverage refusal, fingerprint and completion gating.
+
+All rays stopped by 208.5 km (Apollo) / 176.7 km (Odysseus). Largest half-step
+refinement differences at 36 azimuths: 0.003090 / 0.003580 degrees. Apollo's
+skyline increases at most 0.061786 degrees beyond 50 km, zero beyond 100 km;
+Odysseus is unchanged beyond 50 km. These are DEM/numerical stability measures,
+not independent absolute accuracy. Source overlap differences are recorded
+without averaging or a claimed explanation.
+
+Apollo slope: ~60 m DEM, 60 m grid, ~120 m measurement baseline; median/p95/max
+1.99/6.69/10.63 degrees. Odysseus: ~20 m DEM, 20 m grid, ~41 m mean 3D baseline;
+11.15/16.33/20.84 degrees. Counts are unassessed by this path, represented as
+unknown. Finer rendering grids add no measured detail. Comparison warns about
+different scales. Local meshes stop at 1,920 m half-width; distant terrain is
+represented by the authoritative Horizon-view profile.
+
+**Known limits:** Apollo local mesh-profile error reaches 0.10726 degrees;
+10 of the 50 directions whose setting points lie inside the mesh exceed the
+proposed 0.05-degree target. This target did not pass; do not present it as an
+accuracy guarantee. Odysseus maximum is 0.04414 degrees (0/2,064 over target).
+The third smoke mesh also misses the proposed target (0.16997 degrees).
+The NAIF Odysseus origin altitude 2.583 km differs from the DEM surface by
+10.5284 m and selected observer by 11.5 m; cause/observer equivalence unresolved.
+Retained observer altitudes are -2.627 km (Apollo) and 2.5945 km (Odysseus),
+identical across cached Horizons, profile and rendering. Finer Apollo LROC data
+is deferred. Superseded/partial experimental bundles and ray caches are preserved
+locally, ignored for release; the three current bundles/evidence remain included.
+
+### Browser acceptance and handoff
+
+After the earlier user Escape interruption, the user's renewed instruction
+authorized another browser pass. Personally inspected production-preview
+screenshots on 4180 for both new sites in Terrain Horizon view and overview,
+slope overlays, threshold response (Apollo 12.7% above 5 degrees; Odysseus
+15.0% above 15 degrees), observer/source labels, coherent loading, and four-site
+Terrain and Smooth comparisons. Tracking/site-catalog checks are listed above.
+Screenshots were inspected in tool results, not saved as repository evidence.
+
+The final reload/wrapping recheck was blocked when Computer Use reported it
+could not determine the current Windows browser URL with enough confidence
+to enforce policy and required stopping. No further browser actions occurred.
+Browser acceptance is therefore **partial**, not complete. Remaining: final
+selection/URL reload, keyboard focus interactions, narrow layout, reduced motion,
+remaining loading/WebGL/asset-failure cases, and measured browser performance.
+Checkpoint 4 date/delay/legacy-link browser checks are deferred by user request.
+Passing tests/build do not substitute for these checks. Build retains the
+existing >500 kB lazy Three.js chunk warning; payload hashes are in release evidence.
+
+Next bounded step: resume only the remaining authorized browser checks in a
+working browser session, review the uncommitted candidate and its explicitly
+documented mesh/height limits, then user-controlled integration with deployment.
+Original/main worktree and servers remain untouched. No pipeline/download/test
+job was left running; feature preview PID 45668 on 4180 and original previews
+PIDs 35224/35260 on 5173/5174 remain. Protect noon–16:00 Pacific for integration
+and submission; current recorded time is well before that window.
+
 ## Start here (handoff for a new session, updated 2026-11-14 after the 5C merge)
 
 **Git snapshot (2026-11-14, after the 5C merge; verified):**

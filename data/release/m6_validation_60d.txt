@@ -1,0 +1,139 @@
+dataset lvn-2026-12-01-60d in app/public/data
+PASS  im2-athena: raw/sun: cached body sha256 matches metadata                                                                      6/6 chunks
+PASS  im2-athena: raw/sun: HTTP 200, no API error field                                                                             6/6 chunks; 200
+PASS  im2-athena: raw/sun: observer body is Moon (301)                                                                              6/6 chunks; Moon (301)                      {source: DE441}
+PASS  im2-athena: raw/sun: target is Sun (10)                                                                                       6/6 chunks; Sun (10)                        {source: DE441}
+PASS  im2-athena: raw/sun: site echoed as E-lon,Lat,Alt = config                                                                    6/6 chunks; 29.1957, -84.7906, 5.3229       {E-lon(deg),Lat(deg),Alt(km)}
+PASS  im2-athena: raw/sun: altitude is height above 1737.4 km sphere (|cylindric| ~ R + alt, within printed precision)              6/6 chunks; Dxy/Dz = submitted point rounded to 5/4 printed decimals (residuals +3.1/+10.9 mm); |r| = 1742.7228895 km, R + alt - |r| = 10.5 mm
+PASS  im2-athena: raw/sun: lunar frame MEAN_ME, east-longitude positive                                                             6/6 chunks; MEAN_ME (high precision)        {East-longitude positive}
+PASS  im2-athena: raw/sun: reference body radii 1737.4 km sphere                                                                    6/6 chunks; 1737.4, 1737.4, 1737.4 km       {Equator_a, b, pole_c}
+PASS  im2-athena: raw/sun: airless output                                                                                           6/6 chunks; NO (AIRLESS)
+PASS  im2-athena: raw/sun: time scale UT (=UTC after 1962)                                                                          6/6 chunks
+PASS  im2-athena: raw/sun: columns are airless apparent AZ/EL of target center                                                      6/6 chunks
+PASS  im2-athena: raw/sun: chunk row count and endpoints                                                                            6/6 chunks; 1441 (expected 1441)
+PASS  im2-athena: raw/sun: no missing (n.a.) values                                                                                 6/6 chunks; 0 missing
+PASS  im2-athena: raw/sun: API signature version recorded                                                                           ['1.2'] (doc page says 1.3)
+PASS  im2-athena: raw/sun: chunk boundary samples identical in both chunks                                                          5 boundaries
+PASS  im2-athena: raw/sun: merged row count                                                                                         8641 (expected 8641)
+PASS  im2-athena: raw/earth: cached body sha256 matches metadata                                                                    6/6 chunks
+PASS  im2-athena: raw/earth: HTTP 200, no API error field                                                                           6/6 chunks; 200
+PASS  im2-athena: raw/earth: observer body is Moon (301)                                                                            6/6 chunks; Moon (301)                      {source: DE441}
+PASS  im2-athena: raw/earth: target is Earth (399)                                                                                  6/6 chunks; Earth (399)                     {source: DE441}
+PASS  im2-athena: raw/earth: site echoed as E-lon,Lat,Alt = config                                                                  6/6 chunks; 29.1957, -84.7906, 5.3229       {E-lon(deg),Lat(deg),Alt(km)}
+PASS  im2-athena: raw/earth: altitude is height above 1737.4 km sphere (|cylindric| ~ R + alt, within printed precision)            6/6 chunks; Dxy/Dz = submitted point rounded to 5/4 printed decimals (residuals +3.1/+10.9 mm); |r| = 1742.7228895 km, R + alt - |r| = 10.5 mm
+PASS  im2-athena: raw/earth: lunar frame MEAN_ME, east-longitude positive                                                           6/6 chunks; MEAN_ME (high precision)        {East-longitude positive}
+PASS  im2-athena: raw/earth: reference body radii 1737.4 km sphere                                                                  6/6 chunks; 1737.4, 1737.4, 1737.4 km       {Equator_a, b, pole_c}
+PASS  im2-athena: raw/earth: airless output                                                                                         6/6 chunks; NO (AIRLESS)
+PASS  im2-athena: raw/earth: time scale UT (=UTC after 1962)                                                                        6/6 chunks
+PASS  im2-athena: raw/earth: columns are airless apparent AZ/EL of target center                                                    6/6 chunks
+PASS  im2-athena: raw/earth: chunk row count and endpoints                                                                          6/6 chunks; 1441 (expected 1441)
+PASS  im2-athena: raw/earth: no missing (n.a.) values                                                                               6/6 chunks; 0 missing
+PASS  im2-athena: raw/earth: API signature version recorded                                                                         ['1.2'] (doc page says 1.3)
+PASS  im2-athena: raw/earth: chunk boundary samples identical in both chunks                                                        5 boundaries
+PASS  im2-athena: raw/earth: merged row count                                                                                       8641 (expected 8641)
+PASS  im2-athena: manifest: schema_version 1.0                                                                                      
+PASS  im2-athena: manifest: is_synthetic false                                                                                      
+PASS  im2-athena: manifest: sample_step_seconds 600                                                                                 
+PASS  im2-athena: manifest: generated_at_utc ends in Z                                                                              
+PASS  im2-athena: manifest: lists site im2-athena                                                                                   
+PASS  im2-athena: site: manifest filename, identity and configured coverage match                                                   
+PASS  im2-athena: site: is_synthetic false                                                                                          
+PASS  im2-athena: site: longitude in [0, 360)                                                                                       29.1957
+PASS  im2-athena: site: Horizons altitude equals value submitted                                                                    
+PASS  im2-athena: samples: sorted, unique timestamps                                                                                
+PASS  im2-athena: samples: uniform 600 s spacing                                                                                    
+PASS  im2-athena: samples: first = coverage_start_utc                                                                               2026-12-01T00:00:00Z
+PASS  im2-athena: samples: final sample at coverage_end_utc                                                                         2027-01-30T00:00:00Z
+PASS  im2-athena: samples: no null values                                                                                           0 null
+PASS  im2-athena: samples: elevations in [-90, 90]                                                                                  min -4.2634, max 10.7178
+PASS  im2-athena: samples: azimuths in [0, 360)                                                                                     
+PASS  im2-athena: export == raw Horizons rows (exact, every sample)                                                                 0 mismatches of 17282
+PASS  im2-athena: intervals: contiguous and cover the advertised range exactly                                                      10 interval(s)
+PASS  im2-athena: horizon: explicitly labeled smooth model                                                                          
+PASS  im2-athena: site: available_horizon_models                                                                                    ['smooth', 'terrain']
+PASS  im2-athena: terrain: block present                                                                                            
+PASS  im2-athena: terrain: model and interpolation                                                                                  
+PASS  im2-athena: terrain: 3600 ascending unique azimuths in [0, 360)                                                               3600 azimuths
+PASS  im2-athena: terrain: elevations in [-90, 90] or null                                                                          0 null; min -1.465, max 4.070
+PASS  im2-athena: terrain: negative horizons kept (not clamped to 0; all-positive profiles permitted)                               951 negative
+PASS  im2-athena: terrain: observer height matches site                                                                             
+PASS  im2-athena: terrain: search extent, stopping rule and resolution recorded                                                     
+PASS  im2-athena: terrain: one setting point per azimuth                                                                            
+PASS  im2-athena: terrain: unknown elevation <-> no setting point                                                                   
+PASS  im2-athena: terrain: report and cross-check identities + fingerprint match                                                    
+PASS  im2-athena: terrain: export == data/terrain report (rounded 1e-5 deg), same site altitude                                     
+PASS  im2-athena: terrain intervals: contiguous and cover the advertised range exactly                                              10 interval(s)
+PASS  im2-athena: terrain intervals: re-classified from samples + exported profile (exact)                                          
+PASS  im2-athena: terrain intervals: unknown states                                                                                 0 interval(s) with an unknown state
+PASS  im2-athena: terrain: every LOLA product listed in sources                                                                     
+PASS  im2-athena: terrain: local LOLA files match recorded size and sha256                                                          4 match, 0 not downloaded (run pipeline/fetch_terrain.py --check --rehash)
+PASS  connecting-ridge-cr1: raw/sun: cached body sha256 matches metadata                                                            6/6 chunks
+PASS  connecting-ridge-cr1: raw/sun: HTTP 200, no API error field                                                                   6/6 chunks; 200
+PASS  connecting-ridge-cr1: raw/sun: observer body is Moon (301)                                                                    6/6 chunks; Moon (301)                      {source: DE441}
+PASS  connecting-ridge-cr1: raw/sun: target is Sun (10)                                                                             6/6 chunks; Sun (10)                        {source: DE441}
+PASS  connecting-ridge-cr1: raw/sun: site echoed as E-lon,Lat,Alt = config                                                          6/6 chunks; 222.6, -89.468, 1.9428          {E-lon(deg),Lat(deg),Alt(km)}
+PASS  connecting-ridge-cr1: raw/sun: altitude is height above 1737.4 km sphere (|cylindric| ~ R + alt, within printed precision)    6/6 chunks; Dxy/Dz = submitted point rounded to 5/3 printed decimals (residuals +0.4/-177.3 mm); |r| = 1739.3429773 km, R + alt - |r| = -177.3 mm
+PASS  connecting-ridge-cr1: raw/sun: lunar frame MEAN_ME, east-longitude positive                                                   6/6 chunks; MEAN_ME (high precision)        {East-longitude positive}
+PASS  connecting-ridge-cr1: raw/sun: reference body radii 1737.4 km sphere                                                          6/6 chunks; 1737.4, 1737.4, 1737.4 km       {Equator_a, b, pole_c}
+PASS  connecting-ridge-cr1: raw/sun: airless output                                                                                 6/6 chunks; NO (AIRLESS)
+PASS  connecting-ridge-cr1: raw/sun: time scale UT (=UTC after 1962)                                                                6/6 chunks
+PASS  connecting-ridge-cr1: raw/sun: columns are airless apparent AZ/EL of target center                                            6/6 chunks
+PASS  connecting-ridge-cr1: raw/sun: chunk row count and endpoints                                                                  6/6 chunks; 1441 (expected 1441)
+PASS  connecting-ridge-cr1: raw/sun: no missing (n.a.) values                                                                       6/6 chunks; 0 missing
+PASS  connecting-ridge-cr1: raw/sun: API signature version recorded                                                                 ['1.2'] (doc page says 1.3)
+PASS  connecting-ridge-cr1: raw/sun: chunk boundary samples identical in both chunks                                                5 boundaries
+PASS  connecting-ridge-cr1: raw/sun: merged row count                                                                               8641 (expected 8641)
+PASS  connecting-ridge-cr1: raw/earth: cached body sha256 matches metadata                                                          6/6 chunks
+PASS  connecting-ridge-cr1: raw/earth: HTTP 200, no API error field                                                                 6/6 chunks; 200
+PASS  connecting-ridge-cr1: raw/earth: observer body is Moon (301)                                                                  6/6 chunks; Moon (301)                      {source: DE441}
+PASS  connecting-ridge-cr1: raw/earth: target is Earth (399)                                                                        6/6 chunks; Earth (399)                     {source: DE441}
+PASS  connecting-ridge-cr1: raw/earth: site echoed as E-lon,Lat,Alt = config                                                        6/6 chunks; 222.6, -89.468, 1.9428          {E-lon(deg),Lat(deg),Alt(km)}
+PASS  connecting-ridge-cr1: raw/earth: altitude is height above 1737.4 km sphere (|cylindric| ~ R + alt, within printed precision)  6/6 chunks; Dxy/Dz = submitted point rounded to 5/3 printed decimals (residuals +0.4/-177.3 mm); |r| = 1739.3429773 km, R + alt - |r| = -177.3 mm
+PASS  connecting-ridge-cr1: raw/earth: lunar frame MEAN_ME, east-longitude positive                                                 6/6 chunks; MEAN_ME (high precision)        {East-longitude positive}
+PASS  connecting-ridge-cr1: raw/earth: reference body radii 1737.4 km sphere                                                        6/6 chunks; 1737.4, 1737.4, 1737.4 km       {Equator_a, b, pole_c}
+PASS  connecting-ridge-cr1: raw/earth: airless output                                                                               6/6 chunks; NO (AIRLESS)
+PASS  connecting-ridge-cr1: raw/earth: time scale UT (=UTC after 1962)                                                              6/6 chunks
+PASS  connecting-ridge-cr1: raw/earth: columns are airless apparent AZ/EL of target center                                          6/6 chunks
+PASS  connecting-ridge-cr1: raw/earth: chunk row count and endpoints                                                                6/6 chunks; 1441 (expected 1441)
+PASS  connecting-ridge-cr1: raw/earth: no missing (n.a.) values                                                                     6/6 chunks; 0 missing
+PASS  connecting-ridge-cr1: raw/earth: API signature version recorded                                                               ['1.2'] (doc page says 1.3)
+PASS  connecting-ridge-cr1: raw/earth: chunk boundary samples identical in both chunks                                              5 boundaries
+PASS  connecting-ridge-cr1: raw/earth: merged row count                                                                             8641 (expected 8641)
+PASS  connecting-ridge-cr1: manifest: schema_version 1.0                                                                            
+PASS  connecting-ridge-cr1: manifest: is_synthetic false                                                                            
+PASS  connecting-ridge-cr1: manifest: sample_step_seconds 600                                                                       
+PASS  connecting-ridge-cr1: manifest: generated_at_utc ends in Z                                                                    
+PASS  connecting-ridge-cr1: manifest: lists site connecting-ridge-cr1                                                               
+PASS  connecting-ridge-cr1: site: manifest filename, identity and configured coverage match                                         
+PASS  connecting-ridge-cr1: site: is_synthetic false                                                                                
+PASS  connecting-ridge-cr1: site: longitude in [0, 360)                                                                             222.6
+PASS  connecting-ridge-cr1: site: Horizons altitude equals value submitted                                                          
+PASS  connecting-ridge-cr1: samples: sorted, unique timestamps                                                                      
+PASS  connecting-ridge-cr1: samples: uniform 600 s spacing                                                                          
+PASS  connecting-ridge-cr1: samples: first = coverage_start_utc                                                                     2026-12-01T00:00:00Z
+PASS  connecting-ridge-cr1: samples: final sample at coverage_end_utc                                                               2027-01-30T00:00:00Z
+PASS  connecting-ridge-cr1: samples: no null values                                                                                 0 null
+PASS  connecting-ridge-cr1: samples: elevations in [-90, 90]                                                                        min -7.5035, max 6.1595
+PASS  connecting-ridge-cr1: samples: azimuths in [0, 360)                                                                           
+PASS  connecting-ridge-cr1: export == raw Horizons rows (exact, every sample)                                                       0 mismatches of 17282
+PASS  connecting-ridge-cr1: intervals: contiguous and cover the advertised range exactly                                            5 interval(s)
+PASS  connecting-ridge-cr1: horizon: explicitly labeled smooth model                                                                
+PASS  connecting-ridge-cr1: site: available_horizon_models                                                                          ['smooth', 'terrain']
+PASS  connecting-ridge-cr1: terrain: block present                                                                                  
+PASS  connecting-ridge-cr1: terrain: model and interpolation                                                                        
+PASS  connecting-ridge-cr1: terrain: 3600 ascending unique azimuths in [0, 360)                                                     3600 azimuths
+PASS  connecting-ridge-cr1: terrain: elevations in [-90, 90] or null                                                                0 null; min -0.833, max 4.114
+PASS  connecting-ridge-cr1: terrain: negative horizons kept (not clamped to 0; all-positive profiles permitted)                     624 negative
+PASS  connecting-ridge-cr1: terrain: observer height matches site                                                                   
+PASS  connecting-ridge-cr1: terrain: search extent, stopping rule and resolution recorded                                           
+PASS  connecting-ridge-cr1: terrain: one setting point per azimuth                                                                  
+PASS  connecting-ridge-cr1: terrain: unknown elevation <-> no setting point                                                         
+PASS  connecting-ridge-cr1: terrain: report and cross-check identities + fingerprint match                                          
+PASS  connecting-ridge-cr1: terrain: export == data/terrain report (rounded 1e-5 deg), same site altitude                           
+PASS  connecting-ridge-cr1: terrain intervals: contiguous and cover the advertised range exactly                                    11 interval(s)
+PASS  connecting-ridge-cr1: terrain intervals: re-classified from samples + exported profile (exact)                                
+PASS  connecting-ridge-cr1: terrain intervals: unknown states                                                                       0 interval(s) with an unknown state
+PASS  connecting-ridge-cr1: terrain: every LOLA product listed in sources                                                           
+PASS  connecting-ridge-cr1: terrain: local LOLA files match recorded size and sha256                                                4 match, 0 not downloaded (run pipeline/fetch_terrain.py --check --rehash)
+
+136/136 checks passed

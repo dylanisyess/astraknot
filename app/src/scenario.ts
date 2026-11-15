@@ -4,7 +4,7 @@
 // selected-time status (status.ts). Both views read this object; neither computes its
 // own visibility.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { nearestIndex } from "./data";
 import {
   type Comparison,
@@ -23,9 +23,9 @@ import {
 } from "./mission";
 import { type ModeAvailability, type SiteProfile, modeAvailability, profileFor, strictHorizon, strictIntervals } from "./sites";
 import { type SelectedStatus, selectedTimeStatus } from "./status";
-import type { Dataset, Horizon, HorizonMode, SiteData, SiteEntry } from "./types";
+import type { CatalogSite, Dataset, Horizon, HorizonMode, SiteData, SiteEntry } from "./types";
 import { DEFAULT_THRESHOLD_DEG, clampThreshold } from "./explore/slope";
-import { type CamMode, type LayerKey, type MissionKey, type View, DEFAULT_VIEW, parseUrlState, resolveActive, resolveSites, writeUrlState } from "./urlState";
+import { type CamMode, type LayerKey, type MissionKey, type View, DEFAULT_VIEW, type SiteRequest, addBlockedReason, parseUrlState, resolveActive, resolveSites, withSite, withoutSite, writeUrlState } from "./urlState";
 
 export const DEFAULT_ARRIVAL = "2026-12-05T00:00:00Z";
 export const clampNum = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -44,21 +44,48 @@ export interface SiteView {
   statusSel: SelectedStatus;
 }
 
+/** A selected site that has no view in the current model: still loading, failed, or lacking terrain. */
+export interface PendingSite {
+  id: string;
+  short: string;
+  catalog: CatalogSite;
+  state: "loading" | "error" | "no-terrain";
+  reason: string;
+}
+export type SiteLoad = { state: "loading" } | { state: "ready"; entry: SiteEntry } | { state: "error"; message: string };
+
 export interface Scenario {
   ds: Dataset;
   times: number[];
   view: View;
   setView: (v: View) => void;
+  /** Catalog site IDs (the dataset's sites), in catalog order. */
   allIds: string[];
-  requested: { ids: string[]; unknown: string[] };
+  requested: SiteRequest;
+  /** The link's arrival when it had to be moved into this dataset's coverage (link snapshot; null otherwise). */
+  arrivalMoved: { from: number; to: number } | null;
+  /** Selected (compared) sites, in the user's order; 1 to MAX_SITES, no duplicates. */
   selIds: string[];
-  toggleSite: (id: string) => void;
+  /** Add a catalog site to the comparison and make it active. False when it cannot be added. */
+  addSite: (id: string) => boolean;
+  /** Remove a site from the comparison (never the last one). */
+  removeSite: (id: string) => void;
+  /** Why a catalog site cannot be added right now, or null. */
+  addBlocked: (id: string) => string | null;
   active: string;
-  /** Make a site active (adds it to the compared sites if needed). */
+  /** Make a site active (adds it to the compared sites if there is room). */
   setActive: (id: string) => void;
+  /** Catalog entry of a site. */
+  catalogSite: (id: string) => CatalogSite;
+  /** Load state of each requested site file. */
+  loads: Record<string, SiteLoad>;
+  retrySite: (id: string) => void;
+  /** Selected sites without a view in this model, in selection order. */
+  pending: PendingSite[];
   avail: ModeAvailability;
   mode: HorizonMode;
   setMode: (m: HorizonMode) => void;
+  /** Terrain mode while at least one selected site has no terrain horizon (those sites show no metrics). */
   terrainRequestedButMissing: boolean;
   cov: TimeWindow;
   maxDays: number;
@@ -105,23 +132,53 @@ export interface Scenario {
   step: (n: number) => void;
   playing: boolean;
   setPlaying: (p: boolean) => void;
+  /** Selected sites with data in the current model, in selection order. */
   views: SiteView[];
-  activeView: SiteView;
-  activeSite: SiteData;
-  horizon: Horizon;
+  /** Null while the active site is loading, failed, or lacks the current model. */
+  activeView: SiteView | null;
+  activeSite: SiteData | null;
+  horizon: Horizon | null;
 }
+
+/** A scenario whose active site has a view: what Explore and Analysis render. */
+export type ReadyScenario = Scenario & { activeView: SiteView; activeSite: SiteData; horizon: Horizon };
+export const isReady = (sc: Scenario): sc is ReadyScenario => sc.activeView !== null;
 
 export function useScenario(ds: Dataset, search?: string): Scenario {
   const { times } = ds;
   // The link is read once: the URL is rewritten to the canonical state afterwards, and re-reading
   // it on later renders would lose what the original link asked for (e.g. unknown site IDs).
   const [init] = useState(() => parseUrlState(search ?? window.location.search));
-  const allIds = ds.sites.map((s) => s.id);
+  const allIds = ds.catalog.sites.map((s) => s.id);
+  const catalogSite = (id: string) => ds.catalog.sites.find((c) => c.id === id)!;
   const [requested] = useState(() => resolveSites(init.sites, allIds));
   const [selIds, setSelIds] = useState<string[]>(requested.ids);
-  const entries = ds.sites.filter((e) => selIds.includes(e.id));
   const [activeRaw, setActiveRaw] = useState<string>(() => resolveActive(init.site, requested.ids));
   const active = resolveActive(activeRaw, selIds);
+  // Site files: preloaded ones are ready; any other selected site is loaded on demand.
+  const [loads, setLoads] = useState<Record<string, SiteLoad>>(() => Object.fromEntries(ds.sites.map((e) => [e.id, { state: "ready", entry: e } as SiteLoad])));
+  const [retryN, setRetryN] = useState(0);
+  const started = useRef(new Set<string>());
+  useEffect(() => {
+    for (const id of selIds) {
+      if (loads[id] || started.current.has(id)) continue;
+      started.current.add(id);
+      if (!ds.loadSite) {
+        setLoads((m) => ({ ...m, [id]: { state: "error", message: "site data was not loaded" } }));
+        continue;
+      }
+      setLoads((m) => ({ ...m, [id]: { state: "loading" } }));
+      ds.loadSite(id).then(
+        (entry) => setLoads((m) => ({ ...m, [id]: { state: "ready", entry } })),
+        (e: unknown) => setLoads((m) => ({ ...m, [id]: { state: "error", message: e instanceof Error ? e.message : String(e) } })),
+      );
+    }
+  }, [selIds, retryN]); // eslint-disable-line react-hooks/exhaustive-deps
+  const readyEntry = (id: string) => {
+    const l = loads[id];
+    return l && l.state === "ready" ? l.entry : null;
+  };
+  const entries = selIds.map(readyEntry).filter((e): e is SiteEntry => e !== null);
   const [view, setViewRaw] = useState<View>(init.view ?? DEFAULT_VIEW);
   const [playing, setPlaying] = useState(false);
   const [missionRaw, setMissionRaw] = useState<MissionKey>(() => init.mission ?? ((init.delay ?? 3) > 0 ? "delayed" : "baseline"));
@@ -130,11 +187,12 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
   const [layer, setLayer] = useState<LayerKey>(init.layer ?? "exceed");
   const [slopeThr, setSlopeThrRaw] = useState(() => (init.thr !== null && init.thr !== undefined ? clampThreshold(init.thr) : DEFAULT_THRESHOLD_DEG));
 
-  // One horizon model for every compared site; Terrain only when all of them have it.
-  const avail = modeAvailability(entries);
-  const [modeRaw, setModeRaw] = useState<HorizonMode>(() => init.horizon ?? "terrain");
-  const mode: HorizonMode = modeRaw === "terrain" && !avail.terrain ? "smooth" : modeRaw;
-  const terrainRequestedButMissing = modeRaw === "terrain" && !avail.terrain;
+  // One horizon model for every compared site. Terrain is never mixed with Smooth: a selected site
+  // without a terrain horizon shows no metrics in Terrain mode, and the user is offered an explicit
+  // common Smooth comparison instead (no automatic fallback).
+  const avail = modeAvailability(entries, selIds.filter((id) => !readyEntry(id)).map(catalogSite));
+  const [mode, setModeRaw] = useState<HorizonMode>(() => init.horizon ?? "terrain");
+  const terrainRequestedButMissing = mode === "terrain" && !avail.terrain;
 
   // Coverage: every site shares the same sample times (checked by the loader), so this is the common coverage.
   const cov = { start: times[0], end: times[times.length - 1] };
@@ -146,6 +204,7 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
   const [arrival, setArrivalRaw] = useState(() =>
     clampNum(snapHour(init.arrival ?? Date.parse(DEFAULT_ARRIVAL)), bounds.earliest, bounds.latest),
   );
+  const [arrivalMoved] = useState(() => (init.arrival !== null && snapHour(init.arrival) !== arrival ? { from: snapHour(init.arrival), to: arrival } : null));
   const [delay, setDelayRaw] = useState(() => ([0, 1, 3, 7].includes(init.delay ?? -1) ? init.delay! : 3));
   useEffect(() => {
     setArrivalRaw((a) => clampNum(a, bounds.earliest, bounds.latest));
@@ -172,35 +231,52 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
   const playEnd = sel < i1 ? i1 : last;
 
   // Per-site results for the shared model and the identical windows.
-  const intervalsBySite = useMemo(() => {
-    const m = new Map<string, Interval[]>();
-    for (const e of ds.sites) {
-      if (mode === "terrain" && !e.data.terrain_horizon) continue;
-      m.set(e.id, parseIntervals(e.data, strictIntervals(e.data, mode)));
+  // parsed intervals per loaded site and model (each site's own file only)
+  const cache = useMemo(() => new Map<SiteEntry, Map<HorizonMode, Interval[]>>(), []);
+  const intervalsFor = (e: SiteEntry): Interval[] | null => {
+    if (mode === "terrain" && !e.data.terrain_horizon) return null;
+    let m = cache.get(e);
+    if (!m) cache.set(e, (m = new Map()));
+    let iv = m.get(mode);
+    if (!iv) m.set(mode, (iv = parseIntervals(e.data, strictIntervals(e.data, mode))));
+    return iv;
+  };
+  const shortOf = (id: string) => profileFor(readyEntry(id)?.data ?? null, catalogSite(id)).short;
+  const pending: PendingSite[] = [];
+  const views: SiteView[] = [];
+  for (const id of selIds) {
+    const l = loads[id];
+    const base = { id, short: shortOf(id), catalog: catalogSite(id) };
+    if (!l || l.state === "loading") pending.push({ ...base, state: "loading", reason: "loading site data" });
+    else if (l.state === "error") pending.push({ ...base, state: "error", reason: l.message });
+    else if (!intervalsFor(l.entry)) {
+      const c = catalogSite(id).capabilities.terrain_horizon;
+      pending.push({ ...base, state: "no-terrain", reason: l.entry.terrainProblem ?? (c.available ? "no terrain horizon" : c.reason) });
     }
-    return m;
-  }, [ds, mode]);
-  const views: SiteView[] = entries.map((entry) => {
-    const intervals = intervalsBySite.get(entry.id)!;
+  }
+  for (const entry of entries) {
+    const intervals = intervalsFor(entry);
+    if (!intervals) continue;
     const base = computeMetrics(intervals, baseW);
     const act = computeMetrics(intervals, actW);
     const input = { samples: entry.data.samples, times, horizon: strictHorizon(entry.data, mode), intervals, mode };
     const status = selectedTimeStatus(input, cursorT);
     const statusSel = selT === cursorT ? status : selectedTimeStatus(input, selT);
-    return { entry, data: entry.data, profile: profileFor(entry.data), intervals, base, act, cmp: compare(base, act), status, statusSel };
-  });
-  const activeView = views.find((v) => v.entry.id === active)!;
-  const activeSite = activeView.data;
-  const horizon = strictHorizon(activeSite, mode);
+    views.push({ entry, data: entry.data, profile: profileFor(entry.data, catalogSite(entry.id)), intervals, base, act, cmp: compare(base, act), status, statusSel });
+  }
+  const activeView = views.find((v) => v.entry.id === active) ?? null;
+  const activeSite = activeView?.data ?? null;
+  const horizon = activeSite ? strictHorizon(activeSite, mode) : null;
 
   // URL: replaceState only (never a history entry), and not while playback is running.
   useEffect(() => {
     if (playing) return;
     const url = writeUrlState(new URL(window.location.href), {
-      arrival, days, delay: effDelay, t: activeSite.samples[sel].time_utc, horizon: mode, sites: selIds, site: active, view, mission, cam, layer, thr: slopeThr,
+      arrival, days, delay: effDelay, t: new Date(times[sel]).toISOString().replace(".000Z", "Z"), horizon: mode, sites: selIds, site: active, view, mission, cam, layer, thr: slopeThr,
     });
+    url.searchParams.set("ds", ds.manifest.dataset_id);
     window.history.replaceState(null, "", url);
-  }, [arrival, days, effDelay, sel, activeSite, mode, selIds, active, view, playing, mission, cam, layer, slopeThr]);
+  }, [arrival, days, effDelay, sel, times, mode, selIds, active, view, playing, mission, cam, layer, slopeThr]);
 
   // Playback stops at the supported endpoint of the shown window.
   useEffect(() => {
@@ -213,6 +289,8 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
     f(v);
   };
 
+  const addBlocked = (id: string) => addBlockedReason(selIds, id, allIds);
+
   return {
     ds,
     times,
@@ -220,16 +298,43 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
     setView: pausing(setViewRaw),
     allIds,
     requested,
+    arrivalMoved,
     selIds,
-    toggleSite: pausing((id: string) =>
-      setSelIds((ids) => (ids.includes(id) ? (ids.length > 1 ? ids.filter((x) => x !== id) : ids) : allIds.filter((x) => x === id || ids.includes(x)))),
-    ),
+    addSite: (id: string) => {
+      if (addBlocked(id)) return false;
+      setPlaying(false);
+      setSelIds((ids) => withSite(ids, id, allIds));
+      setActiveRaw(id);
+      return true;
+    },
+    removeSite: pausing((id: string) => {
+      const r = withoutSite(selIds, id, active);
+      setSelIds(r.sel);
+      setActiveRaw(r.active);
+    }),
+    addBlocked,
     active,
     setActive: pausing((id: string) => {
       if (!allIds.includes(id)) return;
-      setSelIds((ids) => (ids.includes(id) ? ids : allIds.filter((x) => x === id || ids.includes(x))));
+      if (!selIds.includes(id)) {
+        if (addBlocked(id)) return;
+        setSelIds((ids) => withSite(ids, id, allIds));
+      }
       setActiveRaw(id);
     }),
+    catalogSite,
+    loads,
+    retrySite: (id: string) => {
+      if (loads[id]?.state !== "error") return;
+      started.current.delete(id);
+      setLoads((m) => {
+        const n = { ...m };
+        delete n[id];
+        return n;
+      });
+      setRetryN((k) => k + 1);
+    },
+    pending,
     avail,
     mode,
     setMode: pausing(setModeRaw),

@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "lvn-2026-12-01-120d",
+  "generated_at_utc": "2026-11-15T10:01:40Z",
+  "coverage_start_utc": "2026-12-01T00:00:00Z",
+  "coverage_end_utc": "2027-03-31T00:00:00Z",
+  "sample_step_seconds": 600,
+  "sites": [
+    {
+      "id": "im2-athena",
+      "name": "IM-2 Athena landing point (Mons Mouton region)",
+      "file": "im2-athena.json"
+    },
+    {
+      "id": "connecting-ridge-cr1",
+      "name": "Connecting Ridge CR1 (NASA notional study point)",
+      "file": "connecting-ridge-cr1.json"
+    },
+    {
+      "id": "im1-odysseus",
+      "name": "IM-1 Odysseus landing point (Malapert A region)",
+      "file": "im1-odysseus.json"
+    },
+    {
+      "id": "apollo17-lm",
+      "name": "Apollo 17 lunar module (Taurus-Littrow valley)",
+      "file": "apollo17-lm.json"
+    }
+  ],
+  "is_synthetic": false
+}

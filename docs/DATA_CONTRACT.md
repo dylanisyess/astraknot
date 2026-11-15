@@ -13,6 +13,10 @@ Do not silently rename fields or change units.
 app/public/data/manifest.json
 app/public/data/<site_id>.json
 
+The accepted 60-day dataset retains these paths unchanged. The feature release
+adds `app/public/data/datasets.json` and versioned dataset folders containing
+their own manifest/site files and catalog. See the 2026-11-15 changelog below.
+
 Raw source responses remain separate from derived app files.
 Development fixtures belong in data/sample/ and must be labeled.
 
@@ -421,3 +425,75 @@ real lunar conditions.
   app writes `layer` explicitly so a hidden overlay survives reloads.
 - Frontend wording (no data change): a disabled delay's reason is "This mission plus the
   selected delay exceeds cached coverage."; validation is unchanged.
+
+### 2026-11-15, recovery: dataset selection and coordinate-driven terrain
+
+Additive metadata; existing schema_version remains "1.0". No accepted site file,
+observer, original interval or existing-window result changes. The accepted
+60-day files stay at their original URLs; expanded data is under
+`app/public/data/lvn-2026-12-01-120d/`, from 2026-12-01T00:00:00Z through the
+position sample at 2027-03-31T00:00:00Z, 600-second spacing, 17,281 samples/site.
+Analysis coverage remains end-exclusive and the final sample's state unknown.
+
+- `datasets.json`: explicit dataset entries with their manifest and catalog
+  URLs, default expanded dataset and legacy dataset identity. Frontend `ds`
+  selects one dataset; unknown IDs fail explicitly. Existing scenario links
+  without `ds` retain legacy coverage and offer an explicit switch; an empty
+  fresh visit uses expanded data. Canonical links record `ds`.
+- `catalog.json`: identity, coordinate, point type/source, capabilities,
+  scientific horizon availability and rendering/screening asset availability.
+  New-site Terrain capabilities require validated complete products and matching
+  served files; partial preprocessing does not enable them. Selection is up to
+  four unique sites, at least one; active scene is a selected site. Analysis uses
+  one common Smooth/Terrain choice, without silently mixing models.
+- `terrain_horizon.checks.preparation`: folder, fingerprint, algorithm and
+  `validated_complete` for generic bundles. Bundle `input.json` records normalized
+  coordinates, exact observer/scenario, sources and label/raw/code SHA-256,
+  registry and processing parameters. `complete.json` contains product hashes
+  and is written last after validation. This evidence is separate from the app's
+  visibility states. Source records keep string `notes` and original URLs.
+- `horizon.resolution.radial_segments` optionally records each `to_km`/`step_m`
+  segment. The generic path uses 5/25/100 m steps to 2/30/500 km and the same
+  spherical stopping bound; old two-step fields remain for older datasets.
+- Generic rendering assets preserve the existing binary layout/observer/frame
+  checks but use a local gnomonic grid and bilinear DEM heights. Their metadata
+  describes source resolution separately from resampled grid spacing, local
+  footprint and measured mesh/profile discrepancy. The mesh is never a
+  visibility authority. A proposed mesh agreement target can fail while the
+  complete scientific profile remains available; that failure must be disclosed.
+- Generic slope assets preserve existing state/null/threshold semantics, with
+  Horn 3x3 on the documented local gnomonic grid. `method` records source pixel
+  spacing, grid cell spacing and effective baseline separately. Cross-site
+  tables warn when scales differ. `shot_quality.fraction_cells_with_lola_shot`
+  and `cells_with_no_shot_in_3x3` may be null for unassessed counts; null is
+  unknown, never zero. Horizon setting-point shot counts are likewise null when
+  unassessed. No laser-shot agreement is claimed by this path.
+
+Apollo 17 and Odysseus retain their selected Horizons observers (-2.627 and
+2.5945 km above the 1737.4 km sphere) throughout positions/profile/rendering.
+The kernel/DEM Odysseus origin-height difference remains unresolved. See
+[COORDINATE_PIPELINE.md](COORDINATE_PIPELINE.md) for full source/coverage,
+reproducibility, acceptance and known accuracy/rendering limits.
+
+### 2026-11-15, 3D context terrain (display only; no contract change)
+- New files `app/public/render/<site_id>.context.json` and `.context.bin`, written by
+  `pipeline/context_terrain.py`. **Rendering assets, not app data under this contract**:
+  no visibility state, metric or skyline is derived from them, and the Horizon view clips
+  them to the exported profile like the detailed mesh.
+- Three square rings on the local gnomonic plane at the site (60 m to 7.68 km, 240 m to
+  30.72 km, 960 m to 92.16 km half-width); each ring's hole is the previous ring, and each
+  inner rim is snapped to the next ring's edge (crack-free). Heights only: float32
+  little-endian metres above the 1737.4 km sphere, row-major `j * nx + i`,
+  `x = (i - c) * spacing` (east), `z = (j - c) * spacing` (-north), `c = (nx - 1) / 2`;
+  NaN = no local DEM (never drawn). The renderer reconstructs observer-frame positions
+  exactly: `q = sqrt(1 + (x² + z²)/R²)`, `p = ((R+h) x/(R q), (R+h)/q - r_obs, (R+h) z/(R q))`,
+  checked against pipeline reference points (`check_points`).
+- Sources: the same registry, bilinear sampler and priority as the coordinate-driven
+  terrain horizon (`pipeline/terrain_sources.py`), local products only (<= 100 m pixels).
+- The app refuses an asset whose site identity, observer radius, reference sphere, byte
+  layout or `detailed_mesh.bin_sha256` (the exact detailed mesh it surrounds) differs.
+  Where the two meet, context cells deep inside the detailed footprint are omitted and the
+  rest are lowered by at most `1 m + 0.05 %` of the distance, so the detailed mesh stays the
+  visible surface. A missing or refused context asset leaves the detailed mesh as before.
+- No existing file changed: detailed meshes, slope assets, site exports and prepared
+  bundles (and their fingerprints) are unchanged.

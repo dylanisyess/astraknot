@@ -1,5 +1,5 @@
 import { terrainProblem } from "./horizon";
-import type { Dataset, Manifest, Sample, SiteData, SiteEntry } from "./types";
+import type { Catalog, CatalogSite, Dataset, Manifest, Sample, SiteData, SiteEntry } from "./types";
 
 export class DataError extends Error {}
 
@@ -57,28 +57,95 @@ export function checkSites(manifest: Manifest, files: SiteData[]): number[] {
   return shared!;
 }
 
-export async function loadDataset(base: string, fetchImpl: typeof fetch = fetch): Promise<Dataset> {
-  const get = async <T,>(path: string): Promise<T> => {
-    const r = await fetchImpl(base + path);
-    if (!r.ok) throw new DataError(`could not load ${path} (HTTP ${r.status})`);
-    return (await r.json()) as T;
-  };
-  const manifest = await get<Manifest>("data/manifest.json");
+/** Sample times implied by the manifest (coverage start to end inclusive at its step). */
+export function manifestTimes(manifest: Manifest): number[] {
+  const a = parseUtc(manifest.coverage_start_utc);
+  const b = parseUtc(manifest.coverage_end_utc);
+  const step = manifest.sample_step_seconds * 1000;
+  if (!(step > 0) || !(b > a) || (b - a) % step !== 0) throw new DataError("manifest coverage is not a whole number of sample steps");
+  const out: number[] = [];
+  for (let t = a; t <= b; t += step) out.push(t);
+  return out;
+}
+
+const LOCATION_TYPES = ["actual_landing_point", "intended_landing_target", "study_location"];
+
+/** The catalog must describe exactly the manifest's sites, in the same order and coverage. */
+export function checkCatalog(manifest: Manifest, catalog: Catalog): void {
+  if (catalog.catalog_version !== "1") throw new DataError(`unsupported catalog version ${catalog.catalog_version}`);
+  if (catalog.dataset_id !== manifest.dataset_id) throw new DataError(`catalog is for ${catalog.dataset_id}, manifest is ${manifest.dataset_id}`);
+  const m = manifest.sites.map((e) => e.id).join(",");
+  const c = catalog.sites.map((e) => e.id).join(",");
+  if (m !== c) throw new DataError(`catalog sites (${c}) differ from the manifest (${m})`);
+  catalog.sites.forEach((cs, k) => {
+    const e = manifest.sites[k];
+    if (cs.name !== e.name || cs.file !== e.file) throw new DataError(`catalog entry ${cs.id} differs from its manifest entry`);
+    if (!LOCATION_TYPES.includes(cs.location_type)) throw new DataError(`catalog entry ${cs.id}: unknown location type ${cs.location_type}`);
+    const p = cs.capabilities.positions;
+    if (p.coverage_start_utc !== manifest.coverage_start_utc || p.coverage_end_utc !== manifest.coverage_end_utc || p.sample_step_seconds !== manifest.sample_step_seconds) {
+      throw new DataError(`catalog entry ${cs.id}: position coverage differs from the dataset's common coverage`);
+    }
+  });
+}
+
+/**
+ * One site file against its manifest entry, its catalog entry and the dataset's sample times.
+ * Anything that disagrees is refused (the site is not shown), never patched.
+ */
+export function checkSiteFile(manifest: Manifest, cs: CatalogSite, data: SiteData, times: number[]): SiteEntry {
+  const e = manifest.sites.find((x) => x.id === cs.id);
+  if (!e) throw new DataError(`${cs.id} is not in the manifest`);
+  if (data.site?.id !== e.id) throw new DataError(`${e.file} contains site ${data.site?.id ?? "(none)"}, not ${e.id}`);
+  if (data.site.name !== e.name) throw new DataError(`${e.file}: site name differs from the manifest entry`);
+  if (data.site.latitude_deg !== cs.latitude_deg || data.site.longitude_deg_east !== cs.longitude_deg_east) {
+    throw new DataError(`${e.file}: coordinates differ from the catalog entry`);
+  }
+  const t = checkSite(manifest, data);
+  if (t.length !== times.length || t.some((x, i) => x !== times[i])) throw new DataError(`${e.file}: sample times differ from the dataset's common times`);
+  const claims = cs.capabilities.terrain_horizon.available;
+  if (claims !== !!data.terrain_horizon) throw new DataError(`${e.file}: terrain horizon ${claims ? "missing although the catalog lists it" : "present although the catalog says none"}`);
+  // The terrain block is optional: if it fails a check, that site's terrain is withheld with the reason.
+  // A site without a terrain block reports the catalog's stated reason.
+  const th = cs.capabilities.terrain_horizon;
+  const problem = th.available ? terrainProblem(data) : th.reason;
+  if (problem && data.terrain_horizon) delete data.terrain_horizon;
+  return { id: e.id, data, terrainProblem: problem };
+}
+
+type FetchLike = typeof fetch;
+const getJson = async <T,>(fetchImpl: FetchLike, url: string, signal?: AbortSignal): Promise<T> => {
+  const r = await fetchImpl(url, signal ? { signal } : undefined);
+  if (!r.ok) throw new DataError(`could not load ${url} (HTTP ${r.status})`);
+  return (await r.json()) as T;
+};
+
+/**
+ * Manifest + catalog of one dataset folder, with a lazy, checked site loader. `preload`
+ * site IDs (default: all) are loaded before returning, in parallel.
+ */
+export async function loadDataset(base: string, fetchImpl: FetchLike = fetch, opts: { dir?: string; expectedId?: string; preload?: string[] | ((ids: string[]) => string[]) } = {}): Promise<Dataset> {
+  const dir = `${base}${opts.dir ?? "data/"}`;
+  const manifest = await getJson<Manifest>(fetchImpl, `${dir}manifest.json`);
+  if (opts.expectedId && manifest.dataset_id !== opts.expectedId) throw new DataError(`Requested dataset ${opts.expectedId}, received ${manifest.dataset_id}`);
   if (!manifest.sites?.length) throw new DataError("manifest lists no sites");
-  const files: SiteData[] = [];
   for (const e of manifest.sites) {
     if (!SITE_ID.test(e.id) || e.file !== `${e.id}.json`) throw new DataError(`manifest maps ${e.id} to ${e.file}, expected ${e.id}.json`);
-    files.push(await get<SiteData>(`data/${e.file}`));
   }
-  const times = checkSites(manifest, files);
-  const sites: SiteEntry[] = files.map((data, k) => {
-    // The terrain block is optional: if it is missing or fails a check, that site's
-    // terrain is withheld (and Terrain mode is offered only when every compared site has it).
-    const problem = terrainProblem(data);
-    if (problem && data.terrain_horizon) delete data.terrain_horizon;
-    return { id: manifest.sites[k].id, data, terrainProblem: problem };
-  });
-  return { manifest, sites, times };
+  if (new Set(manifest.sites.map((e) => e.id)).size !== manifest.sites.length) throw new DataError("manifest lists a site ID more than once");
+  const catalog = await getJson<Catalog>(fetchImpl, `${dir}catalog.json`);
+  checkCatalog(manifest, catalog);
+  const times = manifestTimes(manifest);
+  const loadSite = async (id: string): Promise<SiteEntry> => {
+    const cs = catalog.sites.find((x) => x.id === id);
+    if (!cs) throw new DataError(`unknown site ${id}`);
+    const data = await getJson<SiteData>(fetchImpl, `${dir}${cs.file}`);
+    return checkSiteFile(manifest, cs, data, times);
+  };
+  const ids = catalog.sites.map((c) => c.id);
+  const pre = typeof opts.preload === "function" ? opts.preload(ids) : (opts.preload ?? ids);
+  const want = pre.filter((id) => ids.includes(id));
+  const sites = await Promise.all(want.map(loadSite));
+  return { manifest, catalog, sites, times, loadSite };
 }
 
 /** Index of the sample nearest to t (ms). times must be ascending. */

@@ -1,0 +1,56 @@
+{
+  "generated_at_utc": "2026-11-15T08:26:03Z",
+  "site": {
+    "id": "apollo17-lm",
+    "latitude_deg": 20.1911,
+    "longitude_deg_east": 30.7723,
+    "observer_height_above_surface_m": 1
+  },
+  "dem": {
+    "product": "sldem2015_512_00n_30n_000_045_float",
+    "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/sldem2015/tiles/float_img/sldem2015_512_00n_30n_000_045_float.img",
+    "sha256": "9a3ce2afd311cef9a25e7e7f632a0c623a669c29e5da661d97698da1ef3532d7",
+    "bytes": 1415577600,
+    "projection": "SIMPLE CYLINDRICAL, MEAN EARTH/POLAR AXIS OF DE421, east longitude",
+    "resolution_pix_per_deg": 512.0,
+    "pixel_ground_m_east_north": [
+      55.5857009756084,
+      59.22529379716696
+    ],
+    "height_reference": "km relative to the 1737.4 km sphere (label OFFSET)",
+    "missing_data": "label declares no MISSING_CONSTANT; values checked finite at the four interpolation pixels",
+    "registration": "J = LINE_PROJECTION_OFFSET - lat*res + 1, I = SAMPLE_PROJECTION_OFFSET + (lon - 180)*res + 1; tile corners on pixel edges (checked)"
+  },
+  "site_surface": {
+    "bilinear_m": -2627.9921229876736,
+    "pixel_1based": [
+      15755.9176,
+      5022.656800000001
+    ],
+    "nearest_pixel_m": -2628.966808319092
+  },
+  "local_relief_m": {
+    "ring_30m_min_max": [
+      -1.1337387235362257,
+      1.528711761737668
+    ],
+    "ring_100m_min_max": [
+      -4.5803166114828855,
+      2.8512391576841765
+    ],
+    "note": "height changes relative to the point; local relief, not coordinate uncertainty or accuracy"
+  },
+  "comparison": {
+    "source": "LROC page 938 table (GLD100 elevation)",
+    "elevation_m": -2626.0
+  },
+  "horizons_altitude": {
+    "surface_elevation_m": -2628.0,
+    "surface_elevation_reference": "height above the 1737.4 km sphere (sldem2015_512_00n_30n_000_045_float, bilinear)",
+    "observer_height_above_surface_m": 1,
+    "horizons_site_altitude_km": -2.627,
+    "eye_above_bilinear_dem_m": 0.9921229876736106,
+    "rule": "surface rounded to 0.1 m, plus the nominal observer height (same rule as site_elevation.py)"
+  },
+  "use": "observer altitude for Horizons positions only; no terrain horizon, mesh or slope is derived from this DEM in release 6"
+}

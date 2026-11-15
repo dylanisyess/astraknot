@@ -29,9 +29,10 @@ def main() -> int:
     ap = sites.parser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--refresh", action="store_true", help="ignore cache and re-download")
     ap.add_argument("--print-urls", action="store_true", help="print query URLs and exit")
+    sites.add_config_arg(ap)
     args = ap.parse_args()
 
-    cfg = json.loads(CONFIG.read_text("utf-8"))
+    cfg = sites.load_config(args.config)
     live = 0
     for site in sites.cli_sites(ap, args, cfg, batch=True):
         for tgt in cfg["targets"]:

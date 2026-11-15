@@ -4,7 +4,7 @@
 // profile gets neutral, data-derived wording only.
 
 import { horizonAt } from "./horizon";
-import type { Horizon, HorizonMode, SiteData, SiteEntry, VisibilityInterval } from "./types";
+import type { CatalogSite, Horizon, HorizonMode, SiteData, SiteEntry, VisibilityInterval } from "./types";
 
 export interface SiteProfile {
   /** Display label (required wording for CR1). */
@@ -58,14 +58,16 @@ export const PROFILES: Record<string, SiteProfile> = {
   },
 };
 
-export function profileFor(site: SiteData): SiteProfile {
-  const p = PROFILES[site.site.id];
+/** Presentation for a site: its PROFILES entry, else neutral wording from its catalog entry or file. */
+export function profileFor(site: SiteData | null, cat?: CatalogSite): SiteProfile {
+  const id = site?.site.id ?? cat?.id ?? "";
+  const p = PROFILES[id];
   if (p) return p;
   return {
-    label: site.site.name,
-    short: site.site.id,
-    kind: "Documented lunar surface point",
-    provisionalTerrain: null,
+    label: cat?.name ?? site?.site.name ?? id,
+    short: cat?.short_name ?? id,
+    kind: cat?.location_label ?? "Documented lunar surface point",
+    provisionalTerrain: cat?.capabilities.provisional ?? null,
     roundingEffect: null,
     realityNote: "DEM-based visibility for the published coordinate, not actual operating conditions.",
     limitations: [],
@@ -81,7 +83,9 @@ export function terrainModelLabel(site: SiteData): string | null {
   const pix = t.horizon.resolution.dem_pixel_m;
   const names = Object.keys(pix);
   const near = names[0];
-  return `${Math.round(pix[near])} m LOLA model (${near}${names.length > 1 ? `; ${names.slice(1).join(", ")} beyond its edge` : ""})`;
+  // "LOLA" only for the LOLA LDEM products; any other source is named by its product name alone
+  const family = names.every((n) => /^LDEM_/.test(n)) ? "LOLA " : "";
+  return `${Math.round(pix[near])} m ${family}model (${near}${names.length > 1 ? `; ${names.slice(1).join(", ")} beyond its edge` : ""})`;
 }
 
 // ------------------------------------------------------------ strict model selection
@@ -92,12 +96,19 @@ export interface ModeAvailability {
   missing: { id: string; reason: string }[];
 }
 
-/** Terrain mode only when EVERY compared site has a usable terrain horizon. */
-export function modeAvailability(entries: SiteEntry[]): ModeAvailability {
-  const missing = entries
-    .filter((e) => !e.data.terrain_horizon)
-    .map((e) => ({ id: e.id, reason: e.terrainProblem ?? "no terrain horizon" }));
-  return { terrain: entries.length > 0 && missing.length === 0, missing };
+/**
+ * Terrain mode only when EVERY compared site has a usable terrain horizon. Loaded sites are
+ * judged by their checked file; sites still loading by their catalog capability.
+ */
+export function modeAvailability(entries: SiteEntry[], notLoaded: CatalogSite[] = []): ModeAvailability {
+  const missing = [
+    ...entries.filter((e) => !e.data.terrain_horizon).map((e) => ({ id: e.id, reason: e.terrainProblem ?? "no terrain horizon" })),
+    ...notLoaded.filter((c) => !c.capabilities.terrain_horizon.available).map((c) => {
+      const t = c.capabilities.terrain_horizon;
+      return { id: c.id, reason: t.available ? "" : t.reason };
+    }),
+  ];
+  return { terrain: entries.length + notLoaded.length > 0 && missing.length === 0, missing };
 }
 
 /** Horizon for a mode, or an error: never falls back to the smooth model for a terrain request. */

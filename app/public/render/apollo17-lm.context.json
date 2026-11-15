@@ -1,0 +1,238 @@
+{
+ "asset_version": "render-context-1",
+ "is_rendering_asset": true,
+ "note": "Wide context terrain for orientation: coarse rings around the detailed mesh, sampled bilinearly from the cached local DEMs (<=100 m pixels) by source priority. No invented detail, no vertical exaggeration; curvature once. Never used for visibility, metrics or the skyline; Horizon view clips it to the exported profile.",
+ "site": {
+  "id": "apollo17-lm",
+  "name": "Apollo 17 lunar module (Taurus-Littrow valley)",
+  "latitude_deg": 20.1911,
+  "longitude_deg_east": 30.7723,
+  "horizons_site_altitude_km": -2.627
+ },
+ "observer": {
+  "observer_radius_m": 1734773.0,
+  "eye_above_dem_surface_m": 0.9921229876736106
+ },
+ "reference_radius_m": 1737400.0,
+ "frame": {
+  "axes": "x = east, y = up, z = -north, origin at the observer eye (same frame as the detailed mesh)",
+  "grid": "local gnomonic plane at the site: unit = normalize(up + east * x / R - north * z / R), R = 1737.4 km",
+  "position": "q = sqrt(1 + (x^2 + z^2) / R^2); position = ((R + h) x / (R q), (R + h) / q - observer_radius_m, (R + h) z / (R q))",
+  "heights": "float32 little-endian, metres above the 1737.4 km sphere, row-major j * nx + i, x = (i - c) * spacing, z = (j - c) * spacing, c = (nx - 1) / 2; NaN = no local DEM"
+ },
+ "sources_used": [
+  "sldem2015_512_00n_30n_000_045_float"
+ ],
+ "source_registry_sha256": "dbbc41fb07c2155ceb80409cc2f60d6226294f9926435d27e253d4e2fd637645",
+ "source_sha256": {
+  "sldem2015_512_00n_30n_000_045_float": null
+ },
+ "detailed_mesh": {
+  "file": "apollo17-lm.terrain.json",
+  "bin_sha256": "f2c809f835cadd93d39aa011da702bf669ade72ea87d24b1ae0eb64376d09184",
+  "outer_half_width_m": 1920.0,
+  "relation": "The renderer omits context cells lying inside the detailed mesh and keeps the detailed mesh on top where they meet."
+ },
+ "levels": [
+  {
+   "index": 0,
+   "spacing_m": 60,
+   "half_width_m": 7680,
+   "nx": 257,
+   "ny": 257,
+   "hole_cells": null,
+   "nodata_vertices": 0,
+   "sources_used": [
+    "sldem2015_512_00n_30n_000_045_float"
+   ],
+   "rim_vertices_snapped": 768,
+   "byte_offset": 0,
+   "byte_length": 264196,
+   "vertex_count": 66049,
+   "height_range_m": [
+    -2929.142202234616,
+    -456.90804632753975
+   ]
+  },
+  {
+   "index": 1,
+   "spacing_m": 240,
+   "half_width_m": 30720,
+   "nx": 257,
+   "ny": 257,
+   "hole_cells": [
+    96,
+    160,
+    96,
+    160
+   ],
+   "nodata_vertices": 0,
+   "sources_used": [
+    "sldem2015_512_00n_30n_000_045_float"
+   ],
+   "rim_vertices_snapped": 768,
+   "byte_offset": 264196,
+   "byte_length": 264196,
+   "vertex_count": 66049,
+   "height_range_m": [
+    -3136.923997549481,
+    -194.2072860719543
+   ]
+  },
+  {
+   "index": 2,
+   "spacing_m": 960,
+   "half_width_m": 92160,
+   "nx": 193,
+   "ny": 193,
+   "hole_cells": [
+    64,
+    128,
+    64,
+    128
+   ],
+   "nodata_vertices": 0,
+   "sources_used": [
+    "sldem2015_512_00n_30n_000_045_float"
+   ],
+   "rim_vertices_snapped": 0,
+   "byte_offset": 528392,
+   "byte_length": 148996,
+   "vertex_count": 37249,
+   "height_range_m": [
+    -3768.684842893918,
+    805.7899461682518
+   ]
+  }
+ ],
+ "counts": {
+  "vertices": 169347,
+  "bin_bytes": 677388
+ },
+ "outer_half_width_m": 92160,
+ "check_points": [
+  {
+   "level": 0,
+   "i": 0,
+   "j": 0,
+   "local_m": [
+    -7671.3509,
+    670.3678,
+    -7671.3509
+   ]
+  },
+  {
+   "level": 0,
+   "i": 256,
+   "j": 128,
+   "local_m": [
+    7671.2505,
+    647.6517,
+    0.0
+   ]
+  },
+  {
+   "level": 0,
+   "i": 128,
+   "j": 256,
+   "local_m": [
+    -0.0,
+    -37.153,
+    7668.2234
+   ]
+  },
+  {
+   "level": 0,
+   "i": 36,
+   "j": 85,
+   "local_m": [
+    -5512.0404,
+    121.7578,
+    -2576.2798
+   ]
+  },
+  {
+   "level": 1,
+   "i": 0,
+   "j": 0,
+   "local_m": [
+    -30669.2402,
+    -243.7713,
+    -30669.2402
+   ]
+  },
+  {
+   "level": 1,
+   "i": 256,
+   "j": 128,
+   "local_m": [
+    30688.6204,
+    852.297,
+    0.0
+   ]
+  },
+  {
+   "level": 1,
+   "i": 128,
+   "j": 256,
+   "local_m": [
+    -0.0,
+    313.7583,
+    30679.0982
+   ]
+  },
+  {
+   "level": 1,
+   "i": 36,
+   "j": 85,
+   "local_m": [
+    -22048.9986,
+    187.6068,
+    -10305.5102
+   ]
+  },
+  {
+   "level": 2,
+   "i": 0,
+   "j": 0,
+   "local_m": [
+    -91745.9162,
+    -5179.3062,
+    -91745.9162
+   ]
+  },
+  {
+   "level": 2,
+   "i": 192,
+   "j": 96,
+   "local_m": [
+    91970.6861,
+    -941.9456,
+    0.0
+   ]
+  },
+  {
+   "level": 2,
+   "i": 96,
+   "j": 192,
+   "local_m": [
+    0.0,
+    -1237.8217,
+    91954.9914
+   ]
+  },
+  {
+   "level": 2,
+   "i": 27,
+   "j": 64,
+   "local_m": [
+    -66066.712,
+    -1918.1481,
+    -30639.6345
+   ]
+  }
+ ],
+ "reproduce": "python pipeline/context_terrain.py --site apollo17-lm",
+ "bin_file": "apollo17-lm.context.bin",
+ "bin_sha256": "6fa6fcfb64e5f3bfb1376880c17df3644bfb152773083730f4fb75655b36793c"
+}

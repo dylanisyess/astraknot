@@ -197,6 +197,9 @@ def main() -> int:
             else:
                 f2i, f2j = lola.polar_inverse(l2, lat, lon)
                 comp[display_name] = lola.Window(l2, round(f2i), round(f2j), 2).bilinear(f2i, f2j)["height_m"]
+        except ValueError as e:  # the product does not cover the site (e.g. an 85S product at 80S)
+            comp[display_name] = None
+            unavailable[display_name] = f"product does not cover the site ({e})"
         except RuntimeError as e:
             if not args.offline:
                 raise

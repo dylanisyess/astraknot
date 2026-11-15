@@ -6,8 +6,8 @@ import { describe, expect, it } from "vitest";
 import { Workspace } from "../App";
 import { checkSites } from "../data";
 import { terrainProblem } from "../horizon";
-import { useScenario } from "../scenario";
-import type { Dataset, Manifest, SiteData } from "../types";
+import { type ReadyScenario, useScenario } from "../scenario";
+import type { Catalog, Dataset, Manifest, SiteData } from "../types";
 import { parseUrlState, writeUrlState } from "../urlState";
 import Explore, { type ExploreProps, MissionSummary, timelineSpan } from "./Explore";
 
@@ -20,6 +20,7 @@ function dataset(mutate?: (files: SiteData[]) => void): Dataset {
   const times = checkSites(manifest, files);
   return {
     manifest,
+    catalog: readJson<Catalog>("catalog.json"),
     times,
     sites: files.map((d, k) => {
       const p = terrainProblem(d);
@@ -31,7 +32,7 @@ function dataset(mutate?: (files: SiteData[]) => void): Dataset {
 const DS = dataset();
 const shell = (search: string) => renderToStaticMarkup(<Workspace ds={DS} search={search} />);
 function Harness({ search, ...rest }: { search: string } & Omit<ExploreProps, "sc">) {
-  const sc = useScenario(DS, search);
+  const sc = useScenario(DS, search) as ReadyScenario;
   return <Explore sc={sc} {...rest} />;
 }
 const explore = (search: string, rest: Omit<ExploreProps, "sc"> = {}) => renderToStaticMarkup(<Harness search={search} {...rest} />);
@@ -242,7 +243,7 @@ describe("power and communications framing (milestone 5B)", () => {
     expect(text(ms)).toMatch(/48\.7 % .*88\.7 % Both 48\.7 %/); // the +3 d Analysis card values
     expect(ms).not.toContain("<table"); // collapsed by default
     function Full() {
-      const sc = useScenario(DS, DEMO);
+      const sc = useScenario(DS, DEMO) as ReadyScenario;
       return <MissionSummary sc={sc} focus={sc.mission} setFocus={() => {}} initialOpen />;
     }
     const full = text(renderToStaticMarkup(<Full />));
@@ -486,7 +487,7 @@ describe("5C automatic terrain screening (overlays off), overlays and inspection
     const r = rowHtml(h);
     expect(r).toContain('data-testid="steep-btn"');
     expect(r).not.toContain('data-testid="slope-map-btn"');
-    expect(text(r)).toMatch(/0° to 30°\+ · same scale at both sites/);
+    expect(text(r)).toMatch(/0° to 30°\+ · same color scale at every site/);
     const d = details(explore(base + "&layer=slope", { initialTerrainDetails: true }));
     expect(d).toMatch(/aria-checked="true"[^>]*data-overlay-btn="slope"/);
     expect(text(d)).toMatch(/0° 10° 20° 30°\+/);
@@ -588,5 +589,61 @@ describe("5B corrections: shared viewing time and disabled delays", () => {
     expect(e).toContain("+3 d, +7 d unavailable: this mission plus the selected delay exceeds cached coverage");
     expect(shell(late)).toContain('title="This mission plus the selected delay exceeds cached coverage."');
     expect(text(shell(late + "&view=analysis"))).toContain("This mission plus the selected delay exceeds cached coverage");
+  });
+});
+
+describe("continuous body tracking (release 6, checkpoint 1)", () => {
+  const H = DEMO + "&t=2026-12-06T00:00:00Z&cam=horizon";
+  it("the toolbar offers Track Sun / Track Earth (no one-time Look toward)", () => {
+    const h = explore(H);
+    expect(h).toContain('data-track-btn="sun"');
+    expect(h).toContain('data-track-btn="earth"');
+    expect(text(h)).toContain("Track Sun");
+    expect(text(h)).not.toContain("Look toward");
+    expect(h).not.toContain('data-testid="track-indicator"');
+  });
+  it("tracking shows an obvious indicator with Stop tracking and a pressed button", () => {
+    const h = explore(H, { initialTrack: "earth" });
+    expect(h).toContain('data-testid="track-indicator"');
+    expect(h).toContain('data-track="earth"');
+    expect(h).toContain('data-testid="stop-tracking"');
+    expect(h).toMatch(/data-track-btn="earth"[^>]*>|aria-pressed="true"[^>]*data-track-btn="earth"/);
+    expect(text(h)).toContain("Tracking Earth");
+    expect(text(h)).toMatch(/10-minute sample/);
+  });
+  it("indicator words come from the shared status (same state as the Conditions panel)", () => {
+    const h = explore(H, { initialTrack: "sun" });
+    const st = /data-testid="track-indicator"[^>]*data-state="([a-z]+)"/.exec(h)![1];
+    const panelSun = /data-body="sun" data-state="([a-z-]+)"/.exec(statusPanel(h))![1];
+    // visible <-> available, hidden <-> blocked
+    expect(st === "visible" ? "available" : "blocked").toBe(panelSun === "available" ? "available" : "blocked");
+  });
+  it("tracking is only shown in the Horizon view (the overview is never auto-tracked)", () => {
+    const h = explore(DEMO + "&t=2026-12-06T00:00:00Z&cam=overview", { initialTrack: "sun" });
+    expect(h).not.toContain('data-testid="track-indicator"');
+  });
+  it("smooth mode: the indicator states the 0° assumption", () => {
+    const h = explore("?arrival=2026-12-05T00:00Z&days=14&delay=3&horizon=smooth&t=2026-12-06T00:00:00Z&cam=horizon", { initialTrack: "sun" });
+    expect(text(h)).toContain("0° reference horizon");
+    expect(text(h)).toContain("Smooth model: terrain ignored");
+  });
+  it("tracking a hidden body explains the occlusion", () => {
+    // Earth at CR1 (terrain) is below the skyline at this time in the exported data
+    const iso = DS.sites[1].data.terrain_horizon!.visibility_intervals.find((iv) => iv.earth_visible === false)!.start_utc;
+    const h = explore(`${DEMO}&sites=im2-athena,connecting-ridge-cr1&site=connecting-ridge-cr1&t=${iso}&cam=horizon`, { initialTrack: "earth" });
+    expect(h).toContain('data-state="hidden"');
+    expect(text(h)).toMatch(/Hidden by the terrain skyline/);
+  });
+});
+
+describe("link notices in Explore (dataset switch from the 120-day release)", () => {
+  it("states dropped sites and a moved arrival instead of changing them silently", () => {
+    const h = text(shell("?view=explore&arrival=2027-02-10T00:00Z&days=14&delay=0&sites=im2-athena,connecting-ridge-cr1,im1-odysseus,apollo17-lm&site=apollo17-lm"));
+    expect(h).toContain("Unknown site ID in the link: im1-odysseus, apollo17-lm");
+    expect(h).toMatch(/link.{0,6}s arrival 2027-02-10 00:00 UTC is outside this dataset.{0,6}s coverage for a 14-day mission/);
+    expect(h).toContain("shown from 2027-01-16 00:00 UTC, the nearest arrival that fits");
+  });
+  it("shows no notice for a link that fits the dataset", () => {
+    expect(shell("?view=explore&arrival=2026-12-05T00:00Z&days=14&sites=im2-athena")).not.toContain('data-testid="link-notice"');
   });
 });

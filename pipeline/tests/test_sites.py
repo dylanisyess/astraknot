@@ -152,7 +152,7 @@ class Files(unittest.TestCase):
         with patch.object(exporter, "CONFIG", config_path), patch.object(exporter, "OUT_DIR", self.out), \
                 patch.object(exporter, "export_site", return_value=data(B)) as build, \
                 patch.object(exporter, "dump_site", side_effect=json.dumps), \
-                patch.object(sys, "argv", ["export.py", "--site", B["id"]]), contextlib.redirect_stdout(io.StringIO()):
+                patch.object(sys, "argv", ["export.py", "--config", str(config_path), "--site", B["id"]]), contextlib.redirect_stdout(io.StringIO()):
             # Only the output summary needs interval counts in this synthetic export.
             build.return_value["visibility_intervals"] = []
             self.assertEqual(exporter.main(), 0)
@@ -169,7 +169,7 @@ class Files(unittest.TestCase):
         before = {p.name: p.read_bytes() for p in self.out.iterdir()}
         with patch.object(exporter, "CONFIG", config_path), patch.object(exporter, "OUT_DIR", self.out), \
                 patch.object(exporter, "export_site", return_value=data(A)), \
-                patch.object(sys, "argv", ["export.py", "--site", A["id"]]):
+                patch.object(sys, "argv", ["export.py", "--config", str(config_path), "--site", A["id"]]):
             with self.assertRaisesRegex(ValueError, "identity mismatch"):
                 exporter.main()
         self.assertEqual({p.name: p.read_bytes() for p in self.out.iterdir()}, before)
