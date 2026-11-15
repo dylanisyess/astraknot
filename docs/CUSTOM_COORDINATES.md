@@ -5,8 +5,20 @@
 > Custom coordinates can be processed with the offline Python pipeline. This site demonstrates
 > one generated result. Live coordinate processing is not available on this deployment.
 
-There is no backend, queue, paid host or live processing. Status 2026-11-15, prepared locally;
-**not committed, pushed or deployed.**
+There is no backend, queue, paid host or live processing, and there is **no public
+coordinate-input service**: the app has no coordinate field, and a visitor cannot request a new
+point. New coordinates are processed only locally, by the owner, with the offline pipeline
+(section 2), and then published as part of a dataset. The packaged result below is the only
+custom-coordinate result in the app.
+
+Status 2026-11-15, prepared locally; **not committed, pushed or deployed** (as recorded at the time).
+
+> **Correction, 2026-11-15 evening (documentation pass).** This demonstration was committed in
+> `868883b` and the mentor-feedback release in `149c89f`; both are on `origin/main` (checked with
+> `git fetch` before writing). Deployment of `149c89f` could not be verified from the repository
+> (no deploy configuration or GitHub deployment record); see docs/STATUS.md, "Release state and
+> documentation corrections". Two statements below were superseded by `149c89f` and are marked
+> in place: the default site and the guide.
 
 ### What is packaged
 
@@ -24,7 +36,9 @@ The demonstration is one **optional fifth site** in the current 120-day dataset
 How it sits next to the curated sites:
 - **Same contract:** it went through the same configured-site path as Apollo 17 and Odysseus (`prepare_site.py --config pipeline/config.json --site custom-85p5s-315e --publish`, then `context_terrain.py`).
 - **Defaults unchanged:** a link without `sites` still compares Apollo 17 only, and at most four sites can be compared at once.
+  *Superseded by `149c89f`:* a link without `sites` now compares IM-1 Odysseus alone (the guided example's site); the limit of four compared sites is unchanged. The custom point is never a default.
 - **Guided example unchanged:** the guide's finder step selects the four documented sites, not the custom point.
+  *Superseded by `149c89f`:* the guide now opens on Odysseus, recommends Athena as the comparison site (rule: another south-polar site that is neither provisional nor a user-defined point, so never this one), and its finder step pre-selects only the sites being compared. The catalog has five sites (four documented sites plus this demonstration); any four can be compared.
 
 Bundle `92fe1a278e16…` contains:
 - the observer: LDEM_80S_20M surface −3866.41 m, Horizons altitude −3.8654 km, eye 1.0137 m above the interpolated surface;
@@ -41,7 +55,7 @@ intervals.
 The wording is driven by the catalog location type, never by the site ID:
 - **Analysis Terrain banner:** says "published coordinates" for curated sites, "a user-defined study point (an entered coordinate)" for this point, and "published coordinates and a user-defined study point" when both are compared.
 - **Coordinate source:** shown as text, not a link, because a user-defined point has no source URL.
-- **Facts panel:** Explore's "About" panel and Analysis's "Method, sources and limitations" show a "User-defined study point: inputs and limitations" panel. It covers the entered coordinates and frame, terrain sources and pixel size, observer height and eye, sampling (17,281 samples every 10 minutes), the processing bundle, and the limitations, including the statement above. Every value is read from the site's data file.
+- **Facts panel:** Explore's "About" panel and Analysis's "Method, sources and limitations" (renamed "Method & limits" in `149c89f`, a closed disclosure at the end of Analysis) show a "User-defined study point: inputs and limitations" panel. It covers the entered coordinates and frame, terrain sources and pixel size, observer height and eye, sampling (17,281 samples every 10 minutes), the processing bundle, and the limitations, including the statement above. Every value is read from the site's data file.
 - **Catalog card:** the "Add site" card shows the type label and the same limitations.
 
 ### Terrain versus smooth (verified from exported data)

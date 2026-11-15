@@ -5,9 +5,51 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
+## Release state and documentation corrections — 2026-11-15, evening Pacific
+
+Documentation-only pass over README.md, docs/CUSTOM_COORDINATES.md and this file. No application
+code, data, pipeline, test or build changed, and no broad tests were rerun. Earlier sections
+below are kept as written; where a later commit superseded them, a dated correction is added in
+place.
+
+**Git and deployment (checked before writing):**
+- **Git:** after `git fetch`, `main` and `origin/main` are both at `149c89f` ("various mentor guided fixes"), on top of `868883b` (the custom-coordinate demonstration). The working tree was clean before this pass.
+- **Repository name:** the GitHub repository is now `dylanisyess/astraknot`; the local `origin` URL still uses the old name and is redirected.
+- **Deployment configuration:** there is no `netlify.toml`, no CI workflow, and no GitHub deployment or commit status for `149c89f`. The Netlify build settings live only in the Netlify UI.
+- **Deployment state: not verified from the repository.** Before this pass, the public site was reported to still show Apollo 17. To confirm a deployed `149c89f`:
+  - `<site>/data/lvn-2026-12-01-120d/manifest.json` lists five sites, including `custom-85p5s-315e`;
+  - a private-window root visit shows "Watch a south-pole sunrise";
+  - the guide reaches "Guide · 1 of 3" for Odysseus, arriving 2026-12-18.
+
+**What the release contains (`149c89f`):**
+- **Sites:** five catalog sites, four documented sites (IM-2 Athena, Connecting Ridge CR1, IM-1 Odysseus, Apollo 17) plus one custom-coordinate demonstration. **Up to four sites are compared at once.**
+- **Opening:** the Odysseus opening and the revised three-step guide (sunrise over a ridge → Add site / Athena → +3-day delay and Find arrival windows).
+- **Custom coordinates:** processed locally only, with the offline pipeline. There is **no public coordinate-input service**, and the app has no coordinate field.
+- **Guide speed (verified in code):** `GUIDE_SPEED = speedById("3h")` in `app/src/explore/Explore.tsx`, and `EXAMPLE.leadMs` is 3 h in `app/src/onboarding.ts`. The guide starts 3 h before the 10:40 UTC crossing and plays at 3 h/s, so the crossing appears about 1 s after Play. Measured in the browser: 1.0 s, reaching 10:40 UTC.
+
+**Corrections to earlier records:**
+1. **"Mentor feedback and south-polar guided introduction":** its "Not committed, pushed, merged or deployed" line described the working tree at the time. The work was committed as `149c89f` and pushed; deployment is unverified (above).
+2. **Performance wording:** the production-build measurement is about **2× in elapsed time**. 30 scripted touch-moves under 4× CPU throttling took 5.7–6.5 s before and 2.8–3.3 s after; each move waited for the browser, so this includes protocol round-trips. The "about 4×" figure applies only to **main-thread busy time in a development-build CPU profile**, without throttling: about 5.1 s busy (5.4 s elapsed, 0.27 s idle) fell to about 1.2 s busy (1.9 s elapsed, 0.73 s idle). An earlier summary's "about 4× cheaper" did not say which measurement it meant.
+3. **Mobile crash:** the mentor's crash was **not reproduced** and is **not confirmed fixed**. All mobile testing was emulated (Chrome at 390 px with touch and throttling, plus desktop WebKit 26.0); no actual phone was used. The defects fixed are plausible causes, not a confirmed root cause.
+4. **"Custom-coordinate demonstration as an optional fifth site":** its "Defaults" line (Apollo 17 as the default selection, the guide's four documented sites) was superseded by `149c89f`. A link without `sites` now opens Odysseus; the guide recommends Athena and pre-selects only the compared sites in the finder. The four-site limit is unchanged.
+5. **"Onboarding and the Apollo 17 guided example":** superseded by the Odysseus example; kept as the historical record.
+
+**Submission audit corrections:**
+- **AI use:**
+  - The tools were Claude Code (Anthropic), OpenAI Codex and ChatGPT (OpenAI), used for development, debugging, tests and browser-check scripts, design, and writing.
+  - NASA source data are not AI-generated: JPL Horizons positions, LOLA and SLDEM2015 terrain (with JAXA SELENE data upstream), the PGDA product and the NASA SVS imagery.
+  - Every displayed result is a deterministic output of project code written with AI assistance, reproducible from the cached inputs; no AI model runs in the app.
+  - The app includes no generative images, audio or video.
+- **Demo video:** edited screen recordings of the actual app, with Microsoft Clipchamp AI narration (not unedited footage).
+- **Sources and licenses:** README.md, "Sources" and "Third-party software and fonts", now lists public URLs and attribution/license references for the NASA data, coordinate references, libraries, fonts and development tools. The added links were checked by HTTP status on 2026-11-15. The npmjs.com package pages refused automated requests (HTTP 403), so the Fontsource pages are cited instead.
+
+**Files changed in this pass:** README.md, docs/CUSTOM_COORDINATES.md, docs/STATUS.md. `git diff --check` was run. Not committed or pushed.
+
 ## Mentor feedback and south-polar guided introduction — 2026-11-15, afternoon Pacific
 
 On `main`'s working tree, on top of `868883b`. **Not committed, pushed, merged or deployed.**
+*(Correction, 2026-11-15 evening: committed as `149c89f` and pushed; deployment unverified. See
+"Release state and documentation corrections".)*
 Frontend only: `git status` shows no change under `app/public`, `data/` or `pipeline/`, so every
 dataset, render, screening and site file is unchanged. Python tests were not run (no pipeline change).
 
@@ -24,6 +66,7 @@ dataset, render, screening and site file is unchanged. Python tests were not run
     - `terrainFacts` is cached per file, without large argument spreads;
     - chart paths, timeline rectangles, the Locator, the interval tables and the site sources are built once per scenario change.
     - Measured: 30 touch-moves took 5.7–6.5 s before and 2.8–3.3 s after (throttled). A dev-server CPU profile shows main-thread time down about 4×.
+    *(Correction, 2026-11-15 evening: the elapsed-time improvement is about 2×; the 4× is development-build main-thread busy time only.)*
   - **WebGL contexts were never released.** The old build released 0 of 20 contexts after 20 Explore↔Analysis switches; the new one releases 20 of 20 (`renderer.forceContextLoss()` on unmount).
   - **Any rendering error blanked the page.** Each Analysis chart and map now sits in a `VizBoundary`: "The … could not be drawn", plus Redraw and where the same data appears as text. The workspace has a last-resort `ViewBoundary` (Try again / Reload). The dataset-load error now has a Retry button.
 
@@ -100,6 +143,7 @@ On `main`'s working tree. **Not committed, pushed or deployed.** Full record:
 **What changed:**
 - **Data:** 85.5° S, 315.0° E is now `custom-85p5s-315e` in the 120-day dataset, labelled "Custom-coordinate demonstration" with catalog type `user_defined_study_point`. It was built through the configured-site path, reusing the cached ephemerides (0 new requests).
 - **Defaults:** the default selection (Apollo 17), the four-site comparison limit and the guided example's four documented sites are unchanged.
+  *(Correction, 2026-11-15 evening: superseded by `149c89f`. The default site is now Odysseus, and the guide recommends Athena and pre-selects only the compared sites. The four-site limit is unchanged.)*
 - **Wording:** coordinate wording now depends on the location type, so the app no longer calls the point "published". Its coordinate source is unlinked, and an inputs-and-limitations panel is added.
 - **Pipeline fix:** `catalog.py` now uses LF bytes for `terrain_3d.bytes`. Athena's value changes by −214 bytes and CR1's by −190, display only.
 
@@ -117,6 +161,9 @@ site text fails validation on Windows. Not fixed, because fixing it changes the
 implementation hash.
 
 ## Onboarding and the Apollo 17 guided example — 2026-11-15, 10:40 Pacific (system clock)
+
+*(Correction, 2026-11-15 evening: this example was replaced by the Odysseus south-polar example in
+`149c89f`; see "Mentor feedback and south-polar guided introduction". Kept as the historical record.)*
 
 Same branch (`presentation-polish`), on top of the presentation polish below. **Not committed,
 pushed, merged or deployed.** Frontend and one new display asset only: no dataset, site file,
