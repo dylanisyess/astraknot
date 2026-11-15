@@ -5,6 +5,90 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
+## Mentor feedback and south-polar guided introduction — 2026-11-15, afternoon Pacific
+
+On `main`'s working tree, on top of `868883b`. **Not committed, pushed, merged or deployed.**
+Frontend only: `git status` shows no change under `app/public`, `data/` or `pipeline/`, so every
+dataset, render, screening and site file is unchanged. Python tests were not run (no pipeline change).
+
+**1. Mobile Analysis crash: not reproduced; three defects fixed.**
+- **What was run:**
+  - Production build in Chrome 157 with mobile emulation: 390×844, DPR 3, touch, iPhone UA, 4× CPU throttling.
+  - The original build and the new one in WebKit 26.0 (Playwright's Windows build: the Safari engine, not iOS).
+  - Repeated site, model and delay switches, chart drags, and Explore↔Analysis switches.
+  - No crash, exception or lost context in either browser, on either build.
+- **Limitation:** no real phone was tested. Emulation does not reproduce iOS memory or watchdog limits, so the exact report remains unreproduced.
+- **Defects fixed:**
+  - **Chart drags flooded the main thread.** Every pointer move re-rendered the whole of Analysis: about 200 ms per move under 4× throttling. That re-render recomputed `terrainFacts` (a scan of all 17,280 samples per site), the Locator's 4⁵-combination label search, every chart path and every interval table. Fixes:
+    - drags select once per animation frame (`axis.ts`);
+    - `terrainFacts` is cached per file, without large argument spreads;
+    - chart paths, timeline rectangles, the Locator, the interval tables and the site sources are built once per scenario change.
+    - Measured: 30 touch-moves took 5.7–6.5 s before and 2.8–3.3 s after (throttled). A dev-server CPU profile shows main-thread time down about 4×.
+  - **WebGL contexts were never released.** The old build released 0 of 20 contexts after 20 Explore↔Analysis switches; the new one releases 20 of 20 (`renderer.forceContextLoss()` on unmount).
+  - **Any rendering error blanked the page.** Each Analysis chart and map now sits in a `VizBoundary`: "The … could not be drawn", plus Redraw and where the same data appears as text. The workspace has a last-resort `ViewBoundary` (Try again / Reload). The dataset-load error now has a Retry button.
+
+**2. Opening example: IM-1 Odysseus.**
+- **Scenario:** arrival 2026-12-18 00:00 UTC, 14 days, Terrain.
+- **Selection rule:** applied to CR1, Athena and Odysseus with the app's own `computeMetrics`, `transitions` and `geometryAt`, over every 00:00 UTC arrival. The scan was temporary and has been deleted.
+  - **Requirements:**
+    - the first Sun crossing at least 1 h after arrival is a terrain crossing (Sun center and skyline both ≥1° above 0°);
+    - Smooth and Terrain direct sunlight differ by ≥5 pp;
+    - a +3 d slip changes direct sunlight or Earth visibility by ≥10 pp.
+  - **Ranking:** non-provisional first, then the taller ridge, the earlier crossing, the earlier arrival.
+- **Why Odysseus wins:** the Sun center clears a 5.28° ridge at azimuth 66.7° near 2026-12-18 10:40 UTC. Athena's ridge is 2.43°; CR1 is provisional, with a 1.98° ridge.
+- **Values (all shown from live metrics):**
+
+| | Direct sunlight | Earth | Longest without sunlight |
+|---|---|---|---|
+| Odysseus, Terrain | 90.2 % | 100.0 % | 22.2 h ⚠ |
+| Odysseus, Smooth | 98.6 % | | |
+| Odysseus, +3 d | 72.0 % | 100.0 % | 94.2 h ⚠ |
+| Athena, same window | 86.1 % → 64.7 % | 95.0 % → 73.6 % | 46.7 h ⚠ → 118.7 h ⚠ |
+
+- **What changed in the app:** the landing page button ("Watch a south-pole sunrise"), the copy ("not a replay of the 2024 IM-1 landing") and `DEFAULT_SITES` (Odysseus where the dataset has it).
+- **Default scenario:** a bare root visit, or "Open navigator", loads the example scenario without the guide. Every link with an explicit scenario or `ds` parameter is used as given (checked: a shared Athena + CR1 smooth link and a partial link).
+
+**3. Horizon view opening.** With no aimed direction, entering Horizon view faces the Sun if its center is ≥ −3°, else Earth, else the site default (`usefulEyePose`). The same applies when the URL restores `cam=horizon` and on Reset. Once the user drags, uses the arrow keys or tracks, the direction is kept: a drag to yaw 93.4°, then overview and back, stayed at 93.4°. The guide starts 3 h before the crossing at 3 h/s (changed from 1 h/s at the owner's request); the whole disk is still hidden then. Measured: Play from 07:40 reached "Direct sunlight available" at 10:40 UTC after 1.0 s.
+
+**4. Guide:**
+1. **Watch the Sun clear the ridge:** Horizon view with tracking, the crossing text, the Smooth-model contrast from the live geometry, and Play/Pause in the card.
+2. **Compare another site:** the highlighted "+ Add site" control; "Add Athena for comparison" (an explicit button; `recommendedComparison` picks the other south-polar, non-provisional, non-user-defined site); both sites' baseline metrics; switch buttons; a pointer to Analysis. On narrow screens: "Show me where". A full comparison is never changed; the guide says why.
+3. **Test a 3-day arrival delay:** per-site baseline → +3 d values, a short summary, and Find arrival windows with the compared sites pre-checked.
+
+Skip, Back/Next, Done and Escape all work, and focus returns to "How to use". Mission setup opens on narrow screens for step 3. The "Add site" control now reads "Add site", "Add another site" or "Comparison full", with an `aria-label` giving the count of compared sites.
+
+**5–7. Polish:**
+- **Direction labels:** off-screen labels in Horizon view read "◀ Turn 78° left toward Earth" or "Look up/down N° toward …". These are relative camera turns, not azimuths (Analysis's 241.7° is an azimuth); a body behind the camera takes the shorter turn (≤180°). The legend says "Direction rays … drawn length does not represent distance".
+- **Analysis takeaway:** Analysis now opens with a takeaway: per site, "Direct sunlight … Longest period without sunlight … Earth visible …", with the window, the model and the boundary caveat. The long text sits in one closed "Method & limits" disclosure; essential warnings stay visible.
+- **Precision:** the 59.225… m pixel size now shows as "59.2 m".
+- **Panorama and elevation-chart y-labels:** spaced at least 18 px apart.
+- **Grammar:** fixed "at both site", "Compare all 1 sites" and "1-site comparison".
+- **Skyline label:** the skyline line label yields to the off-screen direction chips.
+
+**8. Custom demonstration:** unchanged. It keeps its provenance and "Not reviewed" badge, and there is no coordinate input. The guide works with five catalog sites; the fourth site added makes the control "Comparison full".
+
+**9. Distances deferred:** the cached Horizons queries requested quantity 4 (azimuth/elevation) only, so there are no observer-to-body distances. Method & limits says so; nothing is inferred from the rays.
+
+**Checks personally performed:**
+- 439/439 frontend tests (15 new in `polish.test.tsx`; the onboarding tests were rewritten for Odysseus).
+- `tsc --noEmit`, `npm run build` (notices OK; the existing >500 kB three.js chunk warning remains), `git diff --check`.
+- Production preview in headless Chrome 157 (SwiftShader), fresh profiles:
+  - **Guide:** the full guide at 1280×720 and at 390×844 mobile (0 label/panel overlaps, document width 390).
+  - **Links and defaults:** shared links, the returning-visitor root, Horizon view opening, the manual look kept, Reset.
+  - **Shortlist and Analysis:** add/switch/remove up to the four-site limit; the custom point; Analysis repeated graph changes at both sizes.
+  - **Failure recovery:** dataset index, site file and slope asset failures each recovered with Retry; no WebGL (Explore's message, Analysis unaffected).
+  - **WebKit:** WebKit 26 ran the Analysis stress test.
+
+**Unresolved:**
+- No real phone, screen reader or hardware GPU was tested.
+- While a newly added comparison site loads, Explore briefly shows the loading page; the guide shows "Loading Athena…" and resumes.
+- At 720 px height the step-3 card can cover the left edge of the scene.
+- The panorama's compass letter and degree text boxes touch by about 1 px (no visible overlap).
+
+**Follow-up (owner request):** dropdown option lists (Speed, Hour, crossing range, finder fields) were unreadable on Windows: the browser draws the list white while the options inherited the light text color. Options now have explicit colors (`explore.css`, `styles.css`; computed light-on-dark #f0efec on #1c1c1a, checked option dark on light).
+
+**Deployment-only step:** the "Powered by Netlify" badge is injected by Netlify, not the app. Netlify UI → the project → *Project configuration › General › Powered by Netlify badge* → off → Save. Not fixed locally.
+
 ## Custom-coordinate demonstration as an optional fifth site — 2026-11-15, afternoon Pacific
 
 On `main`'s working tree. **Not committed, pushed or deployed.** Full record:

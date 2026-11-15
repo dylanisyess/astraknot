@@ -65,7 +65,10 @@ type Speed = (typeof SPEEDS)[number];
 export const speedById = (id: Speed["id"]): Speed => SPEEDS.find((s) => s.id === id)!;
 /** Speed when Play is first pressed. */
 export const DEFAULT_SPEED: Speed = speedById("3h");
-/** Speed the guided example sets for its Sun crossing (the crossing controls keep their own). */
+/**
+ * Speed the guided example sets for its Sun crossing (the crossing controls keep their own): the
+ * guide starts 3 h before the crossing (EXAMPLE.leadMs), so Play shows the event after about 1 s.
+ */
 export const GUIDE_SPEED: Speed = speedById("3h");
 const SUN_R = 0.265;
 const EARTH_R = 0.95;
@@ -133,6 +136,10 @@ export interface ExploreGuide {
   finish: () => void;
   /** The existing delay option the example demonstrates. */
   delayDays: number;
+  /** How long before the Sun crossing the guide sets the viewing time (ms). */
+  leadMs?: number;
+  /** Recommended comparison site (same windows and model as every compared site), or null. */
+  compareSiteId?: string | null;
   /** Opens the Arrival Window Finder with example inputs (never applies a result). */
   openFinder?: () => void;
   finderOpened: boolean;
@@ -260,14 +267,14 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
   const msg = evMsg && evMsg.siteId === siteId && evMsg.mode === sc.mode ? evMsg : null;
 
   // ---------------------------------------------------------------- guided horizon crossings
-  const goCrossing = (dir: 1 | -1, opts: { body?: "sun" | "earth"; range?: "mission" | "all"; fromT?: number; speed?: Speed } = {}) => {
+  const goCrossing = (dir: 1 | -1, opts: { body?: "sun" | "earth"; range?: "mission" | "all"; fromT?: number; speed?: Speed; leadMs?: number } = {}) => {
     sc.setPlaying(false);
     const body = opts.body ?? evBody;
     const inRange = opts.range ?? evRange;
     const name = body === "sun" ? "Sun" : "Earth";
     const range = inRange === "mission" ? win.w : { start: sc.cov.start, end: sc.cov.end };
     const from = opts.fromT ?? sc.selT;
-    const plan = planCrossing({ intervals: v.intervals, body, range, selT: from, anchor: opts.fromT === undefined ? anchor.current : null, dir, leadMs: EVENT_LEAD_MS[body], times: sc.times });
+    const plan = planCrossing({ intervals: v.intervals, body, range, selT: from, anchor: opts.fromT === undefined ? anchor.current : null, dir, leadMs: opts.leadMs ?? EVENT_LEAD_MS[body], times: sc.times });
     const base = { siteId, mode: sc.mode };
     if (plan.kind === "none") {
       const where = inRange === "mission" ? `the ${win.label.toLowerCase()} (${fmtUtc(range.start)} – ${fmtUtc(range.end)})` : "the cached data";
@@ -296,18 +303,38 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
   /** Step 1: the Sun crossing of the selected mission, found from its start by the crossing navigation. */
   const guideTrackSun = () => {
     // body and range are passed explicitly: changing the crossing controls' state would clear the result
-    goCrossing(1, { body: "sun", range: "mission", fromT: win.w.start, speed: GUIDE_SPEED });
+    goCrossing(1, { body: "sun", range: "mission", fromT: win.w.start, speed: GUIDE_SPEED, leadMs: guide?.leadMs });
+    showStage();
+  };
+  /** Narrow screens stack the card below the scene: bring the scene (and the Sun in it) into view. */
+  const stageRef = useRef<HTMLDivElement>(null);
+  const showStage = () => {
+    if (!narrow) return;
+    window.setTimeout(() => stageRef.current?.scrollIntoView?.({ block: "start", behavior: reducedMotion ? "auto" : "smooth" }), 0);
+  };
+  const guidePlay = () => {
+    if (sc.playing) return sc.setPlaying(false);
+    sc.setPlaying(true);
+    showStage();
   };
   /** Changing step pauses playback; entering step 2 brings the viewing time back into the mission. */
   const guideSetStep = (s: GuideStep) => {
     if (!guide) return;
     sc.setPlaying(false);
     setGuideNote(null);
-    if (s === 2 && (sc.selT < win.w.start || sc.selT >= win.w.end)) {
+    if (s === 3 && (sc.selT < win.w.start || sc.selT >= win.w.end)) {
       sc.setSel(nearestIndex(sc.times, win.w.start));
       setGuideNote(`Viewing time was outside the ${win.label.toLowerCase()}; it is back at its start, ${fmtUtc(win.w.start)}.`);
     }
+    // narrow screens: the delay buttons and Find arrival windows are in the collapsed setup panel
+    if (s === 3 && narrow) setSetupOpen(true);
     guide.setStep(s);
+  };
+  /** Step 2: add the recommended comparison site (an explicit action; the shortlist rules apply). */
+  const guideAddCompare = () => {
+    const id = guide?.compareSiteId;
+    if (!id || sc.selIds.includes(id) || sc.addBlocked(id)) return;
+    sc.addSite(id);
   };
   /** Step 2: the same state change as the Arrival delay button, then viewing time into that mission. */
   const guideApplyDelay = () => {
@@ -326,7 +353,7 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
   return (
     <main className="explore" id="explore" data-site={siteId} data-camera={camera} data-mode={sc.mode} data-tracking={track ?? undefined}
       data-guide-step={guide ? guide.step : undefined} data-guide-hint={guide && guide.step === 1 ? (msg ? (v.statusSel.sun.visible === true ? "done" : "play") : "conditions") : undefined} data-guide-finder={guide?.finderOpen ? "open" : undefined}>
-      <div className="stage">
+      <div className="stage" ref={stageRef}>
         {!caps.terrain_3d.available ? (
           <div className="scene-message" role="status" data-testid="no-3d">
             <strong>No 3D terrain for {v.profile.short}.</strong>
@@ -420,9 +447,14 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
           tracking={track === "sun"}
           fatal={fatal ?? (!caps.terrain_3d.available ? caps.terrain_3d.reason : assetHere.state === "error" ? assetHere.message : null)}
           onApplyDelay={guideApplyDelay}
+          compareSiteId={guide.compareSiteId ?? null}
+          onAddCompare={guideAddCompare}
           note={guideNote}
           onOpenFinder={guide.openFinder}
           finderOpened={guide.finderOpened}
+          narrow={narrow}
+          onPlay={guidePlay}
+          speedLabel={speed.label}
         />
       )}
       <MissionPanel sc={sc} focus={win.key} open={setupOpen} onToggle={() => setSetupOpen((o) => !o)} onFindWindows={onFindWindows} />
@@ -954,7 +986,7 @@ function SceneLegend({ camera, mode, meta, context }: { camera: CameraMode; mode
         <div className="lg-pop" role="note">
           {camera === "overview" ? (
             <ul>
-              <li>Rays start at the fixed modeled observer and point along the Sun and Earth directions at the selected time. Markers sit at the far end of those directions; their size is for orientation, not angular size.</li>
+              <li>Direction rays start at the fixed modeled observer and point along the Sun and Earth directions at the selected time. They show direction only: their drawn length does not represent distance. Markers sit at the far end of those directions; their size is for orientation, not angular size.</li>
               <li>Outlined markers are below the observer’s horizon in the selected model. Click a marker to view it at the horizon.</li>
               <li>When terrain hides the Sun or Earth, a ringed point marks the terrain that sets the skyline on the observer’s line of sight (often only tens or hundreds of metres away). The camera is far above the 1 m eye, so that rise rarely looks like a barrier from here; Horizon view shows it as the observer sees it.</li>
               <li>

@@ -11,7 +11,7 @@ import { DEFAULT_SPEED, GUIDE_SPEED, SPEEDS } from "./Explore";
 describe("playback speeds", () => {
   it("default is 3 h/s; options are 10 min, 1 h, 3 h, 6 h and 12 h per second", () => {
     expect(DEFAULT_SPEED.id).toBe("3h");
-    expect(GUIDE_SPEED.id).toBe("3h");
+    expect(GUIDE_SPEED.id).toBe("3h"); // the guide starts 3 h before its crossing: Play shows it after about 1 s
     expect(SPEEDS.map((s) => s.label)).toEqual(["10 min/s", "1 h/s", "3 h/s", "6 h/s", "12 h/s"]);
     // viewing time per real second = stepsPerSec x 10 minutes
     expect(SPEEDS.map((s) => (s.stepsPerSec * 10) / 60)).toEqual([1 / 6, 1, 3, 6, 12]);

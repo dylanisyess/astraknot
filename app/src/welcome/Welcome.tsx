@@ -1,5 +1,5 @@
 // Landing screen: an editorial introduction on a first root visit, and the same screen as a modal
-// dialog from "How to use". It never changes the scenario by itself: only "Explore Apollo 17" does,
+// dialog from "How to use". It never changes the scenario by itself: only the example button does,
 // and from the dialog that is confirmed first when a different scenario is open. The long
 // explanation, limitations and sources live in the About disclosure.
 
@@ -33,10 +33,11 @@ function About({ onClose }: { onClose: () => void }) {
         <button type="button" className="lp-about-x" onClick={onClose} aria-label="Close About">✕</button>
       </div>
       <p>Compare sunlight, direct-to-Earth visibility and terrain steepness at documented lunar landing and study sites (plus one labelled custom-coordinate demonstration), and see what changes when arrival slips.</p>
-      <h3>The Apollo 17 example</h3>
+      <h3>The south-polar example</h3>
       <p>
-        A <strong>hypothetical</strong> {EXAMPLE.days}-day mission at the historic Apollo 17 landing site, arriving {exampleDate} UTC within this dataset’s dates. It
-        is not a reconstruction or replay of the 1972 mission. A three-step guide follows; skip it at any time.
+        A <strong>hypothetical</strong> {EXAMPLE.days}-day mission at the IM-1 Odysseus landing point (Malapert A region, near the south pole), arriving {exampleDate} UTC
+        within this dataset’s dates. It is not a reconstruction or replay of the 2024 IM-1 landing. A three-step guide follows: the Sun clearing a terrain ridge,
+        adding a comparison site, and a three-day arrival delay. Skip it at any time.
       </p>
       <h3>Limitations</h3>
       <p>
@@ -61,7 +62,7 @@ function About({ onClose }: { onClose: () => void }) {
 
 export interface WelcomeProps {
   mode: "page" | "dialog";
-  /** Start the Apollo 17 example (page: directly; dialog: after confirmation when needed). */
+  /** Start the guided example (page: directly; dialog: after confirmation when needed). */
   onExplore: () => void;
   /** Page: enter the navigator. Dialog: close and keep the current scenario. */
   onOpen: () => void;
@@ -147,8 +148,8 @@ export function Welcome({ mode, onExplore, onOpen, current = null }: WelcomeProp
           <p className="lp-annot">
             <span className="lp-annot-rule" aria-hidden="true" />
             <span className="lp-annot-t">
-              <strong>Apollo 17</strong>
-              <em>A historic site. A new mission.</em>
+              <strong>Odysseus · south pole</strong>
+              <em>Watch the Sun clear a ridge.</em>
             </span>
           </p>
         </div>
@@ -156,7 +157,7 @@ export function Welcome({ mode, onExplore, onOpen, current = null }: WelcomeProp
         {!confirm ? (
           <div className="lp-actions">
             <button type="button" className="lp-btn lp-primary" onClick={explore} data-autofocus data-testid="explore-example">
-              <span>Explore Apollo 17</span><Arrow />
+              <span>Watch a south-pole sunrise</span><Arrow />
             </button>
             <button type="button" className="lp-btn lp-secondary" onClick={onOpen} data-testid="open-navigator">
               {dialog ? "Back to the navigator" : "Open navigator"}
@@ -165,15 +166,15 @@ export function Welcome({ mode, onExplore, onOpen, current = null }: WelcomeProp
         ) : (
           <div className="lp-confirm" role="group" aria-labelledby="wl-confirm-h" data-testid="welcome-confirm">
             <p id="wl-confirm-h"><strong>This loads a different scenario.</strong></p>
-            <p>The Apollo 17 example replaces the scenario open in this tab{current ? <> ({current})</> : null}. Copy the address first if you want to keep a link to it.</p>
+            <p>The guided south-polar example replaces the scenario open in this tab{current ? <> ({current})</> : null}. Copy the address first if you want to keep a link to it.</p>
             <div className="lp-actions">
-              <button type="button" className="lp-btn lp-primary" onClick={onExplore} data-testid="confirm-example"><span>Load the Apollo 17 example</span><Arrow /></button>
+              <button type="button" className="lp-btn lp-primary" onClick={onExplore} data-testid="confirm-example"><span>Load the south-polar example</span><Arrow /></button>
               <button type="button" className="lp-btn lp-secondary" onClick={() => setConfirm(false)} data-keep data-testid="keep-current">Keep current scenario</button>
             </div>
           </div>
         )}
         <p className="lp-note">
-          Hypothetical planning example at the historic Apollo 17 landing site, arriving {exampleDate} UTC (dataset dates); not a reconstruction of the 1972 mission.
+          Hypothetical planning example at the IM-1 Odysseus landing point, arriving {exampleDate} UTC (dataset dates); not a replay of the 2024 IM-1 landing.
         </p>
       </div>
       <footer className="lp-foot">

@@ -50,9 +50,15 @@ export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, statu
     for (const s of samples) {
       for (const v of [s.sun_elevation_deg, s.earth_elevation_deg]) if (v !== null && v > hiV) hiV = v;
     }
-    const hv = horizon.elevation_deg.filter((v): v is number => v !== null);
-    const lo = Math.floor(Math.min(-2, ...hv) - 1);
-    const hi = Math.ceil(Math.max(hiV, ...hv) + 0.5);
+    let loH = -2;
+    let hiH = hiV;
+    for (const v of horizon.elevation_deg) {
+      if (v === null) continue;
+      if (v < loH) loH = v;
+      if (v > hiH) hiH = v;
+    }
+    const lo = Math.floor(loH - 1);
+    const hi = Math.ceil(hiH + 0.5);
     return [lo, hi];
   }, [samples, horizon]);
   const x = (u: number) => left + (u / 360) * pw;
@@ -188,7 +194,8 @@ export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, statu
     setHoverU(u >= 0 && u <= 360 ? u : null);
   };
 
-  const yStep = yHi - yLo > 10 ? 2 : 1;
+  // y labels at least ~18 px apart on round degree steps (a high Sun makes a tall range)
+  const yStep = [1, 2, 5, 10, 20, 30, 45].find((k) => (ph / (yHi - yLo)) * k >= 18) ?? 90;
   const yTicks: number[] = [];
   for (let v = Math.ceil(yLo / yStep) * yStep; v <= yHi; v += yStep) yTicks.push(v);
   // pixels per degree vertically / horizontally
@@ -332,14 +339,9 @@ export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, statu
           );
         })}
       </ul>
-      <p className="muted small">
+      <p className="muted small" data-testid="pano-axes">
         Horizontal axis: azimuth ({TICK_NAMES[norm360(centerAz + 180)]} at both edges, {TICK_NAMES[norm360(centerAz)]} in the middle). Vertical axis: elevation angle, stretched about{" "}
-        {Math.round(exaggeration)}× relative to azimuth. Markers are the body centers at their computed positions at the selected
-        time; hollow markers are below the {mode === "terrain" ? "skyline" : "0° line"}, and arrows mark bodies outside the view.
-        Visibility refers to each body’s center, so part of a disk can show above the horizon while its center is hidden. Faint
-        lines are each body’s path through the plotted windows. The visible / hidden words match the cards and timeline: they
-        are the state of the 10-minute step starting at this time, classified at its midpoint. If the center at this exact
-        time is on the other side of the horizon, the label says “near estimated crossing” and the marker gets a dashed ring.
+        {Math.round(exaggeration)}× relative to azimuth. Hollow markers are below the {mode === "terrain" ? "skyline" : "0° line"}; arrows mark bodies outside the view. How to read it: Method &amp; limits.
       </p>
     </div>
   );

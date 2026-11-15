@@ -23,7 +23,7 @@ import { blockingPoint, blockingText } from "./blocking";
 import { type ContextAsset, type ContextState, contextIndices, contextPositions, loadContextAsset, nearFootprint } from "./contextTerrain";
 import { MARKER_TEXT, markerState } from "./availability";
 import { edgePoint } from "./geometry";
-import { TRACK_ENGAGE_MS, type TrackBody, blendPose, trackTarget } from "./tracking";
+import { TRACK_ENGAGE_MS, type TrackBody, blendPose, offscreenHint, trackTarget, usefulEyePose } from "./tracking";
 import { EXCEED_COLOR, OVERLAY_ALPHA, SLOPE_STOPS, type SlopeAsset, type TerrainLayer, hexRgb, overlayMode, thresholdCentideg } from "./slope";
 
 export type CameraMode = "overview" | "eye";
@@ -517,6 +517,15 @@ export default function TerrainScene(props: SceneProps) {
     controls.target.set(0, 0, 0);
     controls.addEventListener("change", () => requestRender());
     let eye: EyePose = eyeDefault(propsRef.current.lookAz);
+    // The user has aimed the Horizon view for this site (drag, arrow keys or tracking): entering
+    // the view then keeps that direction. Until then it opens on a useful body (usefulEyePose).
+    let eyeTouched = false;
+    const usefulEye = (fov = 45): EyePose => {
+      const p = propsRef.current;
+      const u = usefulEyePose(p.status, p.lookAz, fov);
+      canvas.dataset.eyeOpen = u.body ?? "default";
+      return { yaw: u.yaw, pitch: u.pitch, fov: u.fov };
+    };
     const applyEye = () => {
       eyeCam.position.set(0, 0, 0); // the modeled observer; never moved
       eyeCam.rotation.set(THREE.MathUtils.degToRad(eye.pitch), THREE.MathUtils.degToRad(-eye.yaw), 0, "YXZ");
@@ -554,6 +563,7 @@ export default function TerrainScene(props: SceneProps) {
       // looking elsewhere ends tracking (a click without movement does not)
       if (tracking && press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 3) breakTrack();
       if (tracking) return;
+      if (e.clientX !== drag.x || e.clientY !== drag.y) eyeTouched = true;
       const k = eye.fov / Math.max(1, canvas.clientHeight);
       eye.yaw = (((eye.yaw - (e.clientX - drag.x) * k) % 360) + 360) % 360;
       eye.pitch = THREE.MathUtils.clamp(eye.pitch + (e.clientY - drag.y) * k, -85, 85);
@@ -576,6 +586,7 @@ export default function TerrainScene(props: SceneProps) {
       if (camMode === "eye") {
         // arrow keys look elsewhere and end tracking; +/- only zoom and keep it
         if (tracking && e.key.startsWith("Arrow")) breakTrack();
+        if (e.key.startsWith("Arrow")) eyeTouched = true;
         if (e.key === "ArrowLeft") eye.yaw = (eye.yaw - step + 360) % 360;
         else if (e.key === "ArrowRight") eye.yaw = (eye.yaw + step) % 360;
         else if (e.key === "ArrowUp") eye.pitch = Math.min(85, eye.pitch + step);
@@ -627,6 +638,7 @@ export default function TerrainScene(props: SceneProps) {
       tracking = b;
       canvas.dataset.track = b ?? "";
       if (b) {
+        eyeTouched = true; // where tracking leaves the view is the user's choice
         anim = null; // a running reset/look animation would fight the tracked direction
         engage = propsRef.current.reducedMotion ? null : { from: { yaw: eye.yaw, pitch: eye.pitch }, t0: performance.now() };
       } else engage = null;
@@ -1076,16 +1088,26 @@ export default function TerrainScene(props: SceneProps) {
             off.style.display = "none";
           } else {
             el.style.display = hit.style.display = "none";
+            // a relative camera turn (labelled as such), not the body's azimuth (Geometry and
+            // Analysis give the azimuth); a body within the horizontal field is above or below it
             const dAz = azDelta(eye.yaw, g.azimuthDeg);
-            const left = dAz < 0;
+            const halfH = THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(eye.fov / 2)) * (w / Math.max(1, h))));
+            const hint = offscreenHint(name, dAz, Math.abs(dAz) < halfH, g.elevationDeg - eye.pitch);
+            const html = hint.text.replace(name, `<span class="lbl-name">${name}</span>`);
             off.style.display = "";
-            off.innerHTML = `${left ? "◀ " : ""}<span class="lbl-name">${name}</span> ${Math.abs(dAz).toFixed(0)}°${left ? "" : " ▶"}`;
-            const y = h - 150 - (b === "earth" ? 34 : 0);
-            off.setAttribute("aria-label", `${name} is ${Math.abs(dAz).toFixed(0)}° to the ${left ? "left" : "right"}. Center the view on the ${name}.`);
-            off.dataset.bx = String(left ? 12 : w - 12);
-            off.dataset.by = String(y);
-            off.style.transform = `translate(${left ? 12 : w - 12}px, ${y.toFixed(0)}px)`;
-            off.dataset.side = left ? "left" : "right";
+            if (off.innerHTML !== html) off.innerHTML = html;
+            off.setAttribute("aria-label", hint.aria);
+            off.dataset.body = b;
+            const stack = b === "earth" ? 34 : 0;
+            const pos =
+              hint.side === "left" ? [12, h - 150 - stack]
+              : hint.side === "right" ? [w - 12, h - 150 - stack]
+              : hint.side === "top" ? [w / 2, 64 + stack]
+              : [w / 2, h - 60 - stack];
+            off.dataset.bx = String(pos[0]);
+            off.dataset.by = String(pos[1]);
+            off.style.transform = `translate(${pos[0].toFixed(0)}px, ${pos[1].toFixed(0)}px)`;
+            off.dataset.side = hint.side;
           }
         }
       }
@@ -1144,7 +1166,8 @@ export default function TerrainScene(props: SceneProps) {
           .filter((e) => e.offsetParent !== null)
           .map((e) => e.getBoundingClientRect());
         // body labels and their selection rings have priority over the line labels too
-        for (const el of [lab.sun, lab.earth, ...hits.map((x) => x.btn)]) if (el.style.display !== "none") panels.push(el.getBoundingClientRect());
+        // (and the off-screen direction chips, which are controls)
+        for (const el of [lab.sun, lab.earth, lab.offSun, lab.offEarth, ...hits.map((x) => x.btn)]) if (el.style.display !== "none") panels.push(el.getBoundingClientRect());
         for (const el of [lab.skyline, lab.zero, ...cardinals.map((c) => c.el)]) {
           if (el.style.display === "none") continue;
           const r = el.getBoundingClientRect();
@@ -1329,8 +1352,9 @@ export default function TerrainScene(props: SceneProps) {
       buildProfile(site);
       const id = site.site.id;
       propsRef.current.onAssetState({ state: "loading", siteId: id });
-      // reset both cameras to this site's composed defaults
-      eye = eyeDefault(propsRef.current.lookAz);
+      // reset both cameras to this site's composed defaults (the Horizon view faces a useful body)
+      eye = usefulEye();
+      eyeTouched = false;
       applyEye();
       overviewCam.position.copy(overviewDefault());
       overviewCam.lookAt(0, 0, 0);
@@ -1393,6 +1417,12 @@ export default function TerrainScene(props: SceneProps) {
 
     const setCamera = (mode: CameraMode, anim: boolean) => {
       void anim;
+      // entering the Horizon view without an aimed direction: face the Sun (or Earth) at the
+      // current time; the field of view is kept (crossing navigation may have just set it)
+      if (mode === "eye" && camMode !== "eye" && !eyeTouched && !tracking) {
+        eye = usefulEye(eye.fov);
+        applyEye();
+      }
       camMode = mode;
       activeCam = mode === "eye" ? eyeCam : overviewCam;
       controls.enabled = mode === "overview";
@@ -1425,7 +1455,10 @@ export default function TerrainScene(props: SceneProps) {
       }
       if (c.kind === "reset") {
         // the parent stops tracking before a reset reaches here
-        if (camMode === "eye") eyeTo(eyeDefault(p.lookAz), dur);
+        if (camMode === "eye") {
+          eyeTouched = false;
+          eyeTo(usefulEye(), dur);
+        }
         else overviewTo(overviewDefault(), dur);
       }
     };
@@ -1460,6 +1493,9 @@ export default function TerrainScene(props: SceneProps) {
       });
       terrainMat.dispose();
       renderer.dispose();
+      // Release the GPU context now instead of at garbage collection: mobile browsers allow few
+      // live WebGL contexts and little GPU memory, and Explore <-> Analysis switches remount this.
+      renderer.forceContextLoss();
       canvas.remove();
       labelHost.replaceChildren();
       api.current = null;

@@ -73,31 +73,64 @@ export function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, n
   return [ref, w];
 }
 
-/** Pointer handlers that turn click/drag on an SVG into time selection. */
+/**
+ * Pointer handlers that turn click/drag on an SVG into time selection.
+ * A drag selects at most once per animation frame (the latest position wins): every selection
+ * re-renders the whole Analysis view, and touch screens deliver pointer moves faster than a
+ * phone can render, which queued seconds of work and made the page unresponsive. A press and
+ * the final position are always applied, so no selection is lost.
+ */
 export function useTimePointer(scale: TimeScale, onSelect: (t: number) => void, onHover?: (t: number | null) => void) {
   const dragging = useRef(false);
+  const pending = useRef<{ t: number; raf: number } | null>(null);
+  const latest = useRef(onSelect);
+  latest.current = onSelect;
+  useEffect(() => () => {
+    if (pending.current) cancelAnimationFrame(pending.current.raf);
+  }, []);
+  const flush = () => {
+    const p = pending.current;
+    if (!p) return;
+    cancelAnimationFrame(p.raf);
+    pending.current = null;
+    latest.current(p.t);
+  };
+  const schedule = (t: number) => {
+    if (pending.current) {
+      pending.current.t = t;
+      return;
+    }
+    if (typeof requestAnimationFrame === "undefined") return latest.current(t);
+    pending.current = { t, raf: requestAnimationFrame(() => flush()) };
+  };
   const toT = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
-    const px = ((e.clientX - r.left) / r.width) * scale.width;
+    const px = ((e.clientX - r.left) / Math.max(1, r.width)) * scale.width;
     return Math.min(scale.t1, Math.max(scale.t0, scale.t(px)));
+  };
+  const end = () => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    flush();
   };
   return {
     onPointerDown: (e: React.PointerEvent<SVGSVGElement>) => {
       dragging.current = true;
-      e.currentTarget.setPointerCapture(e.pointerId);
-      onSelect(toT(e));
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        /* capture is optional (e.g. a synthetic or already-released pointer) */
+      }
+      flush();
+      latest.current(toT(e));
     },
     onPointerMove: (e: React.PointerEvent<SVGSVGElement>) => {
       const t = toT(e);
-      onHover?.(t);
-      if (dragging.current) onSelect(t);
+      if (dragging.current) schedule(t);
+      else onHover?.(t);
     },
-    onPointerUp: () => {
-      dragging.current = false;
-    },
-    onPointerCancel: () => {
-      dragging.current = false;
-    },
+    onPointerUp: end,
+    onPointerCancel: end,
     onPointerLeave: () => onHover?.(null),
   };
 }

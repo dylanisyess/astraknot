@@ -55,10 +55,10 @@ describe("source-aware wording", () => {
 });
 
 describe("dataset integration", () => {
-  it("is an optional fifth site: default selection and the four-site limit are unchanged", () => {
+  it("is an optional fifth site: never the default selection; the four-site limit is unchanged", () => {
     const ids = catalog.sites.map((s) => s.id);
     expect(ids).toHaveLength(5);
-    expect(resolveSites(null, ids).ids).toEqual(["apollo17-lm"]);
+    expect(resolveSites(null, ids).ids).toEqual(["im1-odysseus"]);
     expect(MAX_SITES).toBe(4);
     expect(resolveSites(ids, ids).dropped).toEqual([ID]);
   });

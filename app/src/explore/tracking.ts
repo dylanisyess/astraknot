@@ -13,7 +13,7 @@
 // Pure functions: no React, no three.js.
 
 import { fmtDeg } from "../data";
-import type { BodyStatus } from "../status";
+import type { BodyStatus, SelectedStatus } from "../status";
 import type { HorizonMode } from "../types";
 import { azDelta } from "./geometry";
 
@@ -103,4 +103,47 @@ export function trackSummary(s: BodyStatus, body: TrackBody, mode: HorizonMode):
   }
   const near = s.nearCrossing ? " Near an estimated crossing: its center is already below the horizon at this instant, but this 10-minute step is classified as visible." : "";
   return { state: "visible", line: rel, note: near || clamp ? `${near}${clamp}`.trim() : null };
+}
+
+// ------------------------------------------------------------ Horizon view opening and edge hints
+
+/**
+ * Opening direction of the Horizon view when the user has not aimed it yet: the Sun when its
+ * modeled direction is known and its center is no more than 3° below the 0° plane, otherwise
+ * Earth under the same rule, otherwise the site's default azimuth. The body sits a little above
+ * the view centre so the skyline below it stays in frame. Display only: never changes a status.
+ */
+export function usefulEyePose(status: Pick<SelectedStatus, "sun" | "earth">, lookAz: number, fov = 45): { yaw: number; pitch: number; fov: number; body: TrackBody | null } {
+  for (const b of ["sun", "earth"] as const) {
+    const g = status[b].geometry;
+    if (g.azimuthDeg === null || g.elevationDeg === null || !Number.isFinite(g.azimuthDeg) || !Number.isFinite(g.elevationDeg)) continue;
+    if (g.elevationDeg < -3) continue;
+    return { yaw: ((g.azimuthDeg % 360) + 360) % 360, pitch: Math.max(1, Math.min(60, g.elevationDeg - fov / 6)), fov, body: b };
+  }
+  return { yaw: lookAz, pitch: 1, fov, body: null };
+}
+
+/**
+ * Edge-indicator text for a body outside the Horizon view: a relative camera turn (not an
+ * azimuth). `dAz` is the signed azimuth difference from the view direction (azDelta, -180..180;
+ * negative = left), `inAz` whether the body lies within the horizontal field of view (then it is
+ * above or below the frame), `dEl` its elevation minus the view's pitch.
+ */
+export function offscreenHint(name: string, dAz: number, inAz: boolean, dEl: number): { text: string; aria: string; side: "left" | "right" | "top" | "bottom" } {
+  if (inAz) {
+    const up = dEl > 0;
+    const n = Math.abs(dEl).toFixed(0);
+    return {
+      text: `${up ? "▲" : "▼"} Look ${up ? "up" : "down"} ${n}° toward ${name}`,
+      aria: `${name} is ${n}° ${up ? "above" : "below"} the view centre. Center the view on the ${name}.`,
+      side: up ? "top" : "bottom",
+    };
+  }
+  const left = dAz < 0;
+  const n = Math.abs(dAz).toFixed(0);
+  return {
+    text: left ? `◀ Turn ${n}° left toward ${name}` : `Turn ${n}° right toward ${name} ▶`,
+    aria: `${name} is ${n}° to the ${left ? "left" : "right"} of the view direction (a camera turn, not an azimuth). Center the view on the ${name}.`,
+    side: left ? "left" : "right",
+  };
 }

@@ -42,40 +42,42 @@ export function ElevationChart({ samples, times, i0, i1, selected, onSelect, sca
   const y = (v: number) => top + ((yHi - v) / (yHi - yLo)) * ph;
   const x = scale.x;
 
-  const paths: Record<Body, string> = { sun: "", earth: "" };
-  for (const { key } of BODIES) {
-    let pen = false;
-    for (let i = i0; i <= i1; i++) {
-      const v = elevation(samples[i], key);
-      if (v === null) {
-        pen = false; // gaps stay gaps; never drawn as zero
-        continue;
-      }
-      paths[key] += `${pen ? "L" : "M"}${x(times[i]).toFixed(1)},${y(v).toFixed(1)}`;
-      pen = true;
-    }
-  }
-
-  const hPaths: Record<Body, string> = { sun: "", earth: "" };
-  if (horizonAtBody) {
-    for (const { key } of BODIES) {
+  // Series paths depend on the data, the window and the size, never on the selected time: built
+  // once per change instead of on every cursor move.
+  const { paths, hPaths } = useMemo(() => {
+    const yy = (v: number) => top + ((yHi - v) / (yHi - yLo)) * ph;
+    const line = (get: (i: number) => number | null) => {
+      let d = "";
       let pen = false;
       for (let i = i0; i <= i1; i++) {
-        const v = horizonAtBody[key][i];
+        const v = get(i);
         if (v === null) {
-          pen = false; // unknown horizon: a gap, never drawn as 0
+          pen = false; // gaps stay gaps; never drawn as zero
           continue;
         }
-        hPaths[key] += `${pen ? "L" : "M"}${x(times[i]).toFixed(1)},${y(v).toFixed(1)}`;
+        d += `${pen ? "L" : "M"}${scale.x(times[i]).toFixed(1)},${yy(v).toFixed(1)}`;
         pen = true;
       }
+      return d;
+    };
+    const p: Record<Body, string> = { sun: "", earth: "" };
+    const h: Record<Body, string> = { sun: "", earth: "" };
+    for (const { key } of BODIES) {
+      p[key] = line((i) => elevation(samples[i], key));
+      // unknown horizon: a gap, never drawn as 0
+      if (horizonAtBody) h[key] = line((i) => horizonAtBody[key][i]);
     }
-  }
+    return { paths: p, hPaths: h };
+    // scale is rebuilt every render; its geometry is captured by t0, t1, width and left
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [samples, times, i0, i1, horizonAtBody, yLo, yHi, ph, scale.t0, scale.t1, scale.width, scale.left]);
 
+  // y labels at least ~18 px apart (narrow charts are short), on round degree steps
   const span = yHi - yLo;
-  const yStep = span > 16 ? 4 : span > 8 ? 2 : 1;
+  const yStep = [1, 2, 4, 5, 10, 20, 30, 45].find((k) => (ph / span) * k >= 18) ?? 90;
   const yTicks: number[] = [];
   for (let v = Math.ceil(yLo / yStep) * yStep; v <= yHi; v += yStep) yTicks.push(v);
+  const ticks = useMemo(() => timeTicks(scale), [scale.t0, scale.t1, scale.width, scale.left]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const snap = (t: number) => Math.min(i1, Math.max(i0, nearestIndex(times, t)));
   const pointer = useTimePointer(scale, (t) => onSelect(snap(t)), (t) => setHover(t === null ? null : snap(t)));
@@ -107,7 +109,7 @@ export function ElevationChart({ samples, times, i0, i1, selected, onSelect, sca
         <text className="horizon-label" x={scale.left + 6} y={y(0) - 5}>
           {zeroLabel}
         </text>
-        {timeTicks(scale).map((tk) => (
+        {ticks.map((tk) => (
           <g key={tk.t}>
             {tk.major && <line className="grid grid-v" x1={x(tk.t)} x2={x(tk.t)} y1={top} y2={top + ph} />}
             <line className="axis-tick" x1={x(tk.t)} x2={x(tk.t)} y1={top + ph} y2={top + ph + (tk.label ? 5 : 3)} />

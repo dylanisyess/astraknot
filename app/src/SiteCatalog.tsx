@@ -143,8 +143,17 @@ export function SiteChips({ sc, theme }: { sc: Scenario; theme: "explore" | "pag
             </span>
           );
         })}
-        <button type="button" className="chip-add" onClick={() => setOpen(true)} aria-haspopup="dialog" data-testid="add-site">
-          + Add site{more > 0 ? <span className="chip-more"> ({more} more)</span> : null}
+        <button
+          type="button"
+          className="chip-add"
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+          aria-label={`${sc.selIds.length >= MAX_SITES ? "Site catalog (comparison full)" : sc.selIds.length > 1 ? "Add another site" : "Add site"}: ${sc.selIds.length} of ${MAX_SITES} sites compared, ${more} more in the catalog`}
+          data-testid="add-site"
+        >
+          <span className="chip-add-plus" aria-hidden="true">+</span>
+          {sc.selIds.length >= MAX_SITES ? "Comparison full" : sc.selIds.length > 1 ? "Add another site" : "Add site"}
+          {more > 0 && sc.selIds.length < MAX_SITES ? <span className="chip-more" aria-hidden="true"> ({more} more)</span> : null}
         </button>
       </div>
       <p className="chip-count small">
@@ -270,7 +279,7 @@ export function MixedTerrainNotice({ sc }: { sc: Scenario }) {
       </p>
       <div className="mixed-actions">
         <button type="button" className="primary" onClick={() => sc.setMode("smooth")} data-testid="use-common-smooth">
-          Compare all {sc.selIds.length} sites with the Smooth model
+          {sc.selIds.length === 1 ? "Use the Smooth model" : `Compare all ${sc.selIds.length} sites with the Smooth model`}
         </button>
         {sc.selIds.length > lacking.length &&
           lacking.map((m, k) => (
@@ -307,7 +316,7 @@ export function PendingCard({ sc, p, compact = false }: { sc: Scenario; p: Pendi
         {p.state === "error" && <button type="button" onClick={() => sc.retrySite(p.id)} data-testid={`retry-${p.id}`}>Retry</button>}
         {p.state === "no-terrain" && (
           <button type="button" className="primary" onClick={() => sc.setMode("smooth")} data-testid="use-common-smooth">
-            Compare all {sc.selIds.length} sites with the Smooth model
+            {sc.selIds.length === 1 ? "Use the Smooth model" : `Compare all ${sc.selIds.length} sites with the Smooth model`}
           </button>
         )}
         {sc.selIds.length > 1 && <button type="button" onClick={() => sc.removeSite(p.id)}>Remove {p.short}</button>}

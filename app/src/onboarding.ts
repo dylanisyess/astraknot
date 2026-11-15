@@ -1,4 +1,4 @@
-// First-visit introduction and the guided Apollo 17 example (presentation only).
+// First-visit introduction and the guided south-polar example (presentation only).
 // - Entry intent is decided from the URL the visitor arrived with, captured in main.tsx before
 //   the app rewrites the address to the canonical scenario (useScenario writes defaults).
 // - "Onboarded" is a per-browser convenience flag; storage may be unavailable, in which case it
@@ -60,20 +60,50 @@ export function showWelcomeOnEntry(entrySearch: string, store?: FlagStore): bool
 }
 
 /**
- * The guided example: a hypothetical 14-day Terrain mission at the historic Apollo 17 landing
- * site within the 120-day dataset. Chosen from the site's own data (see docs/STATUS.md,
- * "Onboarding"): the arrival is shortly before a modeled sunrise, so the baseline has nearly
- * continuous sunlight and the +3-day slip runs into lunar night. The guide applies the delay;
- * the example starts with none.
+ * The guided example: a hypothetical 14-day Terrain mission at the IM-1 Odysseus landing point
+ * (Malapert A region, south-polar) within the 120-day dataset, with the dataset's dates; not a
+ * replay of the 2024 IM-1 landing. Chosen by a reproducible rule over CR1, Athena and Odysseus
+ * (docs/STATUS.md, "South-polar opening example"): every 00:00 UTC arrival whose first Sun
+ * crossing at least 1 h after arrival is a terrain crossing (Sun center and skyline both at least
+ * 1° above the 0° plane), whose Smooth and Terrain direct-sunlight shares differ by at least 5 pp,
+ * and whose +3-day slip changes direct sunlight or Earth visibility by at least 10 pp; then
+ * non-provisional sites first, the taller ridge, the earlier crossing, the earlier arrival.
+ * Result: arrival 2026-12-18 00:00 UTC; the Sun center clears a 5.28° ridge (azimuth 66.7°)
+ * near 10:40 UTC. The guide applies the delay; the example starts with none.
  */
 export const EXAMPLE = {
   datasetId: "lvn-2026-12-01-120d",
-  siteId: "apollo17-lm",
-  arrival: "2027-01-13T00:00:00Z",
+  siteId: "im1-odysseus",
+  arrival: "2026-12-18T00:00:00Z",
   days: 14,
   delay: 3,
   horizon: "terrain",
+  /** Recommended comparison site (recommendedComparison over the catalog). */
+  compareSiteId: "im2-athena",
+  /** The guide starts this long before the Sun crossing: the whole nominal disk is still behind the ridge. */
+  leadMs: 3 * 3_600_000,
 } as const;
+
+/** Catalog fields the comparison rule reads. */
+export interface ComparisonCandidate {
+  id: string;
+  latitude_deg: number;
+  location_type: string;
+  capabilities: { provisional?: string | null; terrain_horizon: { available: boolean } };
+}
+
+/**
+ * Recommended comparison site for the guide: another south-polar catalog site (latitude at or
+ * below 75° S) with a terrain horizon that is neither provisional nor a user-defined study point,
+ * in catalog order. Compared with the same windows and horizon model as every compared site
+ * (the scenario is shared), so differences are site differences. Null when none qualifies.
+ */
+export function recommendedComparison(sites: ComparisonCandidate[], openingId: string): string | null {
+  const ok = sites.find(
+    (c) => c.id !== openingId && c.latitude_deg <= -75 && c.capabilities.terrain_horizon.available && !c.capabilities.provisional && c.location_type !== "user_defined_study_point",
+  );
+  return ok ? ok.id : null;
+}
 
 /** Search string that loads the example (no delay yet; viewing time at the arrival; Site overview). */
 export function exampleSearch(): string {

@@ -3,7 +3,7 @@
 // - TerrainDetails: the one expandable detail area (overlay choice, threshold, stats,
 //   legend, inspection, method);
 // - TerrainToggle: the primary "Highlight steep terrain" toggle on the stage;
-// - TerrainComparison: the matched two-site table in Analysis.
+// - TerrainComparison: the matched comparison table in Analysis (one to four sites).
 // Every number comes from the screening asset (pipeline/slope.py) through slope.ts.
 // Nothing here touches the observer, the Sun/Earth status or mission metrics.
 
@@ -283,7 +283,7 @@ export function TerrainDetails({ state, siteShort, provisional, layer, setLayer,
   );
 }
 
-// ------------------------------------------------------------------ Analysis: matched two-site comparison
+// ------------------------------------------------------------------ Analysis: matched multi-site comparison
 
 export interface ComparisonSite {
   id: string;
@@ -325,7 +325,7 @@ export function TerrainComparison({ sites, thresholdDeg, setThreshold, missionLa
     <section className="card terrain-compare" aria-labelledby="tc-h" data-testid="terrain-compare">
       <h2 id="tc-h">{SCREENING_NAME}: matched {radius ?? 500} m footprint</h2>
       <p className="muted small">
-        {SCREENING_PURPOSE} {mixedScale ? "Same slope method, radius and threshold at every site, but not the same source DEM." : `Same DEM, slope method, radius and threshold at ${sites.length > 2 ? "every" : "both"} site${sites.length > 1 ? "s" : ""}.`}{" "}
+        {SCREENING_PURPOSE} {mixedScale ? "Same slope method, radius and threshold at every site, but not the same source DEM." : `Same DEM, slope method, radius and threshold at ${sites.length > 2 ? "every site" : sites.length === 2 ? "both sites" : "this site"}.`}{" "}
         No single combined score ranks the sites: terrain steepness and Sun/Earth availability are shown side by side as tradeoffs.
       </p>
       {mixedScale && (

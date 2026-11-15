@@ -75,10 +75,10 @@ export function parseUrlState(search: string): UrlState {
 export const MAX_SITES = 4;
 /**
  * Sites compared when a link names none: DEFAULT_SITES where the dataset has them (the 120-day
- * release opens on Apollo 17 alone); otherwise the first two catalog sites (all sites of the
- * accepted 60-day release, so its links are unchanged).
+ * release opens on the south-polar Odysseus site alone, the guided example's site); otherwise the
+ * first two catalog sites (all sites of the accepted 60-day release, so its links are unchanged).
  */
-export const DEFAULT_SITES = ["apollo17-lm"];
+export const DEFAULT_SITES = ["im1-odysseus"];
 export const DEFAULT_SITE_COUNT = 2;
 
 export interface SiteRequest {

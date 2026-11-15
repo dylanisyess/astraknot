@@ -543,8 +543,10 @@ h4 { font-size: 0.85rem; margin: 10px 0 4px; }
 .chip-spin { width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: chip-rot 0.9s linear infinite; display: inline-block; }
 @keyframes chip-rot { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .chip-spin { animation: none; border-right-color: currentColor; opacity: 0.6; } }
-.chip-add { font: inherit; font-size: 12.5px; padding: 4px 11px; border-radius: 999px; border: 1px dashed var(--axis); background: transparent; color: var(--text-secondary); cursor: pointer; }
-.chip-add:hover { border-style: solid; color: var(--text-primary); }
+.chip-add { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-size: 12.5px; font-weight: 600; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--axis); background: transparent; color: var(--text-primary); cursor: pointer; }
+.chip-add:hover { background: rgba(127, 127, 127, 0.12); }
+.chip-add:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.chip-add-plus { font-size: 14px; line-height: 1; font-weight: 700; }
 .chip-more { color: var(--text-muted); font-weight: 400; }
 .chip-count { margin: 0; color: var(--text-muted); }
 
@@ -630,6 +632,8 @@ h4 { font-size: 0.85rem; margin: 10px 0 4px; }
 .finder-field > span { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
 .finder-drawer input[type="number"], .finder-drawer input[type="date"], .finder-drawer select { font: inherit; font-size: 13px; height: 31px; padding: 3px 7px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-0); color: var(--text-primary); min-width: 0; width: 100%; }
 .finder-field.inline select { width: auto; max-width: 100%; }
+.finder-drawer select option { color: var(--text-primary); background-color: var(--surface-0); }
+.finder-drawer select option:disabled { color: var(--text-muted); }
 .finder-drawer button { font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-0); color: var(--text-primary); cursor: pointer; }
 .finder-drawer button:disabled { opacity: 0.5; cursor: not-allowed; }
 .finder-drawer button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
@@ -712,3 +716,26 @@ h4 { font-size: 0.85rem; margin: 10px 0 4px; }
   .fr-apply-wrap .fr-apply { width: 100%; }
   .fr-apply-sub { text-align: left; }
 }
+
+/* ---------------------------------------------------------------- Analysis: takeaway, Method & limits, chart recovery */
+.takeaway { grid-column: 1 / -1; padding: 14px 18px; border-left: 4px solid var(--text-primary); }
+.tk-context { margin: 0 0 8px; color: var(--text-secondary); }
+.tk-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 1rem; line-height: 1.45; }
+.tk-list li { padding-left: 0; }
+.tk-earth { color: var(--text-secondary); }
+.tk-prov { font-size: 0.85rem; }
+.tk-foot { margin: 8px 0 0; }
+.link-btn { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.link-btn:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.method-limits { grid-column: 1 / -1; }
+.method-limits > summary { cursor: pointer; list-style-position: outside; }
+.method-limits > summary h2 { display: inline; margin: 0; font-size: 1.15rem; }
+.method-limits > summary:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+.method-limits[open] > summary { margin-bottom: 8px; }
+.method-limits h3 { margin: 16px 0 6px; }
+.analysis-foot { grid-column: 1 / -1; display: grid; gap: 2px; }
+.analysis-foot p { margin: 0; }
+.viz-slot { min-width: 0; }
+.viz-error { border: 1px solid var(--warn-border); background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 10px 12px; margin: 8px 0; }
+.viz-error p { margin: 0 0 6px; }
+.viz-error button { font: inherit; }

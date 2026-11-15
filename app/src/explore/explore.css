@@ -138,6 +138,10 @@
   height: 31px;
   color-scheme: dark;
 }
+/* the option list is drawn by the browser (white on some systems): give it its own readable colors */
+.explore select option { color: #f0efec; background-color: #1c1c1a; }
+.explore select option:disabled { color: #8a8880; }
+.explore select option:checked { color: #111; background-color: #f0efec; }
 .explore input:focus-visible, .explore select:focus-visible { outline: 2px solid var(--x-focus); outline-offset: 1px; }
 .seg { display: flex; background: var(--x-raise); border: 1px solid var(--x-border-2); border-radius: 5px; padding: 2px; gap: 2px; }
 .seg-b {
@@ -1063,7 +1067,9 @@ p.ts-key .sl-sw { display: inline-block; vertical-align: -1px; margin-right: 4px
 .chips-explore .site-chip button { color: var(--x-text); font-size: 12px; }
 .chips-explore .site-chip.on .chip-main { color: var(--x-text); }
 .chips-explore .chip-x { color: var(--x-muted) !important; }
-.chips-explore .chip-add { color: var(--x-text-2); border-color: var(--x-border-2); font-size: 12px; }
+.chips-explore .chip-add { color: var(--x-text); border-color: var(--x-border-2); background: var(--x-raise); font-size: 12px; }
+.chips-explore .chip-add:hover { border-color: var(--x-text-2); background: var(--x-raise-2); }
+.chips-explore .chip-add:focus-visible { outline: 2px solid var(--x-focus); outline-offset: 2px; }
 .chips-explore .chip-count { color: var(--x-muted); font-size: 10.5px; }
 .chips-explore .chip-prov { background: var(--x-caution-bg); color: var(--x-caution); }
 .explore .mixed-notice { background: var(--x-caution-bg); border-color: rgba(216, 181, 106, 0.45); color: var(--x-caution); font-size: 12px; }

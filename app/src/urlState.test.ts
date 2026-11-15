@@ -16,11 +16,11 @@ describe("URL state", () => {
     expect(resolveActive(s.site, sites.ids)).toBe("im2-athena");
   });
 
-  it("a link without sites opens on Apollo 17 alone where the dataset has it; the 60-day release keeps both of its sites", () => {
+  it("a link without sites opens on Odysseus alone (the guided example's site) where the dataset has it; the 60-day release keeps both of its sites", () => {
     const four = ["im2-athena", "connecting-ridge-cr1", "im1-odysseus", "apollo17-lm"];
-    expect(resolveSites(null, four).ids).toEqual(["apollo17-lm"]);
-    expect(resolveSites(["nope"], four).ids).toEqual(["apollo17-lm"]);
-    expect(resolveActive(null, resolveSites(null, four).ids)).toBe("apollo17-lm");
+    expect(resolveSites(null, four).ids).toEqual(["im1-odysseus"]);
+    expect(resolveSites(["nope"], four).ids).toEqual(["im1-odysseus"]);
+    expect(resolveActive(null, resolveSites(null, four).ids)).toBe("im1-odysseus");
     expect(resolveSites(null, IDS).ids).toEqual(IDS);
     expect(resolveSites(["im2-athena", "connecting-ridge-cr1"], four).ids).toEqual(IDS); // explicit links unchanged
   });

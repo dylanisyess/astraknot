@@ -1,9 +1,10 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Component, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { ArrivalFinder, FindWindowsButton } from "./ArrivalFinder";
 import Explore, { type ExploreGuide } from "./explore/Explore";
 import { TerrainComparison } from "./explore/TerrainScreening";
 import { useSlopeAssets } from "./explore/useSlope";
 import { CR1_5M } from "./assessment";
+import { fmtPixelM } from "./explore/slope";
 import { ElevationChart } from "./ElevationChart";
 import { Panorama } from "./Panorama";
 import { Timeline, type TimelineGroup, type TimelineTrack } from "./Timeline";
@@ -11,7 +12,7 @@ import { timeScale, useWidth } from "./axis";
 import { compass, fmtDeg, fmtLat, fmtLonEast, fmtUtc, nearestIndex } from "./data";
 import { Locator } from "./Locator";
 import { DatasetBar } from "./DatasetBar";
-import { EXAMPLE, type GuideStep, exampleSearch, isExampleScenario, showWelcomeOnEntry, writeOnboarded } from "./onboarding";
+import { EXAMPLE, type GuideStep, exampleSearch, isExampleScenario, isExplicitScenario, recommendedComparison, showWelcomeOnEntry, writeOnboarded } from "./onboarding";
 import { Welcome } from "./welcome/Welcome";
 import { loadIndexedDataset } from "./datasets";
 import { MixedTerrainNotice, PendingCard, SiteChips, pendingText } from "./SiteCatalog";
@@ -64,8 +65,13 @@ import { type View, parseUrlState, writeUrlState } from "./urlState";
 export function App({ entrySearch = typeof window === "undefined" ? "" : window.location.search }: { entrySearch?: string }) {
   const [ds, setDs] = useState<Dataset | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // A root visit without a scenario opens the south-polar example scenario (the default first-use
+  // scenario, without the guide). Any link that names a scenario or dataset is used as given.
+  const explicit = isExplicitScenario(entrySearch);
   // the search that selects the dataset; changes only when the example needs another dataset
-  const [load, setLoad] = useState({ search: entrySearch, n: 0 });
+  const [load, setLoad] = useState({ search: explicit ? entrySearch : exampleSearch(), n: 0 });
+  // the address the workspace reads its scenario from (undefined: the current address)
+  const [wsSearch, setWsSearch] = useState<string | undefined>(explicit ? undefined : exampleSearch());
   const [welcome, setWelcome] = useState(() => showWelcomeOnEntry(entrySearch));
   const [help, setHelp] = useState<{ current: string | null } | null>(null);
   const [guide, setGuide] = useState<GuideStep | null>(null);
@@ -79,23 +85,36 @@ export function App({ entrySearch = typeof window === "undefined" ? "" : window.
     return () => { live = false; };
   }, [load]);
 
-  /** The explicit action that changes the scenario: load the example and start the guide. */
-  const startExample = () => {
-    writeOnboarded();
+  /** Load the example scenario into a fresh workspace (reloading the dataset if another one is open). */
+  const loadExample = () => {
     const q = exampleSearch();
     window.history.replaceState(null, "", `${window.location.pathname}${q}${window.location.hash}`);
     if (ds && ds.manifest.dataset_id !== EXAMPLE.datasetId) {
       setDs(null);
       setLoad((l) => ({ search: q, n: l.n + 1 }));
     }
+    setWsSearch(q);
     setWsKey((k) => k + 1); // a fresh scenario read from the example address
+  };
+  /** The explicit action that changes the scenario: load the example and start the guide. */
+  const startExample = () => {
+    writeOnboarded();
+    loadExample();
     setGuide(1);
     setWelcome(false);
     setHelp(null);
   };
+  /** First visit, "Open navigator": the default first-use scenario (the example) without the guide. */
   const openNavigator = () => {
     writeOnboarded();
+    if (!explicit) loadExample();
     setWelcome(false);
+  };
+  const endGuide = (done: boolean) => {
+    if (done) writeOnboarded();
+    setGuide(null);
+    // keyboard focus lands somewhere sensible: the control that reopens the guide
+    window.setTimeout(() => document.querySelector<HTMLElement>("[data-testid=how-to-use]")?.focus(), 0);
   };
   const openHelp = () => {
     const search = window.location.search;
@@ -108,7 +127,11 @@ export function App({ entrySearch = typeof window === "undefined" ? "" : window.
       <main className="page">
         <div className="notice notice-error" role="alert">
           <strong>Data could not be loaded.</strong> {error}
-          <p>No substitute data is shown. <a href="?ds=lvn-2026-12-01-120d">Open the current dataset</a> or reload to retry.</p>
+          <p>
+            No substitute data is shown.{" "}
+            <button type="button" onClick={() => setLoad((l) => ({ ...l, n: l.n + 1 }))} data-testid="data-retry">Retry</button>{" "}
+            or <a href="?ds=lvn-2026-12-01-120d">open the current dataset</a>.
+          </p>
         </div>
       </main>
     );
@@ -116,15 +139,64 @@ export function App({ entrySearch = typeof window === "undefined" ? "" : window.
   if (!ds) return <main className="page"><p className="muted" role="status">Loading data…</p></main>;
   return (
     <>
-      <Workspace
-        key={wsKey}
-        ds={ds}
-        onHelp={openHelp}
-        guide={guide === null ? null : { step: guide, setStep: setGuide, exit: () => setGuide(null), finish: () => { writeOnboarded(); setGuide(null); } }}
-      />
+      <ViewBoundary key={wsKey} onReset={() => setWsKey((k) => k + 1)}>
+        <Workspace
+          ds={ds}
+          search={wsSearch}
+          onHelp={openHelp}
+          guide={guide === null ? null : { step: guide, setStep: setGuide, exit: () => endGuide(false), finish: () => endGuide(true) }}
+        />
+      </ViewBoundary>
       {help && <Welcome mode="dialog" current={help.current} onExplore={startExample} onOpen={() => setHelp(null)} />}
     </>
   );
+}
+
+/**
+ * Last-resort recovery for the whole workspace: an unexpected rendering error shows what failed
+ * and a way back, instead of an empty page. The scenario stays in the address bar.
+ */
+class ViewBoundary extends Component<{ onReset: () => void; children: ReactNode }, { error: string | null }> {
+  state = { error: null as string | null };
+  static getDerivedStateFromError(e: unknown) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+  render() {
+    if (this.state.error === null) return this.props.children;
+    return (
+      <main className="page">
+        <div className="notice notice-error" role="alert" data-testid="view-error">
+          <strong>This view could not be shown.</strong> {this.state.error}
+          <p>The scenario in the address bar is unchanged.</p>
+          <p className="gp-actions">
+            <button type="button" onClick={() => { this.setState({ error: null }); this.props.onReset(); }} data-testid="view-retry">Try again</button>{" "}
+            <button type="button" onClick={() => window.location.reload()}>Reload the page</button>
+          </p>
+        </div>
+      </main>
+    );
+  }
+}
+
+/**
+ * One chart or map of Analysis: if it fails to draw, the rest of Analysis stays usable and the
+ * failure says so, with a redraw action and where the same information is available as text.
+ */
+export class VizBoundary extends Component<{ name: string; fallbackHint: string; children: ReactNode }, { error: string | null; n: number }> {
+  state = { error: null as string | null, n: 0 };
+  static getDerivedStateFromError(e: unknown) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+  render() {
+    if (this.state.error === null) return <div key={this.state.n} className="viz-slot">{this.props.children}</div>;
+    return (
+      <div className="viz-error" role="alert" data-testid="viz-error" data-viz={this.props.name}>
+        <p><strong>The {this.props.name} could not be drawn.</strong> {this.state.error}</p>
+        <p className="small">{this.props.fallbackHint}</p>
+        <button type="button" onClick={() => this.setState((s) => ({ error: null, n: s.n + 1 }))} data-testid="viz-retry">Redraw {this.props.name}</button>
+      </div>
+    );
+  }
 }
 
 /** Short description of the scenario in an address, for the "replaces the current scenario" note. */
@@ -171,17 +243,19 @@ export function Workspace({ ds, search, onHelp, guide = null }: { ds: Dataset; s
     opener.current = document.activeElement as HTMLElement | null;
     setFinder({ mounted: true, open: true });
   };
-  // Guide step 3: the finder with example inputs (all dataset sites for a site comparison). Only
-  // its inputs are set; nothing is searched or applied for the user.
+  // Guide step 3: the finder with example inputs (the sites being compared, so its ranking uses
+  // the same sites). Only its inputs are set; nothing is searched or applied for the user.
   const [preset, setPreset] = useState<{ n: number; chosen: string[] } | null>(null);
   const [guideFinder, setGuideFinder] = useState(false);
   const exploreGuide: ExploreGuide | null = guide && {
     ...guide,
     delayDays: EXAMPLE.delay,
+    leadMs: EXAMPLE.leadMs,
+    compareSiteId: recommendedComparison(ds.catalog.sites, EXAMPLE.siteId),
     finderOpened: guideFinder,
     finderOpen: finder.open,
     openFinder: () => {
-      if (!guideFinder) setPreset((p) => ({ n: (p?.n ?? 0) + 1, chosen: sc.allIds.filter((id) => !isUserDefined(sc.catalogSite(id))) }));
+      if (!guideFinder) setPreset((p) => ({ n: (p?.n ?? 0) + 1, chosen: sc.selIds.filter((id) => !isUserDefined(sc.catalogSite(id))) }));
       setGuideFinder(true);
       openFinder();
     },
@@ -213,7 +287,7 @@ function GuidePaused({ sc, guide }: { sc: Scenario; guide: AppGuide }) {
           Retry below, open Analysis, or exit the guide and use the navigator.
         </p>
       ) : p ? (
-        <p>Loading the {p.short} example…</p>
+        <p>Loading {p.short}… the guide continues when it is ready.</p>
       ) : (
         <p>Guide paused (step {guide.step} of 3): it continues in Explore.</p>
       )}
@@ -328,42 +402,26 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
   const synthetic = manifest.is_synthetic || views.some((v) => v.data.site.is_synthetic);
   const arrivalDate = utcDateString(arrival);
   const pendingNames = sc.pending.map((p) => `${p.short} (${p.state === "loading" ? "loading" : p.state === "error" ? "not loaded" : "no terrain horizon"})`);
+  // "Method & limits": one disclosure for the long explanations; opened from the takeaway link too
+  const [methodOpen, setMethodOpen] = useState(false);
+  const methodRef = useRef<HTMLDetailsElement>(null);
+  const openMethod = () => {
+    setMethodOpen(true);
+    window.setTimeout(() => {
+      methodRef.current?.scrollIntoView?.({ block: "start" });
+      methodRef.current?.querySelector<HTMLElement>("summary")?.focus();
+    }, 0);
+  };
 
-  return (
-    <main className="page" id="analysis">
-      <header className="masthead">
-        <div>
-          <p className="eyebrow">Lunar Landing Site Navigator · {selIds.length}-site comparison · {mode === "terrain" ? "Terrain horizon" : "Smooth horizon"}</p>
-          <h1>Sun and Earth visibility: {joinNames(sc.selIds.map((id) => views.find((v) => v.entry.id === id)?.profile.short ?? sc.catalogSite(id).short_name))}</h1>
-        </div>
-        <div className="badges">
-          {synthetic ? <span className="badge badge-warn">⚠ Synthetic data</span> : <span className="badge">Real data · JPL Horizons</span>}
-          <span className="badge">All times UTC</span>
-        </div>
-      </header>
-
-      {mode === "terrain" ? (
-        <div className="banner banner-terrain" role="note" data-mode="terrain">
-          <strong>Terrain horizon for every site shown.</strong> “Visible” means the body’s center is above the skyline
-          computed from each site’s terrain model (named on its card) for an observer 1 m above the modeled surface. This applies to both the Sun and Earth:
-          part of either disk can still be above the skyline when its center is hidden. These are terrain-model results for{" "}
-          <span data-field="coordinate-basis">{coordinateBasis(views.map((v) => v.profile))}</span>, not the conditions of an actual lander. Earth visible is a geometric opportunity, not a
-          guaranteed radio link. Sun visible is not electrical power output.
-        </div>
-      ) : (
-        <div className="banner" role="note" data-mode="smooth">
-          <strong>⚠ Smooth horizon for every site shown: terrain ignored (comparison mode).</strong> “Visible” means the
-          body’s center is above the local horizontal plane (0°), for both the Sun and Earth; part of either disk can still
-          be above 0° when its center is not. Real terrain can hide the Sun or Earth when this view says visible. Earth visible is a geometric opportunity, not a guaranteed radio link. Sun visible is not
-          electrical power output.
-        </div>
-      )}
-      <MixedTerrainNotice sc={sc} />
-      <LinkNotices sc={sc} />
-
-      <section className="card locator-card" aria-labelledby="loc-h">
-        <h2 id="loc-h">Sites</h2>
-        <SiteChips sc={sc} theme="page" />
+  // Everything below that does not depend on the selected time is built once per scenario change,
+  // not on every cursor move (a drag on a chart selects a new time every frame).
+  const viewIds = views.map((v) => v.entry.id).join(",");
+  const metricsKey = `${mode}|${baseW.start}|${baseW.end}|${actW.start}|${actW.end}|${effDelay}|${viewIds}`;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const timelineTracks = useMemo(() => tracks, [metricsKey]);
+  const locator = useMemo(
+    () => (
+      <VizBoundary name="site map" fallbackHint="Site coordinates are listed under Method & limits.">
         <Locator
           points={ds.catalog.sites.map((c) => ({
             id: c.id,
@@ -374,6 +432,54 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
             active: c.id === active,
           }))}
         />
+      </VizBoundary>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ds, selIds.join(","), active, viewIds],
+  );
+  const intervalTables = useMemo(
+    () => views.map((v) => <IntervalTables key={v.entry.id} label={v.profile.label} intervals={v.intervals} baseW={baseW} actW={effDelay ? actW : null} delayedLabel={delayedLabel} />),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [metricsKey],
+  );
+  const siteSources = useMemo(
+    () => views.map((v) => <SiteSources key={v.entry.id} v={v} mode={mode} />),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [viewIds, mode],
+  );
+
+  return (
+    <main className="page" id="analysis">
+      <header className="masthead">
+        <div>
+          <p className="eyebrow">Lunar Landing Site Navigator · {selIds.length === 1 ? "one site" : `${selIds.length}-site comparison`} · {mode === "terrain" ? "Terrain horizon" : "Smooth horizon"}</p>
+          <h1>Sun and Earth visibility: {joinNames(sc.selIds.map((id) => views.find((v) => v.entry.id === id)?.profile.short ?? sc.catalogSite(id).short_name))}</h1>
+        </div>
+        <div className="badges">
+          {synthetic ? <span className="badge badge-warn">⚠ Synthetic data</span> : <span className="badge">Real data · JPL Horizons</span>}
+          <span className="badge">All times UTC</span>
+        </div>
+      </header>
+
+      <Takeaway sc={sc} delayedLabel={delayedLabel} onMethod={openMethod} />
+      {mode === "terrain" ? (
+        <div className="banner banner-terrain" role="note" data-mode="terrain">
+          <strong>Terrain horizon for every site shown.</strong> Visible means the body’s center is above each site’s modeled skyline, for an observer 1 m above
+          the terrain model at <span data-field="coordinate-basis">{coordinateBasis(views.map((v) => v.profile))}</span>; not the conditions of an actual lander.
+        </div>
+      ) : (
+        <div className="banner" role="note" data-mode="smooth">
+          <strong>⚠ Smooth horizon for every site shown: terrain ignored (comparison mode).</strong> Visible means the body’s center is above the flat 0° plane.
+          Real terrain can hide the Sun or Earth when this view says visible.
+        </div>
+      )}
+      <MixedTerrainNotice sc={sc} />
+      <LinkNotices sc={sc} />
+
+      <section className="card locator-card" aria-labelledby="loc-h">
+        <h2 id="loc-h">Sites</h2>
+        <SiteChips sc={sc} theme="page" />
+        {locator}
       </section>
 
       <section className="card controls-card" aria-labelledby="ctl-h">
@@ -505,9 +611,7 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
           );
         })}
         <p className="muted small compare-foot">
-          Shares of elapsed window time; darkness means the Sun’s center is below the horizon of the model shown. These cards
-          compare modeled visibility for the same windows only; they do not rank the sites, and neither point is presented as a
-          better landing site overall. Percentages use body centers. Boundaries are estimates on the 10-minute reporting grid, not event times of guaranteed accuracy.
+          Same windows and model for every site; not a ranking of landing sites. Shares of window time for body centers, on the 10-minute grid (see Method &amp; limits).
         </p>
       </section>
 
@@ -583,6 +687,7 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
           <p className="provisional small" role="note">⚠ {activeView.profile.provisionalTerrain}. Showing the {terrainModelLabel(activeSite)}.</p>
         )}
         <div ref={panoRef} className="plots" data-site={active}>
+          <VizBoundary key={`${active}|${mode}`} name="horizon panorama" fallbackHint="The Sun and Earth readouts above give the same positions as text.">
           <Panorama
             key={active}
             width={panoWidth}
@@ -596,6 +701,7 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
             selectedTime={cursorT}
             centerAz={activeView.profile.panoramaCenterAz}
           />
+          </VizBoundary>
         </div>
         {mode === "terrain" && activeSite.terrain_horizon && <SiteShiftNote site={activeSite} t={activeSite.terrain_horizon} />}
         <HorizonFacts site={activeSite} profile={activeView.profile} mode={mode} />
@@ -605,7 +711,9 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
             <h3>Visibility timelines (all compared sites, one UTC axis)</h3>
           </div>
           {pendingNames.length > 0 && <p className="muted small" data-testid="timeline-missing">Not on the timeline: {pendingNames.join(", ")}.</p>}
-          <Timeline scale={scale} tracks={tracks} cursor={cursorT} onSelect={(t) => setCursor(clampNum(nearestIndex(times, t), i0, i1))} />
+          <VizBoundary name="visibility timeline" fallbackHint="The visibility intervals tables below list the same intervals.">
+            <Timeline scale={scale} tracks={timelineTracks} cursor={cursorT} onSelect={(t) => setCursor(clampNum(nearestIndex(times, t), i0, i1))} />
+          </VizBoundary>
           <div className="chart-head sub">
             <h3>Elevation of body centers: {activeView.profile.label}</h3>
             <ul className="legend" aria-label="Elevation legend">
@@ -616,6 +724,7 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
               {mode === "terrain" && <li><span className="swatch swatch-h-earth" />Skyline under the Earth</li>}
             </ul>
           </div>
+          <VizBoundary key={`${active}|${mode}`} name="elevation chart" fallbackHint="The slider below still sets the selected time; the readouts give the elevations as text.">
           <ElevationChart
             key={active}
             samples={activeSite.samples}
@@ -628,6 +737,7 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
             horizonAtBody={horizonAtBody}
             zeroLabel={mode === "terrain" ? "0° (smooth-horizon comparison; terrain skyline dashed in color)" : "0° smooth horizon (terrain ignored)"}
           />
+          </VizBoundary>
         </div>
         <div className="slider-row">
           <button type="button" onClick={() => setCursor(cursor - 1)} disabled={cursor <= i0} aria-label="Back 10 minutes">‹</button>
@@ -643,17 +753,36 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
           />
           <button type="button" onClick={() => setCursor(cursor + 1)} disabled={cursor >= i1} aria-label="Forward 10 minutes">›</button>
         </div>
-        <p className="muted small">
-          Drag on the timeline or chart, or use the slider (arrow keys step 10 minutes, Page Up/Down larger steps, Home/End
-          the window edges). One UTC time is shared by every site, the cards, the readouts, the panorama and the charts.
-        </p>
-        {views.map((v) => (
-          <IntervalTables key={v.entry.id} label={v.profile.label} intervals={v.intervals} baseW={baseW} actW={effDelay ? actW : null} delayedLabel={delayedLabel} />
-        ))}
+        <p className="muted small">Drag on the timeline or chart, or use the slider; one UTC time is shared by every view.</p>
+        {intervalTables}
       </section>
 
-      <section className="card sources-card" aria-labelledby="src-h">
-        <h2 id="src-h">Method, sources and limitations</h2>
+      <details
+        className="card sources-card method-limits"
+        id="method-limits"
+        ref={methodRef}
+        open={methodOpen}
+        onToggle={(e) => setMethodOpen((e.currentTarget as HTMLDetailsElement).open)}
+        data-testid="method-limits"
+      >
+        <summary>
+          <h2 id="src-h">Method &amp; limits</h2>
+          <span className="muted small"> How visibility is computed, sources per site, and what the results do not mean</span>
+        </summary>
+        <h3>What “visible” means</h3>
+        {mode === "terrain" ? (
+          <p className="small" data-field="model-detail">
+            “Visible” means the body’s center is above the skyline computed from each site’s terrain model (named on its card) for an observer 1 m above the
+            modeled surface. This applies to both the Sun and Earth: part of either disk can still be above the skyline when its center is hidden. These are
+            terrain-model results for {coordinateBasis(views.map((v) => v.profile))}, not the conditions of an actual lander.
+          </p>
+        ) : (
+          <p className="small" data-field="model-detail">
+            “Visible” means the body’s center is above the local horizontal plane (0°), for both the Sun and Earth; part of either disk can still be above 0°
+            when its center is not. Real terrain can hide the Sun or Earth when this view says visible.
+          </p>
+        )}
+        <p className="small">Earth visible is a geometric opportunity, not a guaranteed radio link. Sun visible (direct sunlight) is not electrical power output.</p>
         <h3>Method (all sites)</h3>
         <ul>
           <li>Sun and Earth positions: JPL Horizons airless apparent azimuth/elevation of each body’s center, every 10 minutes, for each site’s own observer point (altitude above the 1737.4 km lunar reference sphere, listed per site below).</li>
@@ -662,11 +791,16 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
           <li>Terrain horizon: for every 0.1° of azimuth, the highest apparent elevation of the site’s terrain model (named per site below) along a great-circle ray from the observer, with exact sphere geometry (lunar curvature counted once); rays continue until even the highest lunar terrain could not rise above the skyline found so far. Directions the data cannot reach would be shown as unknown, never as clear.</li>
           <li>Every compared site always uses the same horizon model, the same mission windows and the same UTC time; a site without the chosen model shows no results rather than another model’s. Delays shift the windows by +1, +3 or +7 days from the baseline arrival; the duration is unchanged.</li>
           <li>Unknown data is never counted as darkness or as visible; a metric is shown as unavailable instead.</li>
+          <li>Shares are of elapsed window time; darkness means the Sun’s center is below the horizon of the model shown. The cards compare modeled visibility for the same windows only; they do not rank the sites, and no point is presented as a better landing site overall.</li>
+        </ul>
+        <h3>Reading the panorama and charts</h3>
+        <ul>
+          <li>Panorama: azimuth across, elevation up (stretched relative to azimuth; the factor is under the panorama). Markers are the body centers at the selected time; hollow markers are below the horizon of the model shown and arrows mark bodies outside the plotted range. Faint lines are each body’s path through the plotted windows.</li>
+          <li>The visible / hidden words are the state of the 10-minute step starting at the selected time, classified at its midpoint, so they match the cards and the timeline. If the center at that exact time is on the other side of the horizon, the label says “near estimated crossing” and the marker gets a dashed ring.</li>
+          <li>Drag on the timeline or chart, or use the slider (arrow keys step 10 minutes, Page Up/Down larger steps, Home/End the window edges). One UTC time is shared by every site, the cards, the readouts, the panorama and the charts.</li>
         </ul>
         <div className="two-col">
-          {views.map((v) => (
-            <SiteSources key={v.entry.id} v={v} mode={mode} />
-          ))}
+          {siteSources}
         </div>
         <h3 className="common-limits">Limitations common to all sites</h3>
         <ul>
@@ -674,13 +808,16 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
           <li>Earth visible is a geometric opportunity, not a guaranteed communications link. Sun visible is not electrical power output.</li>
           <li>Results outside {fmtUtc(cov.start)} – {fmtUtc(cov.end)} are not available; events beyond that range are reported as “not found in available data”, never as “never”.</li>
           <li>No overall ranking: this tool compares modeled visibility and does not judge which site is a better landing site.</li>
+          <li>Observer-to-Sun and observer-to-Earth distances are not part of this dataset (only directions were fetched), so none are shown; the rays drawn in Explore show direction only.</li>
           <li>Educational planning prototype, not a flight-qualified analysis tool.</li>
         </ul>
-        <p className="muted small">Dataset <code>{manifest.dataset_id}</code>, generated {manifest.generated_at_utc}; site list and capabilities from its catalog.</p>
-        <p className="muted small" data-testid="notices-link">
+      </details>
+      <footer className="analysis-foot muted small">
+        <p>Dataset <code>{manifest.dataset_id}</code>, generated {manifest.generated_at_utc}; site list and capabilities from its catalog.</p>
+        <p data-testid="notices-link">
           Built with React and three.js (MIT licenses). <a href="THIRD_PARTY_LICENSES.md">Third-party software notices</a>.
         </p>
-      </section>
+      </footer>
     </main>
   );
 }
@@ -909,6 +1046,69 @@ function LinkNotices({ sc, strip = false }: { sc: Scenario; strip?: boolean }) {
   );
 }
 
+/** The shared outage format: "22.2 h", "22.2 h ⚠" at a window edge, "none", or "unavailable". */
+function run(m: Availability<DarkRun | null>): string {
+  if (!m.ok) return "unavailable";
+  if (!m.value) return "none";
+  return `${fmtOutage(m.value.durationMs)}${m.value.touchesStart || m.value.touchesEnd ? " ⚠" : ""}`;
+}
+
+/**
+ * The scenario-specific takeaway that leads Analysis: per compared site, direct sunlight and the
+ * longest period without it (and Earth visibility), from the same computeMetrics results as the
+ * cards below, with the window, model and comparison context. Provisional, boundary and unknown
+ * states are stated here, not only in the details.
+ */
+function Takeaway({ sc, delayedLabel, onMethod }: { sc: ReadyScenario; delayedLabel: string | null; onMethod: () => void }) {
+  const d = sc.effDelay;
+  const n = sc.selIds.length;
+  return (
+    <section className="card takeaway" aria-labelledby="tk-h" data-testid="takeaway">
+      <h2 id="tk-h" className="sr-only">Takeaway</h2>
+      <p className="tk-context small" data-field="context">
+        <span className="num">{fmtUtc(sc.baseW.start)} → {fmtUtc(sc.baseW.end)}</span> ({sc.days} days)
+        {delayedLabel && <>; {delayedLabel.toLowerCase()}: <span className="num">{fmtUtc(sc.actW.start)} → {fmtUtc(sc.actW.end)}</span></>}
+        {" · "}{sc.mode === "terrain" ? "Terrain horizon" : "Smooth 0° horizon (terrain ignored)"}
+        {" · "}{n === 1 ? "1 site" : `${n} sites, same window and model`}
+      </p>
+      <ul className="tk-list">
+        {sc.selIds.map((id) => {
+          const v = sc.views.find((x) => x.entry.id === id);
+          const p = sc.pending.find((x) => x.id === id);
+          if (!v) {
+            return (
+              <li key={id} data-site={id} data-state={p?.state}>
+                <strong>{p?.short ?? sc.catalogSite(id).short_name}:</strong>{" "}
+                <span className="muted">{p?.state === "loading" ? "loading…" : p?.state === "error" ? "could not be loaded" : "no terrain horizon (no result in this model)"}</span>
+              </li>
+            );
+          }
+          const prov = sc.mode === "terrain" ? v.profile.provisionalTerrain : null;
+          const arrow = (a: string, b: string) => (d ? `${a} → ${b} with +${d} d` : a);
+          const edges = [v.base.longestDark, ...(d ? [v.act.longestDark] : [])].some((m) => m.ok && m.value && (m.value.touchesStart || m.value.touchesEnd));
+          return (
+            <li key={id} data-site={id}>
+              <strong>{v.profile.short}</strong>
+              {prov && <span className="flag tk-prov" title={prov}> ⚠ provisional</span>}
+              {": "}
+              <span data-field="sun">Direct sunlight: {arrow(pctText(v.base.sunPct), pctText(v.act.sunPct))}.</span>{" "}
+              <span data-field="dark">
+                Longest period without sunlight: {arrow(run(v.base.longestDark), run(v.act.longestDark))}
+                {edges ? " (⚠ touches a mission-window edge, so it may be longer)" : ""}.
+              </span>{" "}
+              <span data-field="earth" className="tk-earth">Earth visible: {arrow(pctText(v.base.earthPct), pctText(v.act.earthPct))}.</span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="tk-foot small muted">
+        Body centers on the 10-minute grid. Direct sunlight is not electrical power; Earth visible is not a working radio link.{" "}
+        <button type="button" className="link-btn" onClick={onMethod} data-testid="open-method">Method &amp; limits</button>
+      </p>
+    </section>
+  );
+}
+
 function metricCell(base: Availability<number>, act: Availability<number> | null, delta: number | null) {
   if (!act) return pctText(base);
   return `${pctText(base)} → ${pctText(act)} (${delta === null ? "unavailable" : fmtSigned(delta, "pp")})`;
@@ -1045,7 +1245,7 @@ function SiteSources({ v, mode }: { v: SiteView; mode: HorizonMode }) {
             {facts.nearFieldDominated && (
               <li>The whole skyline is set by modeled relief {facts.settingDistanceM[0].toFixed(0)}–{facts.settingDistanceM[2].toFixed(0)} m from the point, while the Sun’s center stays only {facts.sunElevationRange[0].toFixed(2)}–{facts.sunElevationRange[1].toFixed(2)}° above the horizontal plane, so small terrain differences decide whole sunlit periods.</li>
             )}
-            <li>Regional terrain, not the lander’s view: terrain pixels are {Object.values(site.terrain_horizon!.horizon.resolution.dem_pixel_m).join(" m, then ")} m apart; rocks, small craters and any lander are not resolved.</li>
+            <li>Regional terrain, not the lander’s view: terrain pixels are {Object.values(site.terrain_horizon!.horizon.resolution.dem_pixel_m).map(fmtPixelM).join(" m, then ")} m apart; rocks, small craters and any lander are not resolved.</li>
             <li>{facts.known ? `${facts.zeroShot} of ${facts.known} skyline points lie in pixels without a LOLA shot (interpolated heights). Shot counts indicate data density, not accuracy.` : "Laser-shot counts at the skyline points have not been assessed; unknown counts are not zero."}</li>
             {maxShift !== null && <li>Moving the observer 100 m north, east, south or west changes the skyline by up to {maxShift.toFixed(1)}° (test scenarios, not a measured uncertainty).</li>}
             <li>Comparisons with LOLA laser shots are consistency checks: the terrain model was built from those shots.</li>
@@ -1136,7 +1336,7 @@ function HorizonFacts({ site, profile, mode }: { site: SiteData; profile: SitePr
   const se = h.search_extent;
   const rs = h.resolution;
   const facts = terrainFacts(site)!;
-  const pix = Object.entries(rs.dem_pixel_m).map(([k, v]) => `${k} ${v} m`).join(", then ");
+  const pix = Object.entries(rs.dem_pixel_m).map(([k, v]) => `${k} ${fmtPixelM(v)} m`).join(", then ");
   const nf = t.checks.near_field;
   const obsEye = t.observer ? t.observer.eye_above_dem_surface_m.toFixed(3) : String(obsH);
   return (

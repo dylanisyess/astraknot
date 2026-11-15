@@ -252,6 +252,10 @@
   font-weight: 700;
 }
 /* step 1, after the crossing: press Play, and watch Solar-power potential */
+.gd-site { appearance: none; font: inherit; font-weight: 600; color: var(--x-text); background: transparent; border: 1px solid var(--x-border-2); border-radius: 999px; padding: 1px 9px; cursor: pointer; }
+.gd-site[aria-pressed="true"] { border-color: var(--x-sun); background: rgba(242, 180, 65, 0.14); }
+.gd-site:focus-visible { outline: 2px solid var(--x-focus); outline-offset: 2px; }
+.gd-table td.muted { color: var(--x-muted); text-align: left; white-space: normal; }
 .gd-callout { display: flex; gap: 8px; align-items: flex-start; padding: 7px 9px; border-radius: 5px; background: rgba(242, 180, 65, 0.12); border: 1px solid rgba(242, 180, 65, 0.45); color: var(--x-text) !important; }
 .gd-play-ic { flex: none; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: var(--x-text); color: #111; font-size: 9px; margin-top: 1px; }
 .gd-done { background: rgba(242, 180, 65, 0.18); }
@@ -260,12 +264,14 @@
 
 /* the real control the step refers to (the delay button mirrors EXAMPLE.delay in onboarding.ts) */
 .explore[data-guide-step="1"][data-guide-hint="play"] .play-btn,
-.explore[data-guide-step="2"] [data-delay-btn="3"],
+.explore[data-guide-step="2"] .mission-panel [data-testid="add-site"],
+.explore[data-guide-step="3"] [data-delay-btn="3"],
 .explore[data-guide-step="3"] .mission-panel .find-windows-btn { outline: 2px solid var(--x-sun); outline-offset: 3px; }
 .explore[data-guide-hint="play"] .play-btn[aria-pressed="false"] { box-shadow: 0 0 0 6px rgba(242, 180, 65, 0.25); }
 @media (prefers-reduced-motion: no-preference) {
   .explore[data-guide-step="1"][data-guide-hint="play"] .play-btn,
-  .explore[data-guide-step="2"] [data-delay-btn="3"],
+  .explore[data-guide-step="2"] .mission-panel [data-testid="add-site"],
+  .explore[data-guide-step="3"] [data-delay-btn="3"],
   .explore[data-guide-step="3"] .mission-panel .find-windows-btn { animation: gd-pulse 1.4s ease-in-out 3; }
   @keyframes gd-pulse { 50% { outline-color: rgba(242, 180, 65, 0.25); } }
 }

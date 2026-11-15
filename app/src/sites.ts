@@ -188,7 +188,28 @@ export interface TerrainFacts {
   nearFieldDominated: boolean;
 }
 
+/** Facts per site file: computed once (they scan every sample), never per render. */
+const factsCache = new WeakMap<SiteData, TerrainFacts | null>();
+
 export function terrainFacts(site: SiteData): TerrainFacts | null {
+  if (factsCache.has(site)) return factsCache.get(site)!;
+  const f = computeTerrainFacts(site);
+  factsCache.set(site, f);
+  return f;
+}
+
+/** Smallest and largest of a long list without spreading it into arguments (engine argument limits). */
+function minMax(xs: number[]): [number, number] {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const x of xs) {
+    if (x < lo) lo = x;
+    if (x > hi) hi = x;
+  }
+  return [lo, hi];
+}
+
+function computeTerrainFacts(site: SiteData): TerrainFacts | null {
   const t = site.terrain_horizon;
   if (!t) return null;
   const d = t.setting_points.distance_km.filter((v): v is number => v !== null).sort((a, b) => a - b);
@@ -199,8 +220,8 @@ export function terrainFacts(site: SiteData): TerrainFacts | null {
     settingDistanceM: [d[0] * 1000, d[Math.floor(d.length / 2)] * 1000, d[d.length - 1] * 1000],
     zeroShot: t.setting_points.shot_count.filter((c) => c === 0).length,
     known,
-    elevationRange: [Math.min(...el), Math.max(...el)],
-    sunElevationRange: [Math.min(...sun), Math.max(...sun)],
+    elevationRange: minMax(el),
+    sunElevationRange: minMax(sun),
     nearFieldDominated: d[d.length - 1] < 2,
   };
 }

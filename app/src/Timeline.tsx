@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { type TimeScale, timeTicks, useTimePointer } from "./axis";
 import { type DarkRun, type Interval, type TimeWindow, type Tri, bothState, clip } from "./mission";
 import { fmtUtc } from "./data";
@@ -66,24 +66,12 @@ export function Timeline({ scale, tracks, cursor, onSelect }: Props) {
   const height = acc - TRACK_GAP + axisH + 4;
   const plotRight = scale.left + scale.plotWidth;
   const pointer = useTimePointer(scale, onSelect, setHover);
-  const ticks = timeTicks(scale);
-
-  return (
-    <svg
-      width={scale.width}
-      height={height}
-      viewBox={`0 0 ${scale.width} ${height}`}
-      className="timeline"
-      role="img"
-      aria-label={`Visibility timeline on one UTC axis for ${tracks.map((t) => t.label).join(" and ")}: Sun, Earth and both-visible rows for each mission window. Exact intervals are listed in the tables below.`}
-      {...pointer}
-    >
-      <defs>
-        <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <rect width="6" height="6" className="hatch-bg" />
-          <line x1="0" y1="0" x2="0" y2="6" className="hatch-line" />
-        </pattern>
-      </defs>
+  // Everything except the cursor and hover lines depends only on the tracks and the size:
+  // built once per change, not on every cursor move (tracks are memoized by the caller).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const ticks = useMemo(() => timeTicks(scale), [scale.t0, scale.t1, scale.width, scale.left]);
+  const body = useMemo(() => (
+    <>
       {tracks.map((tr, ti) => {
         const ty = offsets[ti];
         return (
@@ -175,6 +163,27 @@ export function Timeline({ scale, tracks, cursor, onSelect }: Props) {
           </g>
         );
       })()}
+    </>
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [tracks, ticks, height, scale.t0, scale.t1, scale.width, scale.left]);
+
+  return (
+    <svg
+      width={scale.width}
+      height={height}
+      viewBox={`0 0 ${scale.width} ${height}`}
+      className="timeline"
+      role="img"
+      aria-label={`Visibility timeline on one UTC axis for ${tracks.map((t) => t.label).join(" and ")}: Sun, Earth and both-visible rows for each mission window. Exact intervals are listed in the tables below.`}
+      {...pointer}
+    >
+      <defs>
+        <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="6" height="6" className="hatch-bg" />
+          <line x1="0" y1="0" x2="0" y2="6" className="hatch-line" />
+        </pattern>
+      </defs>
+      {body}
       {hover !== null && <line className="crosshair" x1={x(hover)} x2={x(hover)} y1={0} y2={height - axisH} />}
       <line className="cursor" x1={x(cursor)} x2={x(cursor)} y1={0} y2={height - axisH} />
     </svg>
