@@ -1,0 +1,214 @@
+{
+ "asset_version": "render-terrain-1",
+ "is_rendering_asset": true,
+ "note": "Rendering geometry for 3D Explore. Not scientific data: visibility states come only from the site export's intervals. Positions are observer-relative metres in the renderer frame x = east, y = up, z = -north; curvature is in the positions once; no vertical exaggeration.",
+ "site": {
+  "id": "im2-athena",
+  "name": "IM-2 Athena landing point (Mons Mouton region)",
+  "latitude_deg": -84.7906,
+  "longitude_deg_east": 29.1957,
+  "horizons_site_altitude_km": 5.3229
+ },
+ "observer": {
+  "observer_radius_m": 1742722.9,
+  "dem_surface_at_site_m": 5321.88044848867,
+  "eye_above_dem_surface_m": 1.019551511237296,
+  "ground_below_eye_local_y_m": -1.019551511237296,
+  "source": "same point as the site export's terrain_horizon.observer (checked to 1e-6 m)"
+ },
+ "frame": {
+  "axes": "x = east, y = up, z = -north (right-handed, Y-up), origin at the observer eye",
+  "direction_formula": "(cos el * sin az, sin el, -cos el * cos az)",
+  "local_frame": "zenith = site radial unit vector (sphere), east = d/dlon, north = d/dlat (terrain_horizon.enu)",
+  "body_frame": "Moon ME/DE421 as the LOLA labels (assumed for the site coordinate; see site export)"
+ },
+ "source_dem": {
+  "product": "LDEM_80S_20M",
+  "file": "data/raw/lola/ldem_80s_20m/ldem_80s_20m.img",
+  "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_80s_20m.img",
+  "sha256": "db44c3b2444acff1af528301c8a6988934b490249aceff0ac55668bdf3eab365",
+  "sha256_verified_this_run": true,
+  "label_lines_samples": [
+   30400,
+   30400
+  ],
+  "map_scale_m": 20.0,
+  "height": "DN x 0.5 m above the 1737.4 km sphere; bilinear between pixel centres",
+  "registration": "pixel centres at I = X/s + N/2 + 0.5, J = -Y/s + N/2 + 0.5 (lola.py, terrain_horizon.Raster)",
+  "anchor_pixel_1based": [
+   19056,
+   8301
+  ],
+  "site_fractional_pixel": [
+   19055.912076519486,
+   8300.836486748412
+  ]
+ },
+ "sampling": {
+  "grid": "square grids in polar-stereographic map space aligned to DEM pixel centres; nested levels",
+  "triangulation": "cell (i,j): (v00, v01, v10) and (v10, v01, v11); index = j * nx + i",
+  "outer_half_width_m": 30720.0,
+  "unmeshed": "Terrain beyond the outer square (half-width 30.72 km in map space) is not meshed. The exported skyline profile is computed from terrain to hundreds of km."
+ },
+ "levels": [
+  {
+   "index": 0,
+   "spacing_m": 5.0,
+   "spacing_px": 0.25,
+   "half_width_m": 640.0,
+   "nx": 257,
+   "ny": 257,
+   "vertex_count": 66049,
+   "triangle_count": 131072,
+   "byte_offset": 0,
+   "byte_length": 792588,
+   "hole_cells": null,
+   "boundary_vertices_snapped": 768,
+   "kind": "bilinear interpolation between pixel centres (no added measured detail)",
+   "height_range_m": [
+    5286.0,
+    5358.5
+   ]
+  },
+  {
+   "index": 1,
+   "spacing_m": 20.0,
+   "spacing_px": 1.0,
+   "half_width_m": 2560.0,
+   "nx": 257,
+   "ny": 257,
+   "vertex_count": 66049,
+   "triangle_count": 122880,
+   "byte_offset": 792588,
+   "byte_length": 792588,
+   "hole_cells": [
+    96,
+    160,
+    96,
+    160
+   ],
+   "boundary_vertices_snapped": 512,
+   "kind": "DEM pixel centres",
+   "height_range_m": [
+    5027.0,
+    5358.5
+   ]
+  },
+  {
+   "index": 2,
+   "spacing_m": 40.0,
+   "spacing_px": 2.0,
+   "half_width_m": 10240.0,
+   "nx": 513,
+   "ny": 513,
+   "vertex_count": 263169,
+   "triangle_count": 491520,
+   "byte_offset": 1585176,
+   "byte_length": 3158028,
+   "hole_cells": [
+    192,
+    320,
+    192,
+    320
+   ],
+   "boundary_vertices_snapped": 1536,
+   "kind": "every 2th pixel centre (decimated overview)",
+   "height_range_m": [
+    4593.5,
+    6350.0
+   ]
+  },
+  {
+   "index": 3,
+   "spacing_m": 160.0,
+   "spacing_px": 8.0,
+   "half_width_m": 30720.0,
+   "nx": 385,
+   "ny": 385,
+   "vertex_count": 148225,
+   "triangle_count": 262144,
+   "byte_offset": 4743204,
+   "byte_length": 1778700,
+   "hole_cells": [
+    128,
+    256,
+    128,
+    256
+   ],
+   "boundary_vertices_snapped": 0,
+   "kind": "every 8th pixel centre (decimated overview)",
+   "height_range_m": [
+    177.5,
+    7025.0
+   ]
+  }
+ ],
+ "counts": {
+  "vertices": 543492,
+  "triangles": 1007616,
+  "bin_bytes": 6521904
+ },
+ "local_bounds_m": {
+  "x": [
+   -41764.81288918733,
+   41784.4229252112
+  ],
+  "y": [
+   -5422.160588072949,
+   1467.505177876023
+  ],
+  "z": [
+   -41718.030763909876,
+   41747.394632947085
+  ]
+ },
+ "mesh_check": {
+  "target_deg": 0.05,
+  "target_note": "0.05 deg is a proposed rendering target, not a statement of source-data accuracy.",
+  "azimuths": 3600,
+  "setting_point_inside_mesh": {
+   "n": 3600,
+   "signed_min_deg": -0.11242,
+   "signed_max_deg": 0.01776,
+   "signed_mean_deg": -0.00179,
+   "abs_median_deg": 0.00231,
+   "abs_p95_deg": 0.01074,
+   "abs_max_deg": 0.11242,
+   "n_abs_over_target": 11
+  },
+  "setting_point_beyond_mesh": {
+   "n": 0
+  },
+  "meets_target_inside_mesh": false,
+  "fine_reference": {
+   "method": "terrain_horizon.march on the same LDEM_80S_20M bilinear surface and observer, radial step 1.0 m from 5.0 m to 2000.0 m; azimuths whose profile and fine-march setting points both lie within 1950 m.",
+   "mesh_minus_fine_reference": {
+    "n": 1135,
+    "signed_min_deg": -0.00167,
+    "signed_max_deg": 0.00948,
+    "abs_median_deg": 0.00035,
+    "abs_p95_deg": 0.00166,
+    "abs_max_deg": 0.00948,
+    "n_abs_over_target": 0
+   },
+   "fine_reference_minus_profile": {
+    "n": 1135,
+    "signed_min_deg": -0.0,
+    "signed_max_deg": 0.01752,
+    "abs_median_deg": 0.00098,
+    "abs_p95_deg": 0.00659,
+    "abs_max_deg": 0.01752,
+    "n_abs_over_target": 0
+   },
+   "interpretation": "mesh_minus_fine_reference isolates triangulation/stitching error; fine_reference_minus_profile is the exported profile's own radial-sampling effect (5 m steps cut under sharp crests). Neither is a terrain accuracy."
+  },
+  "method": "Exact silhouette of the exported triangles (float64 positions before float32 rounding) from the observer, per 0.1 deg azimuth, by triangle / vertical half-plane intersection; compared with terrain_horizon.horizon.elevation_deg of the site export. 'inside' = the profile's setting point lies within the meshed extent in that azimuth (representation error); 'beyond' = it lies outside (incomplete extent)."
+ },
+ "reproduce": "python pipeline/render_assets.py --site im2-athena",
+ "runtime_s": {
+  "build": 3.8,
+  "check": 5.5
+ },
+ "bin_file": "im2-athena.terrain.bin",
+ "bin_sha256": "f557f9d3e0de9b25ca07bd57738626cf400780af329c72739587d93803c8ceb4"
+}

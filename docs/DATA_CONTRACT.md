@@ -368,3 +368,24 @@ real lunar conditions.
   - Unknown states carry a reason: position unavailable, horizon unknown, or
     state unknown. A missing interval inside sample coverage is "state
     unknown" and retains its sample step; it is not the final-sample case.
+
+### 2026-11-14, milestone 5A: 3D Explore rendering assets (no contract change)
+- New files `app/public/render/<site_id>.terrain.json` and `.terrain.bin`,
+  written by `pipeline/render_assets.py`. They are **rendering assets, not app
+  data under this contract**: they carry no visibility state, and the app never
+  derives a state from them. Every label still comes from the site file's
+  intervals via `app/src/status.ts`.
+- `.bin`: float32 little-endian `x, y, z` per vertex, level after level,
+  observer-relative metres in the renderer frame `x = east, y = up, z = -north`
+  (origin = the exported `terrain_horizon.observer` point). `.json`: site
+  identity, observer, frame, source DEM (product, sha256), levels (grid size,
+  spacing, half-width, hole cells, byte offsets), counts, `bin_sha256` and the
+  mesh-vs-profile check. The app refuses an asset whose identity, observer
+  radius, eye height or byte layout differs from the site file.
+- Evidence (pipeline only): `data/render/<site_id>_mesh_check.json`, per
+  azimuth mesh silhouette, exported profile, fine-march reference and coverage.
+- URL (frontend only): `view=explore|analysis`; absent means Explore. All
+  other parameters are unchanged; older links keep their scenario.
+  Since 5B also `mission=baseline|delayed` and `cam=overview|horizon`
+  (Explore view state); `t` may lie outside the mission windows in Explore,
+  while Analysis shows it clamped to its windows as before.

@@ -45,9 +45,10 @@ Choose points with suitable terrain coverage and document sources.
 7. Open methodology and source information.
 
 ## Required views
-The next primary experience is **Explore**, a 3D view of the terrain around a
-fixed observer (planned; requirements below). The existing dashboard stays
-as **Analysis**:
+The primary experience is **Explore** (the default view), a 3D view of the
+terrain around a fixed observer; a first working version exists since
+milestone 5A (requirements below; evidence in STATUS.md). The dashboard is
+**Analysis**:
 - Small site locator.
 - Two comparison cards.
 - Shared visibility timeline with Sun, Earth, and both-visible rows.
@@ -116,10 +117,17 @@ generation, data contract, validation, demo, and documentation.
 - Multi-year coverage.
 - Observer-height controls.
 
-## 3D Explore: requirements for the next milestone
+## 3D Explore: requirements
 Recorded after the 2026-11-14 science review
-([SCIENCE_REVIEW.md](SCIENCE_REVIEW.md)). The mesh format and design are
-work for that milestone, not yet decided.
+([SCIENCE_REVIEW.md](SCIENCE_REVIEW.md)). Milestone 5A implements them with
+separate rendering assets (`pipeline/render_assets.py`); its measured
+mesh-vs-profile disagreement (item 9) misses the 0.05° target at both sites
+and is recorded in STATUS.md, "Milestone 5A".
+Since milestone 5B the observer view clips terrain to the exported profile and
+lets only the profile hide the Sun and Earth (stencil mask), so the mesh
+discrepancy cannot add or remove occlusion there; the overview shows the mesh.
+Explore frames visibility as solar-power potential and direct-to-Earth
+communication windows (STATUS.md, "Milestone 5B").
 1. **Fixed modeled observer, separate from the camera.** The observer is the
    exported `terrain_horizon.observer` radius at the site coordinate.
    - The eye view only rotates and zooms: no translation, no vertical
@@ -160,9 +168,10 @@ work for that milestone, not yet decided.
    - Rendered shadows are labelled illustrative and never drive a label.
      They are least reliable with the Sun at 0–2° (CR1) or below 6.5°
      (Athena).
-6. **Nominal disk sizes and center-based labels.** Draw the Sun (about 0.53°)
-   and Earth (about 1.9°) at nominal true size with a center mark. Label the
-   sizes nominal, since the dataset holds no diameters. When a disk straddles
+6. **Nominal disk sizes and center-based labels.** Draw the Sun and Earth at
+   nominal display angular diameters (about 0.53° and 1.9°) with a center
+   mark. These are nominal values, not measured or time-varying diameters: the
+   dataset holds no diameters, so label them nominal. When a disk straddles
    the skyline, say "center hidden" or "center visible".
 7. **No extrapolation beyond time coverage.**
    - Playback stays inside the samples; linear interpolation between samples

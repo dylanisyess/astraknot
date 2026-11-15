@@ -27,7 +27,10 @@ function dataset(mutate?: (files: SiteData[]) => void): Dataset {
   };
 }
 const DS = dataset();
-const render = (search: string, ds = DS) => renderToStaticMarkup(<Workspace ds={ds} search={search} />);
+// These tests cover the Analysis dashboard. Explore is the default view since milestone 5A,
+// so the dashboard is requested explicitly; the scenario parameters are unchanged.
+const render = (search: string, ds = DS) =>
+  renderToStaticMarkup(<Workspace ds={ds} search={`${search || "?"}${search.includes("?") && search.length > 1 ? "&" : ""}view=analysis`} />);
 
 /** Inner HTML of the first element with data-site=id and the given tag (cards are <article>). */
 function block(html: string, tag: string, id: string): string {

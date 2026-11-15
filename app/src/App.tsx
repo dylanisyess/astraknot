@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Explore from "./explore/Explore";
 import { CR1_5M } from "./assessment";
 import { ElevationChart } from "./ElevationChart";
 import { Panorama } from "./Panorama";
@@ -7,57 +8,42 @@ import { timeScale, useWidth } from "./axis";
 import { compass, fmtDeg, fmtLat, fmtLonEast, fmtUtc, loadDataset, nearestIndex } from "./data";
 import {
   type Availability,
-  type Comparison,
   type DarkRun,
   type Interval,
   type NextChange,
   type Tri,
   type WindowMetrics,
-  DAY_MS,
-  DEFAULT_DURATION_DAYS,
-  arrivalBounds,
   bothState,
   clip,
-  compare,
-  computeMetrics,
-  delayOptions,
   fmtDuration,
   fmtHours,
   fmtSigned,
   fromUtcDateHour,
   nextChange,
-  parseIntervals,
-  scenarioWindow,
   utcDateString,
   utcHour,
 } from "./mission";
 import {
   type SiteProfile,
   horizonUnderBodies,
-  modeAvailability,
   polarXY,
   profileFor,
-  strictHorizon,
-  strictIntervals,
   surfaceDistanceKm,
   terrainFacts,
   terrainModelLabel,
 } from "./sites";
 import {
   type BodyStatus,
-  type SelectedStatus,
   NEAR_CROSSING,
   horizonName,
   nearCrossingExplanation,
-  selectedTimeStatus,
   signedClearance,
   stateLabel,
   unknownText,
 } from "./status";
 import type { Dataset, HorizonMode, SiteData, SiteEntry, TerrainHorizonBlock } from "./types";
-import { parseUrlState, resolveActive, resolveSites, writeUrlState } from "./urlState";
-
-const DEFAULT_ARRIVAL = "2026-12-05T00:00:00Z";
+import { type Scenario, type SiteView, clampNum, useScenario } from "./scenario";
+import type { View } from "./urlState";
 
 export function App() {
   const [ds, setDs] = useState<Dataset | null>(null);
@@ -81,103 +67,74 @@ export function App() {
   return <Workspace ds={ds} />;
 }
 
-const clampNum = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
-interface SiteView {
-  entry: SiteEntry;
-  data: SiteData;
-  profile: SiteProfile;
-  intervals: Interval[];
-  base: WindowMetrics;
-  act: WindowMetrics;
-  cmp: Comparison;
-  /** Status at the shared selected time (status.ts): the single source for cards, readouts and panorama. */
-  status: SelectedStatus;
+// ------------------------------------------------------------------ shell
+
+/** Shell: one shared scenario, two views. Explore (3D) is the default; Analysis is the dashboard.
+ *  The Explore shell (controls, status, time bar) is plain React; only its 3D scene is lazy-loaded,
+ *  so Analysis and the status stay usable if the renderer or an asset fails. */
+export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
+  const sc = useScenario(ds, search);
+  return (
+    <div className={sc.view === "explore" ? "app app-explore" : "app app-analysis"} data-view={sc.view}>
+      <TopBar sc={sc} />
+      {sc.view === "explore" ? <Explore sc={sc} /> : <Analysis sc={sc} />}
+    </div>
+  );
 }
 
-// ------------------------------------------------------------------ workspace
-
-export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
-  const { manifest, times } = ds;
-  // The link is read once: the URL is rewritten to the canonical state afterwards, and re-reading
-  // it on later renders would lose what the original link asked for (e.g. unknown site IDs).
-  const [init] = useState(() => parseUrlState(search ?? window.location.search));
-  const allIds = ds.sites.map((s) => s.id);
-  const [requested] = useState(() => resolveSites(init.sites, allIds));
-  const [selIds, setSelIds] = useState<string[]>(requested.ids);
-  const entries = ds.sites.filter((e) => selIds.includes(e.id));
-  const [activeRaw, setActive] = useState<string>(() => resolveActive(init.site, requested.ids));
-  const active = resolveActive(activeRaw, selIds);
-
-  // One horizon model for every compared site; Terrain only when all of them have it.
-  const avail = modeAvailability(entries);
-  const [modeRaw, setMode] = useState<HorizonMode>(() => init.horizon ?? "terrain");
-  const mode: HorizonMode = modeRaw === "terrain" && !avail.terrain ? "smooth" : modeRaw;
-  const terrainRequestedButMissing = modeRaw === "terrain" && !avail.terrain;
-
-  // Coverage: every site shares the same sample times (checked by the loader), so this is the common coverage.
-  const cov = { start: times[0], end: times[times.length - 1] };
-  const maxDays = Math.floor((cov.end - cov.start) / DAY_MS);
-  const [days, setDays] = useState(() => clampNum(Math.round(init.days ?? DEFAULT_DURATION_DAYS), 1, maxDays));
-  const durationMs = days * DAY_MS;
-  const bounds = arrivalBounds(cov, durationMs)!; // days <= maxDays guarantees a valid range
-  const snapHour = (ms: number) => Math.round(ms / 3_600_000) * 3_600_000;
-  const [arrival, setArrivalRaw] = useState(() =>
-    clampNum(snapHour(init.arrival ?? Date.parse(DEFAULT_ARRIVAL)), bounds.earliest, bounds.latest),
+function TopBar({ sc }: { sc: Scenario }) {
+  const synthetic = sc.ds.manifest.is_synthetic || sc.ds.sites.some((s) => s.data.site.is_synthetic);
+  const tabs: { v: View; label: string; hint: string }[] = [
+    { v: "explore", label: "Explore", hint: "3D terrain around the modeled observer" },
+    { v: "analysis", label: "Analysis", hint: "Two-site comparison dashboard" },
+  ];
+  return (
+    <header className="topbar">
+      <div className="brand">
+        <svg className="brand-mark" viewBox="0 0 20 20" aria-hidden="true">
+          <circle cx="10" cy="10" r="8.25" />
+          <path d="M3 12.5c3-1.6 5.3-1.1 7-0.2s4.3 1.2 7-0.6" />
+        </svg>
+        <span className="brand-name">Lunar Visibility Navigator</span>
+      </div>
+      <nav className="view-tabs" aria-label="View">
+        {tabs.map((t) => (
+          <button
+            key={t.v}
+            type="button"
+            className={sc.view === t.v ? "view-tab active" : "view-tab"}
+            aria-current={sc.view === t.v ? "page" : undefined}
+            title={t.hint}
+            onClick={() => sc.setView(t.v)}
+            data-view-tab={t.v}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+      <div className="topbar-meta">
+        {synthetic && <span className="tb-badge tb-warn">Synthetic data</span>}
+        <span className="tb-badge tb-utc">All times UTC</span>
+      </div>
+    </header>
   );
-  const setArrival = (ms: number) => setArrivalRaw(clampNum(snapHour(ms), bounds.earliest, bounds.latest));
-  const [delay, setDelay] = useState(() => ([0, 1, 3, 7].includes(init.delay ?? -1) ? init.delay! : 3));
-  useEffect(() => {
-    setArrivalRaw((a) => clampNum(a, bounds.earliest, bounds.latest));
-  }, [bounds.earliest, bounds.latest]);
+}
 
-  const options = delayOptions(arrival, durationMs, cov);
-  const chosen = options.find((o) => o.days === delay)!;
-  const effDelay = chosen.enabled ? delay : 0;
-  const baseW = options[0].window;
-  const actW = scenarioWindow(arrival, effDelay, durationMs);
-  const domain = { start: baseW.start, end: Math.max(baseW.end, actW.end) };
-  const i0 = nearestIndex(times, domain.start);
-  const i1 = nearestIndex(times, domain.end);
-  const [cursorRaw, setCursor] = useState(() => nearestIndex(times, init.t ?? actW.start));
-  const cursor = clampNum(cursorRaw, i0, i1);
-  const cursorT = times[cursor];
+// ------------------------------------------------------------------ analysis (the dashboard)
 
-  // Per-site results for the shared model and the identical windows.
-  const intervalsBySite = useMemo(() => {
-    const m = new Map<string, Interval[]>();
-    for (const e of ds.sites) {
-      if (mode === "terrain" && !e.data.terrain_horizon) continue;
-      m.set(e.id, parseIntervals(e.data, strictIntervals(e.data, mode)));
-    }
-    return m;
-  }, [ds, mode]);
-  const views: SiteView[] = entries.map((entry) => {
-    const intervals = intervalsBySite.get(entry.id)!;
-    const base = computeMetrics(intervals, baseW);
-    const act = computeMetrics(intervals, actW);
-    const status = selectedTimeStatus(
-      { samples: entry.data.samples, times, horizon: strictHorizon(entry.data, mode), intervals, mode },
-      cursorT,
-    );
-    return { entry, data: entry.data, profile: profileFor(entry.data), intervals, base, act, cmp: compare(base, act), status };
-  });
-  const activeView = views.find((v) => v.entry.id === active)!;
-  const activeSite = activeView.data;
-  const horizon = strictHorizon(activeSite, mode);
+export function Analysis({ sc }: { sc: Scenario }) {
+  const {
+    ds, times, requested, selIds, toggleSite, active, setActive, avail, mode, setMode, terrainRequestedButMissing,
+    cov, maxDays, days, setDays, durationMs, bounds, arrival, setArrival, delay, setDelay, options, chosen, effDelay,
+    baseW, actW, domain, i0, i1, cursor, cursorT, setCursor, views, activeView, activeSite, horizon,
+  } = sc;
+  const { manifest } = ds;
   const horizonAtBody = useMemo(
     () => (mode === "terrain" ? horizonUnderBodies(activeSite, horizon) : null),
     [activeSite, mode, horizon],
   );
-
-  useEffect(() => {
-    const url = writeUrlState(new URL(window.location.href), {
-      arrival, days, delay: effDelay, t: activeSite.samples[cursor].time_utc, horizon: mode, sites: selIds, site: active,
-    });
-    window.history.replaceState(null, "", url);
-  }, [arrival, days, effDelay, cursor, activeSite, mode, selIds, active]);
-
   const [wrapRef, width] = useWidth<HTMLDivElement>();
   const [panoRef, panoWidth] = useWidth<HTMLDivElement>();
   const scale = timeScale(domain.start, domain.end, width);
@@ -196,11 +153,9 @@ export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
   });
   const synthetic = manifest.is_synthetic || ds.sites.some((s) => s.data.site.is_synthetic);
   const arrivalDate = utcDateString(arrival);
-  const toggleSite = (id: string) =>
-    setSelIds((ids) => (ids.includes(id) ? (ids.length > 1 ? ids.filter((x) => x !== id) : ids) : allIds.filter((x) => x === id || ids.includes(x))));
 
   return (
-    <main className="page">
+    <main className="page" id="analysis">
       <header className="masthead">
         <div>
           <p className="eyebrow">Lunar Visibility Navigator · Two-site comparison · {mode === "terrain" ? "Terrain horizon" : "Smooth horizon"}</p>
