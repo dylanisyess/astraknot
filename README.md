@@ -1,4 +1,4 @@
-# astraknots: Lunar Landing Site Navigator
+# Astraknot: Lunar Landing Site Navigator
 
 A NASA Space Apps prototype that shows when the Sun and Earth are above the
 horizon from documented lunar landing and study sites. It is an educational
