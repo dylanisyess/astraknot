@@ -1,0 +1,125 @@
+{
+ "site": {
+  "id": "im2-athena",
+  "latitude_deg": -84.7906,
+  "longitude_deg_east": 29.1957,
+  "horizons_site_altitude_km": 5.3229,
+  "observer_height_above_surface_m": 1
+ },
+ "asset": "app/public/screening/im2-athena.slope.json",
+ "asset_sha256": "dd4778e4393b1dcb14195b9728974ac7f0ba9b917baa3b84e0440c9baebef2a0",
+ "asset_bytes": 37184,
+ "site_export_sha256": "201ca9f848c19c991415b60fac1aaa82cb8ccb7b0c3d50193f085d5c6c1620fb",
+ "render_asset_anchor_checked": true,
+ "method": {
+  "name": "Horn (1981) 3x3 weighted finite difference on true 3D pixel-centre positions",
+  "neighbourhood": "3 x 3 DEM pixels (weights 1-2-1); centre pixel height not used",
+  "baseline_m": 39.917,
+  "neighbourhood_extent_m": 59.876,
+  "cell_ground_m": 19.9587,
+  "horizontal": "true ground distances: pixel centres placed at (1737.4 km + h) x exact inverse stereographic unit vector, so the projection scale k = 2/(1+sin|lat|) and the terrain radius are included",
+  "vertical_reference": "local lunar horizontal at each pixel = plane normal to that pixel's radial unit vector (sphere); symmetric differences cancel curvature, so curvature is not counted as slope",
+  "heights": "DN x 0.5 m at pixel centres (no interpolation, no render mesh, no shading normals)",
+  "invalid": "a cell is invalid if any 3x3 neighbour is outside the raster or nodata (LOLA LDEMs have no nodata value)",
+  "stored_resolution_deg": 0.01,
+  "percentiles": "nearest rank on stored values: value at rank ceil(p/100 * n) of the sorted valid cells",
+  "exceedance": "stored slope strictly greater than the threshold (equal is not an exceedance), threshold at 0.01 deg",
+  "area_weighting": "equal-area: planimetric pixel area (s/k)^2 varies by a factor 1.0000520 within the footprint; weighted and unweighted exceedance differ by at most 7.46e-07",
+  "scale_note": "Each value is the slope of a 20 m DEM cell measured across about 40 m. It is not a slope at a smaller scale: boulders, small craters, the lander footprint and local roughness are not resolved, and the DEM is interpolated where no laser shot fell."
+ },
+ "footprint": {
+  "radius_m": 500.0,
+  "centre": "the site coordinate (vertical of the modeled observer)",
+  "distance": "great-circle ground distance on the 1737.4 km sphere between pixel centres and the site unit vector",
+  "membership": "pixel centre within the radius",
+  "cells_in_footprint": 1969,
+  "cells_valid": 1969,
+  "cells_invalid": 0,
+  "valid_fraction": 1.0,
+  "valid_area_m2": 784350.2,
+  "footprint_area_m2": 784350.2,
+  "halo": "the 3x3 stencil reads one pixel beyond the footprint; every footprint stencil lies inside the raster"
+ },
+ "stats": {
+  "cells_in_footprint": 1969,
+  "cells_valid": 1969,
+  "cells_invalid": 0,
+  "valid_fraction": 1.0,
+  "valid_area_m2": 784350.2,
+  "footprint_area_m2": 784350.2,
+  "median_deg": 2.88,
+  "p95_deg": 5.9,
+  "max_deg": 13.67,
+  "min_deg": 0.25,
+  "mean_deg_weighted": 3.1005,
+  "exceedance": [
+   {
+    "threshold_deg": 5.0,
+    "cells_above": 203,
+    "fraction_equal_weight": 0.10309801929913662,
+    "fraction_area_weighted": 0.10309876574661044,
+    "abs_difference": 7.464474738178017e-07
+   },
+   {
+    "threshold_deg": 10.0,
+    "cells_above": 3,
+    "fraction_equal_weight": 0.0015236160487557136,
+    "fraction_area_weighted": 0.0015236187539677383,
+    "abs_difference": 2.7052120246586625e-09
+   },
+   {
+    "threshold_deg": 15.0,
+    "cells_above": 0,
+    "fraction_equal_weight": 0.0,
+    "fraction_area_weighted": 0.0,
+    "abs_difference": 0.0
+   },
+   {
+    "threshold_deg": 20.0,
+    "cells_above": 0,
+    "fraction_equal_weight": 0.0,
+    "fraction_area_weighted": 0.0,
+    "abs_difference": 0.0
+   },
+   {
+    "threshold_deg": 25.0,
+    "cells_above": 0,
+    "fraction_equal_weight": 0.0,
+    "fraction_area_weighted": 0.0,
+    "abs_difference": 0.0
+   },
+   {
+    "threshold_deg": 30.0,
+    "cells_above": 0,
+    "fraction_equal_weight": 0.0,
+    "fraction_area_weighted": 0.0,
+    "abs_difference": 0.0
+   }
+  ],
+  "area_weight_max_over_min": 1.0000519815454063
+ },
+ "observer_cell": {
+  "cell": [
+   27,
+   27
+  ],
+  "slope_deg": 2.26,
+  "note": "slope of the DEM cell containing the site coordinate (20 m cell, about 40 m baseline)"
+ },
+ "shot_quality": {
+  "cells_with_lola_shot": 1362,
+  "fraction_cells_with_lola_shot": 0.691721686135094,
+  "cells_with_no_shot_in_3x3": 3,
+  "note": "LDEC_80S_20M counts; a quality indicator for the interpolated DEM, not an accuracy guarantee"
+ },
+ "mapping": {
+  "max_residual_cells": 0.0009405892723932922,
+  "note": "affine fit of renderer-frame (x, z) of every grid pixel centre to its cell indices"
+ },
+ "aspect_summary_deg": {
+  "circular_mean_downslope_az": 357.61,
+  "resultant_length": 0.7439
+ },
+ "runtime_s": 1.15,
+ "reproduce": "python pipeline/slope.py --site im2-athena"
+}

@@ -503,3 +503,18 @@ h4 { font-size: 0.85rem; margin: 10px 0 4px; }
 .site-compare .compare td, .site-compare .compare th { padding: 6px 8px; }
 .site-compare .compare thead th { white-space: normal; vertical-align: bottom; line-height: 1.25; }
 .site-compare .table-scroll.plain { overflow-x: visible; }
+
+/* 5C: terrain hazard screening comparison and the Explore/Analysis time distinction */
+.clamp-note { margin: 4px 0 10px; }
+.terrain-compare .tc-thr { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 8px 0; }
+.terrain-compare .tc-thr label { font-weight: 600; font-size: 14px; }
+.terrain-compare .thr-input { display: inline-flex; align-items: center; }
+.terrain-compare .thr-input input { width: 70px; }
+.terrain-compare .thr-input .unit { margin-left: 4px; }
+.tc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tc-table th, .tc-table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.tc-table thead th { font-weight: 600; }
+.tc-table tbody th { font-weight: 500; }
+.terrain-compare .table-scroll { max-height: none; }
+.terrain-compare { grid-column: 1 / -1; }
+.tc-table td, .tc-table th { min-width: 140px; }

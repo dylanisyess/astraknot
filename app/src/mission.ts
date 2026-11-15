@@ -64,6 +64,9 @@ export interface DelayOption {
   reason: string | null;
 }
 
+/** Why a delay choice is disabled (validation unchanged: the delayed window must fit the coverage). */
+export const DELAY_UNAVAILABLE = "This mission plus the selected delay exceeds cached coverage.";
+
 export function delayOptions(baselineArrival: number, durationMs: number, coverage: TimeWindow): DelayOption[] {
   return DELAY_DAYS.map((days) => {
     const window = scenarioWindow(baselineArrival, days, durationMs);
@@ -72,7 +75,7 @@ export function delayOptions(baselineArrival: number, durationMs: number, covera
       days,
       window,
       enabled,
-      reason: enabled ? null : "Window would end after the available data",
+      reason: enabled ? null : DELAY_UNAVAILABLE,
     };
   });
 }

@@ -21,10 +21,12 @@ import { type Vec3, azDelta, directionFromAzEl, gridIndices, needsFlip, obliqueC
 import { type TerrainAsset, type TerrainAssetMeta, loadTerrainAsset, terrainMatchesSite } from "./terrainAsset";
 import { MARKER_TEXT, markerState } from "./availability";
 import { edgePoint } from "./geometry";
+import { EXCEED_COLOR, OVERLAY_ALPHA, SLOPE_STOPS, type SlopeAsset, type TerrainLayer, hexRgb, overlayMode, thresholdCentideg } from "./slope";
 
 export type CameraMode = "overview" | "eye";
 export interface CameraCommand {
-  kind: "reset" | "sun" | "earth";
+  /** "frame": overview framing of the 500 m assessed area (never sent by an overlay change). */
+  kind: "reset" | "sun" | "earth" | "frame";
   n: number;
   /** Optional field of view for "look toward" in the observer view (deg). */
   fov?: number;
@@ -49,7 +51,74 @@ export interface SceneProps {
   onAssetState: (s: AssetState) => void;
   onFatal: (message: string) => void;
   onLook: (body: "sun" | "earth") => void;
+  /** 5C terrain layer (Site overview only; the Horizon view keeps its presentation). */
+  layer?: TerrainLayer;
+  /** Screening asset of this site, or null while it is not loaded (Surface is drawn). */
+  slope?: SlopeAsset | null;
+  thresholdDeg?: number;
+  /** Terrain inspection point (renderer frame), or null. Never the modeled observer. */
+  inspection?: Vec3 | null;
+  /** Clicking terrain in the overview reports the hit point here (only when enabled). */
+  onInspect?: (p: Vec3) => void;
+  inspectEnabled?: boolean;
+  /** Ground-distance rings and the analysis boundary. */
+  showRings?: boolean;
+  /** Changes when HTML controls over the stage change size, so label layout is redone. */
+  layoutKey?: string;
 }
+
+// GLSL for the 5C terrain layers (injected into the terrain's MeshStandardMaterial).
+// The quantitative colors are applied AFTER lighting, tone mapping and the sRGB conversion,
+// so a cell's color is the legend's sRGB color (at OVERLAY_ALPHA over the shaded surface)
+// whatever the illustrative light does. Each DEM cell is one flat color (nearest cell).
+const NS = SLOPE_STOPS.length;
+const SLOPE_FRAG_HEAD = `
+varying vec3 vSlopeLocal;
+uniform int uSlopeMode; uniform sampler2D uSlopeTex; uniform vec3 uSlopeA; uniform vec3 uSlopeB; uniform vec2 uSlopeSize;
+uniform float uThrC; uniform vec3 uStops[${NS}]; uniform float uStopDeg[${NS}]; uniform vec3 uExceed;
+uniform float uRings; uniform float uRObs;
+vec3 slopeRamp(float d) {
+  d = clamp(d, uStopDeg[0], uStopDeg[${NS - 1}]);
+  vec3 c = uStops[0];
+  for (int k = 1; k < ${NS}; k++) {
+    if (d >= uStopDeg[k - 1]) c = mix(uStops[k - 1], uStops[k], clamp((d - uStopDeg[k - 1]) / (uStopDeg[k] - uStopDeg[k - 1]), 0.0, 1.0));
+  }
+  return c;
+}`;
+// Texture values: 0.01 deg; -100 no data (in the footprint); -200 outside the footprint.
+// The display is clipped to the exact 500 m ring (a smooth, restrained boundary). Cells are
+// still assigned by their centre (pipeline/slope.py); a cell straddling the ring shows its
+// value only inside the ring, and a centre-outside sliver inside the ring stays "not assessed".
+const SLOPE_FRAG_FINAL = `
+{
+  vec2 cf = vec2(uSlopeA.x + uSlopeA.y * vSlopeLocal.x + uSlopeA.z * vSlopeLocal.z, uSlopeB.x + uSlopeB.y * vSlopeLocal.x + uSlopeB.z * vSlopeLocal.z);
+  // ground distance on the 1737.4 km sphere from the observer's vertical (the footprint's definition)
+  float gd = 1737400.0 * atan(length(vSlopeLocal.xz), uRObs + vSlopeLocal.y);
+  float gw = fwidth(gd);
+  if (uSlopeMode > 0) {
+    vec2 cell = floor(cf + 0.5);
+    float v = -200.0;
+    if (cell.x >= 0.0 && cell.y >= 0.0 && cell.x < uSlopeSize.x && cell.y < uSlopeSize.y) v = texture2D(uSlopeTex, (cell + 0.5) / uSlopeSize).r;
+    if (v < -150.0 || gd > 500.0) {
+      gl_FragColor.rgb *= 0.6;   // outside the assessed area: dimmed, not assessed
+    } else if (v < -50.0) {
+      gl_FragColor.rgb = mix(vec3(0.03), vec3(0.18), step(0.5, fract((vSlopeLocal.x + vSlopeLocal.z) / 8.0)));  // no slope data
+    } else if (uSlopeMode == 1) {
+      // one flat color per 20 m cell (no borders, no interpolation between cells)
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, slopeRamp(v / 100.0), ${OVERLAY_ALPHA.toFixed(2)});
+    } else if (v > uThrC) {
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, uExceed, ${OVERLAY_ALPHA.toFixed(2)});
+    }
+  }
+  if (uRings > 0.5) {
+    // drawn into the surface itself: exactly draped, no z-fighting, no protrusion
+    float a500 = 1.0 - smoothstep(0.5, 1.4, abs(gd - 500.0) / max(gw, 1e-4));
+    float dash = step(0.5, fract(atan(vSlopeLocal.x, -vSlopeLocal.z) * gd / 14.0));
+    float a250 = (1.0 - smoothstep(0.3, 1.0, abs(gd - 250.0) / max(gw, 1e-4))) * dash;
+    float a100 = (1.0 - smoothstep(0.3, 1.0, abs(gd - 100.0) / max(gw, 1e-4))) * dash;
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.95), max(0.7 * a500, 0.35 * max(a250, a100)));
+  }
+}`;
 
 // Nominal angular diameters (SPEC.md): the dataset holds no diameters.
 export const SUN_DIAMETER_DEG = 0.53;
@@ -60,7 +129,10 @@ const SKY_R = 90_000; // where sky annotations are placed (beyond every meshed v
 const CURTAIN_R = 80_000;
 const RAY_LEN = 0.3; // overview ray length as a fraction of the camera distance
 /** Default overview camera elevation: low enough that the true horizon is inside the 50° frame. */
-export const OVERVIEW_ELEV_DEG = 13;
+export const OVERVIEW_ELEV_DEG = 16;
+/** "Frame assessed area": the whole 500 m footprint (a user action only; overlays never move the camera). */
+export const TERRAIN_ELEV_DEG = 42;
+export const TERRAIN_DIST_M = 1650;
 const COLORS = {
   sun: 0xf2b441,
   earth: 0x6ea8f0,
@@ -112,6 +184,7 @@ export default function TerrainScene(props: SceneProps) {
     update: () => void;
     setCamera: (mode: CameraMode, animate: boolean) => void;
     command: (c: CameraCommand) => void;
+    setSlope: (a: SlopeAsset | null) => void;
   } | null>(null);
   const [lost, setLost] = useState(false);
 
@@ -156,6 +229,34 @@ export default function TerrainScene(props: SceneProps) {
     terrainMat.stencilFunc = THREE.EqualStencilFunc;
     terrainMat.stencilRef = 1;
     terrainMat.stencilZPass = THREE.KeepStencilOp;
+    // 5C terrain layers: slope / exceedance colors from the screening asset's DEM cells, mixed
+    // into the diffuse color so the display lighting still shows the terrain's shape.
+    // Site overview only; nothing here drives a status, a metric or the observer.
+    const blank = new THREE.DataTexture(new Float32Array([-200]), 1, 1, THREE.RedFormat, THREE.FloatType);
+    blank.needsUpdate = true;
+    const SU = {
+      uSlopeMode: { value: 0 },
+      uSlopeTex: { value: blank as THREE.Texture },
+      uSlopeA: { value: new THREE.Vector3() },
+      uSlopeB: { value: new THREE.Vector3() },
+      uSlopeSize: { value: new THREE.Vector2(1, 1) },
+      uThrC: { value: 1500 },
+      uStops: { value: SLOPE_STOPS.map((x) => new THREE.Vector3(...hexRgb(x.color))) },
+      uStopDeg: { value: SLOPE_STOPS.map((x) => x.deg) },
+      uExceed: { value: new THREE.Vector3(...hexRgb(EXCEED_COLOR)) }, // sRGB: applied after the color-space conversion
+      uRings: { value: 0 },
+      uRObs: { value: 1737400 },
+    };
+    terrainMat.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, SU);
+      sh.vertexShader = sh.vertexShader
+        .replace("#include <common>", "#include <common>\nvarying vec3 vSlopeLocal;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvSlopeLocal = position;");
+      sh.fragmentShader = sh.fragmentShader
+        .replace("#include <common>", "#include <common>\n" + SLOPE_FRAG_HEAD)
+        .replace("#include <colorspace_fragment>", "#include <colorspace_fragment>\n" + SLOPE_FRAG_FINAL);
+    };
+    terrainMat.customProgramCacheKey = () => "terrain-slope-2";
     const terrain = new THREE.Group();
     // No group renderOrder: three.js sorts by a group's order before an object's, which would
     // force the whole terrain after (or before) every sky object. Order is set per mesh instead.
@@ -185,7 +286,32 @@ export default function TerrainScene(props: SceneProps) {
       new THREE.MeshBasicMaterial({ color: 0xdcdad3, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide }),
     );
     refPlane.renderOrder = 4;
-    overview.add(obsRing, pin, north, rays.sun, rays.earth, refPlane);
+    // terrain inspection point: a dashed pin, unlike the observer's solid pin
+    const inspPin = makeLine([[0, 0, 0], [0, 1, 0]], 0xffffff, 1.6, { depthTest: false, dashed: true, dash: [0.12, 0.08] });
+    inspPin.renderOrder = 22;
+    overview.add(obsRing, pin, north, rays.sun, rays.earth, refPlane, inspPin);
+    let slopeAsset: SlopeAsset | null = null;
+    let ringsOn = false;
+    const setSlope = (a: SlopeAsset | null) => {
+      const prev = SU.uSlopeTex.value;
+      if (prev !== blank) prev.dispose();
+      SU.uSlopeTex.value = blank;
+      slopeAsset = a;
+      if (a) {
+        const g = a.grid;
+        const data = new Float32Array(g.nx * g.ny);
+        for (let k = 0; k < data.length; k++) data[k] = g.state[k] === 1 ? (g.slope_centideg[k] as number) : g.state[k] === 2 ? -100 : -200;
+        const tex = new THREE.DataTexture(data, g.nx, g.ny, THREE.RedFormat, THREE.FloatType);
+        tex.minFilter = tex.magFilter = THREE.NearestFilter;
+        tex.needsUpdate = true;
+        SU.uSlopeTex.value = tex;
+        SU.uSlopeA.value.set(...g.local_to_cell.a);
+        SU.uSlopeB.value.set(...g.local_to_cell.b);
+        SU.uSlopeSize.value.set(g.nx, g.ny);
+        SU.uRObs.value = a.observer.observer_radius_m;
+      }
+      resize();
+    };
 
     // Eye-view sky annotations (drawn by direction only; distance is irrelevant)
     const sky = new THREE.Group();
@@ -266,6 +392,17 @@ export default function TerrainScene(props: SceneProps) {
       labelHost.appendChild(d);
       return d;
     };
+    // edge indicators for off-screen bodies: one button per body (its own name and action)
+    function chip(b: "sun" | "earth") {
+      const d = document.createElement("button");
+      d.type = "button";
+      d.className = `scene-label lbl-off lbl-${b}`;
+      d.dataset.body = b;
+      d.style.display = "none";
+      d.addEventListener("click", () => propsRef.current.onLook(b));
+      labelHost.appendChild(d);
+      return d;
+    }
     const lab = {
       observer: mk("lbl-observer"),
       north: mk("lbl-north", "N"),
@@ -274,9 +411,11 @@ export default function TerrainScene(props: SceneProps) {
       edge: mk("lbl-edge"),
       skyline: mk("lbl-skyline"),
       zero: mk("lbl-zero"),
-      offSun: mk("lbl-off lbl-sun"),
-      offEarth: mk("lbl-off lbl-earth"),
+      offSun: chip("sun"),
+      offEarth: chip("earth"),
+      inspect: mk("lbl-inspect", '<span class="insp-mark" aria-hidden="true"></span><span class="lbl-name">Terrain inspection point</span>'),
     };
+    const ringLabels = [100, 250, 500].map((r) => ({ r, el: mk("lbl-ring", r === 500 ? "500 m · analysis area" : `${r} m`) }));
     const cardinals = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"].map((t, k) => ({ az: k * 45, el: mk(k % 2 ? "lbl-card minor" : "lbl-card", t) }));
     const hits = (["sun", "earth"] as const).map((b) => {
       const btn = document.createElement("button");
@@ -342,7 +481,25 @@ export default function TerrainScene(props: SceneProps) {
     applyEye();
 
     let drag: { x: number; y: number; id: number } | null = null;
+    // click (not drag) on terrain in the overview -> terrain inspection point
+    let press: { x: number; y: number; t: number } | null = null;
+    const raycaster = new THREE.Raycaster();
+    const onClickUp = (e: PointerEvent) => {
+      const p0 = press;
+      press = null;
+      const pr = propsRef.current;
+      if (!p0 || camMode !== "overview" || !pr.inspectEnabled || !pr.onInspect || !asset) return;
+      if (Math.hypot(e.clientX - p0.x, e.clientY - p0.y) > 5 || performance.now() - p0.t > 700) return;
+      const r = canvas.getBoundingClientRect();
+      raycaster.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), overviewCam);
+      const t0 = performance.now();
+      const hit = raycaster.intersectObjects(terrain.children, false)[0];
+      canvas.dataset.pickMs = (performance.now() - t0).toFixed(1);
+      if (hit) pr.onInspect([hit.point.x, hit.point.y, hit.point.z]);
+    };
+    canvas.addEventListener("pointerup", onClickUp);
     const onDown = (e: PointerEvent) => {
+      press = { x: e.clientX, y: e.clientY, t: performance.now() };
       if (camMode !== "eye") return;
       drag = { x: e.clientX, y: e.clientY, id: e.pointerId };
       canvas.setPointerCapture(e.pointerId);
@@ -471,6 +628,13 @@ export default function TerrainScene(props: SceneProps) {
         (curtain.material as THREE.MeshBasicMaterial).color.setHex(smooth ? COLORS.curtainSmooth : COLORS.curtain);
       }
       terrainMat.stencilWrite = masked;
+      // terrain layers: Site overview only, and only with this site's screening asset
+      const slopeOk = slopeAsset !== null && slopeAsset.site.id === p.site.site.id && camMode === "overview";
+      SU.uSlopeMode.value = overlayMode(p.layer ?? "surface", camMode, slopeAsset?.site.id ?? null, p.site.site.id);
+      SU.uThrC.value = thresholdCentideg(p.thresholdDeg ?? 15);
+      ringsOn = slopeOk && !!p.showRings;
+      SU.uRings.value = ringsOn ? 1 : 0;
+      inspPin.visible = camMode === "overview" && !!p.inspection;
       if (skyline) {
         skyline.visible = camMode === "eye" && !smooth;
       }
@@ -507,6 +671,99 @@ export default function TerrainScene(props: SceneProps) {
       }
     };
 
+    // Label layout only: edge chips are stacked or nudged clear of each other, the toolbar,
+    // panels and labels; ring labels yield to everything. No direction or marker is moved.
+    type Box = { l: number; t: number; r: number; b: number };
+    const hit2 = (a: Box, b: Box) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
+    const resolveCollisions = (w: number, h: number, bodyLabels: HTMLElement[]) => {
+      const hb = host.getBoundingClientRect();
+      const box = (el: Element): Box => {
+        const r = el.getBoundingClientRect();
+        return { l: r.left - hb.left, t: r.top - hb.top, r: r.right - hb.left, b: r.bottom - hb.top };
+      };
+      const shown = (el: HTMLElement) => el.style.display !== "none";
+      const stage = { l: 0, t: 0, r: w, b: h };
+      const obstacles = Array.from(document.querySelectorAll<HTMLElement>(".view-toolbar, .mission-panel, .right-col > .panel, .terrain-layers, .scene-legend, .event-card, .stage-note"))
+        .filter((e) => e.offsetParent !== null)
+        .map(box)
+        .filter((r) => r.r > r.l && hit2(r, stage));
+      // on-screen body labels step sideways off a panel (the marker itself never moves)
+      for (const el of bodyLabels) {
+        el.style.marginLeft = "0px";
+        if (!shown(el)) continue;
+        const r = box(el);
+        const ob = obstacles.find((o) => hit2(r, o));
+        if (ob) el.style.marginLeft = `${((ob.l + ob.r) / 2 > (r.l + r.r) / 2 ? ob.l - r.r - 4 : ob.r - r.l + 4).toFixed(0)}px`;
+      }
+      // the observer label takes the first clear spot: right of the pin, left of it, or below it
+      if (shown(lab.observer) && camMode === "overview") {
+        const others = [...bodyLabels, ...markers.map((m) => m.btn)].filter(shown).map(box);
+        for (const tr of ["", "calc(-100% - 10px) -50%", "-50% 14px"]) {
+          lab.observer.style.translate = tr;
+          const o = box(lab.observer);
+          if (!others.some((q) => hit2(o, q)) && !obstacles.some((q) => hit2(o, q))) break;
+        }
+      }
+      const fixed: Box[] = [...obstacles];
+      for (const el of [lab.observer, lab.inspect, ...bodyLabels, ...markers.map((m) => m.btn)]) if (shown(el)) fixed.push(box(el));
+      for (const el of [lab.offSun, lab.offEarth]) {
+        if (!shown(el)) continue;
+        const bx = Number(el.dataset.bx);
+        const by = Number(el.dataset.by);
+        const side = el.dataset.side;
+        let dx = 0;
+        let dy = 0;
+        el.style.transform = `translate(${bx.toFixed(0)}px, ${by.toFixed(0)}px)`;
+        // Search small displacements (up to 8 rounds): each round takes the smallest move that clears
+        // the current blocker and keeps the chip inside the stage band below the toolbar.
+        const band = { l: 4, t: 56, r: w - 4, b: h - 4 };
+        const inBand = (q: Box) => q.l >= band.l && q.t >= band.t && q.r <= band.r && q.b <= band.b;
+        const clampIn = () => {
+          const r = box(el);
+          const cy = r.t < band.t ? band.t - r.t : r.b > band.b ? band.b - r.b : 0;
+          const cx = r.l < band.l ? band.l - r.l : r.r > band.r ? band.r - r.r : 0;
+          dx += cx;
+          dy += cy;
+          el.style.transform = `translate(${(bx + dx).toFixed(0)}px, ${(by + dy).toFixed(0)}px)`;
+        };
+        clampIn();
+        for (let k = 0; k < 8; k++) {
+          const r = box(el);
+          const blocker = fixed.find((f) => hit2(r, f));
+          if (!blocker) break;
+          const moves: [number, number][] = [
+            [blocker.l - r.r - 4, 0],
+            [blocker.r - r.l + 4, 0],
+            [0, blocker.t - r.b - 4],
+            [0, blocker.b - r.t + 4],
+          ];
+          const ok = moves
+            .map(([mx, my]) => ({ mx, my, q: { l: r.l + mx, t: r.t + my, r: r.r + mx, b: r.b + my } }))
+            .filter((m) => inBand(m.q))
+            .sort((p1, p2) => Math.abs(p1.mx) + Math.abs(p1.my) - (Math.abs(p2.mx) + Math.abs(p2.my)));
+          // prefer a move that clears every fixed box; otherwise the smallest feasible one
+          const best = ok.find((m) => !fixed.some((f) => hit2(m.q, f))) ?? ok[0];
+          if (!best) break;
+          dx += best.mx;
+          dy += best.my;
+          el.style.transform = `translate(${(bx + dx).toFixed(0)}px, ${(by + dy).toFixed(0)}px)`;
+        }
+        void side;
+        el.dataset.shifted = dx || dy ? "true" : "false";
+        fixed.push(box(el));
+      }
+      // the "N" letter is redundant with the north line: it yields to every other label
+      if (shown(lab.north) && fixed.some((f) => hit2(box(lab.north), f))) lab.north.style.display = "none";
+      else if (shown(lab.north)) fixed.push(box(lab.north));
+      // ring labels are redundant with the legend: hide any that would touch another label or a panel
+      for (const rl of ringLabels) {
+        if (!shown(rl.el)) continue;
+        const r = box(rl.el);
+        if (r.l < 4 || r.r > w - 4 || r.t < 4 || r.b > h - 4 || fixed.some((f) => hit2(r, f))) rl.el.style.display = "none";
+        else fixed.push(r);
+      }
+    };
+
     const updateOverlay = (w: number, h: number) => {
       const p = propsRef.current;
       const st = p.status;
@@ -529,9 +786,30 @@ export default function TerrainScene(props: SceneProps) {
         place(lab.observer, [0, s * 0.07 - eyeH, 0], w, h, cam);
         lab.observer.innerHTML = `<span class="lbl-name">Modeled observer</span><span class="lbl-sub">eye ${eyeH.toFixed(2)} m above DEM surface</span>`;
         place(lab.north, [0, -eyeH, -s * 0.18], w, h, cam);
+        // ring labels at the ring point facing the camera
+        const camAz = (Math.atan2(cam.position.x, -cam.position.z) * 180) / Math.PI;
+        for (const rl of ringLabels) {
+          const ring = slopeAsset?.rings.find((x) => x.radius_m === rl.r);
+          const off = rl.r === 500 ? 0 : rl.r === 250 ? 18 : -30; // stagger so labels never stack
+          if (!ringsOn || !ring) {
+            rl.el.style.display = "none";
+            continue;
+          }
+          const n = ring.points.length;
+          const q = ring.points[((Math.round(((camAz + off) / 360) * n) % n) + n) % n];
+          place(rl.el, [q[0], q[1] + 1.2, q[2]], w, h, cam);
+        }
+        const ins = p.inspection;
+        if (ins) {
+          inspPin.position.set(ins[0], ins[1], ins[2]);
+          inspPin.scale.set(1, s * 0.05, 1);
+          place(lab.inspect, [ins[0], ins[1], ins[2]], w, h, cam);
+        } else lab.inspect.style.display = "none";
       } else {
         lab.observer.style.display = "none";
         lab.north.style.display = "none";
+        lab.inspect.style.display = "none";
+        for (const rl of ringLabels) rl.el.style.display = "none";
       }
       // body labels
       const placed: { el: HTMLElement; x: number; y: number; gap: number; r: number }[] = [];
@@ -559,7 +837,8 @@ export default function TerrainScene(props: SceneProps) {
           const pt = screen(far, w, h, cam);
           // usable area: inside the side panels, below the toolbar, above the legend
           const side = w > 760 ? 330 : 28;
-          const inView = pt.front && pt.x >= side && pt.x <= w - side && pt.y >= 64 && pt.y <= h - 60;
+          // the marker button (about 30 px) must fit wholly inside that area, not just its centre
+          const inView = pt.front && pt.x >= side + 18 && pt.x <= w - side - 18 && pt.y >= 64 && pt.y <= h - 60;
           mk.dataset.state = ms;
           mk.dataset.near = s.nearCrossing ? "true" : "false";
           mk.setAttribute("aria-label", `${name}: ${MARKER_TEXT[ms]}${s.nearCrossing ? " (near estimated crossing)" : ""}. View at horizon.`);
@@ -581,6 +860,9 @@ export default function TerrainScene(props: SceneProps) {
             const arrow = e.edge === "left" ? "◀" : e.edge === "right" ? "▶" : e.edge === "top" ? "▲" : "▼";
             off.style.display = "";
             off.innerHTML = `${arrow} <span class="lbl-name">${name}</span> <span class="lbl-sub">${MARKER_TEXT[ms]}</span>`;
+            off.setAttribute("aria-label", `${name} is off screen (${MARKER_TEXT[ms]}). View it at the horizon.`);
+            off.dataset.bx = String(e.x);
+            off.dataset.by = String(e.y);
             off.style.transform = `translate(${e.x.toFixed(0)}px, ${e.y.toFixed(0)}px)`;
             off.dataset.side = e.edge;
             off.dataset.body = b;
@@ -611,6 +893,9 @@ export default function TerrainScene(props: SceneProps) {
             off.style.display = "";
             off.innerHTML = `${left ? "◀ " : ""}<span class="lbl-name">${name}</span> ${Math.abs(dAz).toFixed(0)}°${left ? "" : " ▶"}`;
             const y = h - 150 - (b === "earth" ? 34 : 0);
+            off.setAttribute("aria-label", `${name} is ${Math.abs(dAz).toFixed(0)}° to the ${left ? "left" : "right"}. Center the view on the ${name}.`);
+            off.dataset.bx = String(left ? 12 : w - 12);
+            off.dataset.by = String(y);
             off.style.transform = `translate(${left ? 12 : w - 12}px, ${y.toFixed(0)}px)`;
             off.dataset.side = left ? "left" : "right";
           }
@@ -630,7 +915,8 @@ export default function TerrainScene(props: SceneProps) {
       // keep overview marker labels and markers clear of the observer label
       if (ov && lab.observer.style.display !== "none") {
         lab.observer.style.translate = "";
-        const hitsMarker = markers.some(({ btn }) => {
+        // markers and edge chips both push the observer label aside (labels never move a marker)
+        const hitsMarker = [...markers.map((m) => m.btn), lab.offSun, lab.offEarth].some((btn) => {
           if (btn.style.display === "none") return false;
           const a = btn.getBoundingClientRect();
           const o = lab.observer.getBoundingClientRect();
@@ -643,6 +929,7 @@ export default function TerrainScene(props: SceneProps) {
           if (r.left < ob.right && r.right > ob.left && r.top < ob.bottom && r.bottom > ob.top) q.el.style.translate = "-50% calc(-100% - 20px)";
         }
       }
+      resolveCollisions(w, h, placed.map((q) => q.el));
       // eye-view references
       if (!ov) {
         for (const c of cardinals) {
@@ -710,6 +997,7 @@ export default function TerrainScene(props: SceneProps) {
       frames++;
       canvas.dataset.frames = String(frames);
       canvas.dataset.frameMs = (performance.now() - t0).toFixed(2);
+      canvas.dataset.camPos = overviewCam.position.toArray().map((x) => x.toFixed(2)).join(",");
       if (anim) raf = requestAnimationFrame(frame);
     };
     function requestRender() {
@@ -876,6 +1164,10 @@ export default function TerrainScene(props: SceneProps) {
     const command = (c: CameraCommand) => {
       const p = propsRef.current;
       const dur = 650;
+      if (c.kind === "frame") {
+        if (camMode === "overview") overviewTo(new THREE.Vector3(...obliqueCamera(p.lookAz, TERRAIN_ELEV_DEG, TERRAIN_DIST_M)), dur);
+        return;
+      }
       if (c.kind === "reset") {
         if (camMode === "eye") eyeTo(eyeDefault(p.lookAz), dur);
         else overviewTo(overviewDefault(), dur);
@@ -890,7 +1182,7 @@ export default function TerrainScene(props: SceneProps) {
       }
     };
 
-    api.current = { render: requestRender, setSite, update: requestRender, setCamera, command };
+    api.current = { render: requestRender, setSite, update: requestRender, setCamera, command, setSlope };
     setCamera(propsRef.current.camera, false);
     setSite(propsRef.current.site);
     resize();
@@ -904,6 +1196,7 @@ export default function TerrainScene(props: SceneProps) {
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointerup", onClickUp);
       canvas.removeEventListener("pointercancel", onUp);
       canvas.removeEventListener("wheel", onWheel);
       canvas.removeEventListener("keydown", onKey);
@@ -938,7 +1231,11 @@ export default function TerrainScene(props: SceneProps) {
   }, [props.command]);
   useEffect(() => {
     api.current?.update();
-  }, [props.status, props.mode]);
+  }, [props.status, props.mode, props.layer, props.thresholdDeg, props.inspection, props.showRings, props.layoutKey]);
+  const slopeForSite = props.slope && props.slope.site.id === siteId ? props.slope : null;
+  useEffect(() => {
+    api.current?.setSlope(slopeForSite);
+  }, [slopeForSite, siteId]);
 
   return (
     <div className="scene-host" ref={hostRef} data-site={siteId} data-camera={props.camera}>

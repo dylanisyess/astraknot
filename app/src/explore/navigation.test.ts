@@ -150,3 +150,68 @@ describe("edge indicators stay inside the usable viewport", () => {
     expect(diag.y).toBeGreaterThanOrEqual(64);
   });
 });
+
+describe("5C check: overview celestial directions under orbit, pan and zoom", () => {
+  // The drawn ray runs from the modeled observer (origin) along d for 0.3 x the camera distance
+  // (TerrainScene RAY_LEN); the marker is at the camera position + d x 200 km (a direction, not a
+  // place). Any 3D line with direction d projects onto a screen line through d's vanishing point,
+  // so the ray's on-screen extension passes through the marker for every camera pose.
+  const project = (cam: THREE.PerspectiveCamera, p: THREE.Vector3) => {
+    const v = p.clone().project(cam);
+    return { x: (v.x * 0.5 + 0.5) * 1600, y: (-v.y * 0.5 + 0.5) * 900, front: v.z <= 1 && v.z >= -1 };
+  };
+  const poses: { pos: [number, number, number]; target: [number, number, number]; fov: number }[] = [
+    { pos: [-3000, 900, 2000], target: [0, 0, 0], fov: 50 }, // default-like orbit
+    { pos: [1800, 2600, -900], target: [0, 0, 0], fov: 50 }, // high orbit, other side
+    { pos: [-300, 120, 260], target: [0, 0, 0], fov: 50 }, // zoomed in
+    { pos: [-2400, 700, 3100], target: [900, -40, 600], fov: 50 }, // panned: observer off-centre
+    { pos: [5200, 300, 4800], target: [-1500, 20, -800], fov: 50 }, // panned far, low
+  ];
+  const dirs = [[129.7, 5.6], [322.0, 4.1], [250.0, 1.2], [140.0, -0.4]] as const;
+  it("the drawn ray, extended on screen, passes through its direction marker (collinear, same side)", () => {
+    let checked = 0;
+    for (const pose of poses) {
+      const cam = new THREE.PerspectiveCamera(pose.fov, 16 / 9, 0.5, 600_000);
+      cam.position.set(...pose.pos);
+      cam.lookAt(new THREE.Vector3(...pose.target));
+      cam.updateMatrixWorld();
+      const L = 0.3 * cam.position.length();
+      for (const [az, el] of dirs) {
+        const d = directionFromAzEl(az, el);
+        const dv = new THREE.Vector3(...d);
+        const fwd = new THREE.Vector3();
+        cam.getWorldDirection(fwd);
+        if (dv.dot(fwd) <= 0.05) continue; // direction behind the camera: edge chip, not a marker
+        const O = project(cam, new THREE.Vector3(0, 0, 0));
+        const E = project(cam, dv.clone().multiplyScalar(L));
+        const V = project(cam, cam.position.clone().add(dv.clone().multiplyScalar(200_000)));
+        if (!O.front || !E.front || !V.front) continue;
+        const ex = E.x - O.x, ey = E.y - O.y, vx = V.x - O.x, vy = V.y - O.y;
+        const cross = Math.abs(ex * vy - ey * vx) / (Math.hypot(ex, ey) * Math.hypot(vx, vy));
+        expect(cross).toBeLessThan(1e-3); // sine of the screen angle between ray and marker direction
+        expect(ex * vx + ey * vy).toBeGreaterThan(0); // the marker lies ahead of the ray, not behind the observer
+        // the ray's screen end never overshoots the marker (no endpoint forced onto it)
+        expect(Math.hypot(ex, ey)).toBeLessThanOrEqual(Math.hypot(vx, vy) + 1e-6);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThanOrEqual(8);
+  });
+  it("pan and zoom (camera translation at a fixed orientation) leave the marker where it is", () => {
+    const d = directionFromAzEl(322, 4.1);
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, 0.8, 0, "YXZ"));
+    const at = (pos: [number, number, number]) => {
+      const cam = new THREE.PerspectiveCamera(50, 16 / 9, 0.5, 600_000);
+      cam.position.set(...pos);
+      cam.quaternion.copy(q);
+      cam.updateMatrixWorld();
+      return project(cam, cam.position.clone().add(new THREE.Vector3(...d).multiplyScalar(200_000)));
+    };
+    const ref = at([-3000, 900, 2000]);
+    for (const p of [[-2000, 900, 2000], [-3000, 400, 2600], [-600, 180, 400], [4000, 900, -2000]] as [number, number, number][]) {
+      const m = at(p);
+      expect(Math.abs(m.x - ref.x)).toBeLessThan(1e-6);
+      expect(Math.abs(m.y - ref.y)).toBeLessThan(1e-6);
+    }
+  });
+});

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Explore from "./explore/Explore";
+import { TerrainComparison } from "./explore/TerrainScreening";
+import { useSlopeAssets } from "./explore/useSlope";
 import { CR1_5M } from "./assessment";
 import { ElevationChart } from "./ElevationChart";
 import { Panorama } from "./Panorama";
@@ -135,6 +137,8 @@ export function Analysis({ sc }: { sc: Scenario }) {
     () => (mode === "terrain" ? horizonUnderBodies(activeSite, horizon) : null),
     [activeSite, mode, horizon],
   );
+  // 5C: both sites' screening assets, lazy; a failure leaves the rest of Analysis unaffected
+  const slope = useSlopeAssets(views.map((v) => v.data), true);
   const [wrapRef, width] = useWidth<HTMLDivElement>();
   const [panoRef, panoWidth] = useWidth<HTMLDivElement>();
   const scale = timeScale(domain.start, domain.end, width);
@@ -302,9 +306,9 @@ export function Analysis({ sc }: { sc: Scenario }) {
             ))}
           </div>
           {options.some((o) => !o.enabled) && (
-            <p className="muted small">
-              Unavailable: {options.filter((o) => !o.enabled).map((o) => `+${o.days} d`).join(", ")} would end after the
-              available data ({fmtUtc(cov.end)}).
+            <p className="muted small" data-testid="delay-unavailable">
+              Unavailable: {options.filter((o) => !o.enabled).map((o) => `+${o.days} d`).join(", ")}. This mission plus the
+              selected delay exceeds cached coverage (data end {fmtUtc(cov.end)}).
             </p>
           )}
           {!chosen.enabled && (
@@ -342,6 +346,21 @@ export function Analysis({ sc }: { sc: Scenario }) {
         </p>
       </section>
 
+      <TerrainComparison
+        sites={views.map((v) => ({
+          id: v.entry.id,
+          short: v.profile.short,
+          provisional: v.profile.provisionalTerrain,
+          state: slope.states[v.entry.id] ?? { state: "idle" },
+          sun: pctText(effDelay ? v.act.sunPct : v.base.sunPct),
+          earth: pctText(effDelay ? v.act.earthPct : v.base.earthPct),
+        }))}
+        thresholdDeg={sc.slopeThr}
+        setThreshold={sc.setSlopeThr}
+        missionLabel={delayedLabel ?? "Baseline"}
+        onRetry={slope.retry}
+      />
+
       <section className="card viz-card" aria-labelledby="viz-h">
         <div className="chart-head">
           <h2 id="viz-h">Selected time, panorama and timelines</h2>
@@ -373,6 +392,13 @@ export function Analysis({ sc }: { sc: Scenario }) {
           </div>
         </fieldset>
 
+        {sc.selT !== cursorT && (
+          <p className="note small clamp-note" role="status" data-testid="clamped-time">
+            Explore’s viewing time, <strong className="num">{fmtUtc(sc.selT)}</strong>, is outside these mission windows.
+            Analysis shows the nearest window edge, <strong className="num">{fmtUtc(cursorT)}</strong>. Explore keeps its
+            viewing time unless you change the time here.
+          </p>
+        )}
         <Readouts view={activeView} mode={mode} />
 
         <div className="chart-head sub">

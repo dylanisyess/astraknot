@@ -389,3 +389,35 @@ real lunar conditions.
   Since 5B also `mission=baseline|delayed` and `cam=overview|horizon`
   (Explore view state); `t` may lie outside the mission windows in Explore,
   while Analysis shows it clamped to its windows as before.
+
+### 2026-11-14, milestone 5C: terrain hazard screening assets (no contract change)
+- New files `app/public/screening/<site_id>.slope.json` (lazy-loaded) and evidence
+  `data/screening/<site_id>_slope_report.json`, written by `pipeline/slope.py`. They are
+  **screening assets, not app data under this contract**: they carry no visibility
+  state, never change the observer, a status, an interval or a metric, and are not a
+  landing-safety assessment.
+- Content:
+  - site identity, observer radius, DEM product and sha256, method, footprint;
+  - `grid.state` (0 outside the 500 m footprint, 1 valid, 2 in the footprint without a
+    slope; row-major, a along +I, b along +J);
+  - `grid.slope_centideg` (integer 0.01°, `null` unless state 1; never 0 for missing);
+  - `grid.local_to_cell` (affine renderer-frame x, z → cell, with its max residual) and
+    check points;
+  - `observer_cell`, `stats` (nearest-rank median/p95, max), `shot_quality` (LDEC,
+    indicator only), and `rings` (100/250/500 m ground-distance polylines in the
+    renderer frame).
+- Method: Horn 3 × 3 on true 3D pixel-centre positions of LDEM_80S_20M (DN × 0.5 m above
+  1737.4 km), slope relative to each pixel's radial vertical, baseline about 40 m. The
+  footprint is pixel centres within 500 m great-circle ground distance (1737.4 km sphere)
+  of the site coordinate. Equal-area weighting is used; the evidence records the weighted
+  difference.
+- Threshold semantics: exceedance = stored slope strictly greater than the threshold,
+  applied at 0.01°. The threshold changes classifications only.
+- The app refuses an asset whose site identity, coordinates, altitude or observer radius
+  differ from the site file, or whose grid states and values disagree.
+- URL (frontend only): `layer=exceed|slope|hide` and `thr=<deg>` (1–45, default 15;
+  shared by Explore and Analysis). Since the 5C UX correction an absent `layer` means the
+  default steep-area highlight; `hide`, `off` and the older `surface` mean hidden. The
+  app writes `layer` explicitly so a hidden overlay survives reloads.
+- Frontend wording (no data change): a disabled delay's reason is "This mission plus the
+  selected delay exceeds cached coverage."; validation is unchanged.

@@ -5,7 +5,13 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
-## Start here (handoff for a new session, updated 2026-11-14 after milestone 5B)
+## Start here (handoff for a new session, updated 2026-11-14 after milestone 5C)
+**Milestone 5C (terrain hazard screening, uncommitted on
+`milestone-5c-terrain-screening` from merged `main` = `caab643`):** see "Milestone 5C"
+below, including its acceptance pass (automatic screening in Conditions, one highlight
+toggle). 5A–5B are committed (`840137b`) and merged in PR #4. The snapshot that follows
+is the 5A–5B closeout record, kept for history.
+
 Read this section first, then `docs/SPEC.md`, `docs/DATA_CONTRACT.md` and
 `docs/SCIENCE_REVIEW.md`. The rest of this file is the detailed record behind it.
 
@@ -297,14 +303,15 @@ python pipeline/fetch.py --site connecting-ridge-cr1                 # "0 live r
 python pipeline/crosscheck_metrics.py --site connecting-ridge-cr1 --terrain  # 12-05 +0 d: sun 72.123..., earth 25.446..., dark 62.833 h (touches end)
 python pipeline/crosscheck_metrics.py --site connecting-ridge-cr1    # 12-05 +0 d: sun 100.0, earth 28.373..., dark 0.0 h
 python pipeline/observer_rounding_check.py --site connecting-ridge-cr1  # max 0.0235 deg; sun 13, earth 3 steps
-python -m unittest discover -s pipeline/tests      # Ran 76 tests ... OK (68 before milestone 5A)
+python -m unittest discover -s pipeline/tests      # Ran 91 tests ... OK (76 after 5A, 68 before 5A)
 python pipeline/pgda.py fetch Site01 surf ldec toterr   # 3 x ~41 MB into data/raw/pgda/site01 (~60 KB/s observed)
 python pipeline/terrain_5m.py --site connecting-ridge-cr1   # ~12 min; F5_fixed vs L20: max 0.97 deg, 321 Sun steps
 python pipeline/fetch.py --site im2-athena                           # "0 live request(s) made" (all cached)
 python pipeline/crosscheck_metrics.py --site im2-athena              # 12-05 +0 d: sun 43.353..., dark 190.333 h
 python pipeline/crosscheck_metrics.py --site im2-athena --terrain    # 12-05 +0 d: sun 27.232..., earth 67.262..., dark 244.5 h
 python pipeline/compare_altitude.py --site im2-athena                # earth mean 8.041e-04 deg, sun 2.067e-06 deg
-cd app && npm test                                 # 217 passed (12 files; 202 after 5B, 173 after 5A, 140 before 5A)
+cd app && npm test                                 # 275 passed (13 files; 217 after 5B, 173 after 5A, 140 before 5A)
+python pipeline/slope.py                            # ~1 s/site; Athena median 2.88 p95 5.90; CR1 median 5.57 p95 15.15 (needs LDEM_80S_20M)
 python pipeline/render_assets.py --site connecting-ridge-cr1        # ~10 s; mesh check vs profile max |d| 0.1076 deg (needs LDEM_80S_20M)
 python pipeline/render_assets.py --site im2-athena                  # ~10 s; mesh check vs profile max |d| 0.1124 deg
 cd app && npm run build                            # builds without errors
@@ -374,6 +381,550 @@ To regenerate CR1 from the caches (order matters; all inputs cached, no network)
 `export.py` → `validate.py` → `terrain_horizon.py` (~5 min) →
 `horizon_crosscheck.py` (~5 min; RDR boxes cached) → `export.py` →
 `validate.py` → `observer_rounding_check.py`, all with `--site connecting-ridge-cr1`.
+
+## Milestone 5C: terrain hazard screening and site comparison (2026-11-14)
+
+Branch `milestone-5c-terrain-screening`, **uncommitted, for review**.
+
+**Git state verified at the start of 5C (personally):** 5A–5B were committed as
+`840137b` and merged into `main` through PR #4 (`caab643`). `main` = `origin/main` =
+`caab643`. `milestone-5c-terrain-screening` was created at `caab643` with a clean tree.
+The handoff's "uncommitted on `milestone-5a-explore`" statement in the 5C prompt was
+out of date; the live Git state above overrides it.
+
+No Horizons fetch, no terrain download, no change to site exports, intervals,
+horizons, render meshes or mesh checks (sha256 of the same 74 protected files before
+and after: all identical; `git status` shows no change under `app/public/data`,
+`app/public/render`, `data/terrain`, `data/render`, `data/horizons`, `pipeline/config.json`).
+
+### Part 1: 5B corrections (checked personally)
+- **A. Overview celestial alignment: no bug found; convention documented and tested.**
+  - Sun/Earth rays, overview markers, edge chips and "Look toward" all use the same
+    `selectedTimeStatus` geometry az/el through `directionFromAzEl`.
+  - Convention: a ray starts at the modeled observer, along direction d, with a length of
+    0.3 × the camera distance. The marker is placed at camera position + d × 200 km,
+    which is d's vanishing point (camera rotation only; translation ignored).
+  - Consequences:
+    - every 3D line along d projects onto a screen line through that point, so the
+      ray's on-screen extension passes through the marker for any camera pose;
+    - camera translation (pan/zoom) cannot move a marker against the terrain;
+    - the ray's drawn end is not forced onto the marker.
+  - The marker's distance is not a physical distance. Its size is enlarged for
+    orientation (legend: "Body markers enlarged for orientation").
+  - New tests (`explore/navigation.test.ts`):
+    - collinearity (sine < 1e-3) and same-side checks for 5 orbit/pan/zoom poses ×
+      4 directions (≥ 8 front-facing cases checked);
+    - the ray end never overshoots the marker;
+    - the marker NDC is unchanged under 4 translations at a fixed orientation.
+  - Browser, headed Chrome 157, CR1 2027-01-16:
+    - default view: the Earth ray from the observer (≈720, 405 px) through (703, 348)
+      extends to x ≈ 643 at the marker's y = 147; the marker is at x = 645;
+    - after a real mouse orbit, right-drag pan and wheel zoom, Earth fell behind the
+      right panel and its edge chip sat on the ray's side.
+  - Fixed: an edge chip could overlap the "Modeled observer" label. The label now
+    moves aside for chips as it already did for markers; labels never move a marker.
+  - The behind-camera chip position remains approximate (known since 5B).
+- **B. Shared viewing time.**
+  - Explore's time outside the mission windows was already preserved across
+    Explore → Analysis → Explore (re-checked in the browser: 2027-01-10 00:00 kept,
+    URL `t` unchanged).
+  - New: Analysis now says so explicitly: "Explore's viewing time, …, is outside these
+    mission windows. Analysis shows the nearest window edge, …. Explore keeps its
+    viewing time unless you change the time here." (`data-testid="clamped-time"`).
+- **C. Disabled delays.**
+  - The validation is unchanged (`windowFits`).
+  - The reason text is now "This mission plus the selected delay exceeds cached
+    coverage." (`DELAY_UNAVAILABLE`, used as the tooltip in both views).
+  - Explore shows an inline note linked by `aria-describedby`, e.g. "+3 d, +7 d
+    unavailable: this mission plus the selected delay exceeds cached coverage (data end
+    2027-01-30 00:00 UTC)." Analysis uses the same sentence.
+  - Browser-checked at arrival 2027-01-14.
+
+### Slope method, scale and footprint (`pipeline/slope.py`)
+- **DEM:** LDEM_80S_20M, sha256 `db44c3b2…` re-verified against the site export's
+  product record in the final run.
+  - Units: horizontal m (polar stereographic map, 20 m pixels); vertical m above
+    the 1737.4 km sphere (DN × 0.5).
+  - Registration: the established one (pixel centres I = X/s + N/2 + 0.5,
+    J = −Y/s + N/2 + 0.5).
+  - Heights are the DN values at pixel centres. No render mesh, shading normal or
+    2.5/5 m interpolation is used.
+- **Gradient:**
+  - Horn (1981) 3 × 3 weights (1-2-1), applied to the true Moon-centred positions of
+    the 8 neighbouring pixel centres: (1737.4 km + h) × the exact inverse-stereographic
+    unit vector.
+  - Horizontal distances therefore include the projection scale k = 2/(1 + sin|lat|)
+    (1.0021 at Athena) and the terrain radius.
+  - Slope is the angle between the surface normal and the centre pixel's radial unit
+    vector (the local lunar horizontal).
+  - The symmetric differences cancel curvature: flat ground on the sphere gives
+    < 1e-6° (tested).
+- **Measurement scale:**
+  - each value is the slope of one 20 m DEM cell, measured across ±1 pixel;
+  - baseline 39.92 m (Athena) / 40.00 m (CR1); the 3 × 3 neighbourhood spans about
+    60 m;
+  - stored at 0.01°.
+  - Not sub-cell detail: the overlay shows one constant color per DEM cell
+    (nearest cell, tested on the 2.5 m / 5 m render vertices).
+- **Footprint:**
+  - every pixel centre within 500 m great-circle ground distance (1737.4 km sphere)
+    of the site coordinate, the modeled observer's vertical;
+  - the same radius, method, DEM and threshold semantics at both sites;
+  - the grid anchor equals the render mesh's anchor (checked);
+  - the 3 × 3 halo is read from the raster.
+- **Invalid cells:** any neighbour outside the raster or equal to an explicit nodata DN
+  (LOLA LDEMs have none) makes the cell invalid. Invalid cells have no slope, are
+  excluded from statistics and are never drawn as flat (hatched "No slope data").
+  Actual: **0 invalid cells at both sites; valid coverage 100 %**.
+- **Area weighting:**
+  - equal-area weighting is used;
+  - planimetric (s/k)² varies by a factor 1.000052 (Athena) / 1.0000053 (CR1) within
+    the footprint;
+  - weighted and unweighted exceedance differ by ≤ 7.5e-7 (recorded in the evidence).
+- **Statistics:**
+  - percentiles are nearest-rank on the stored values (value at rank ceil(p/100·n)),
+    identical in Python and TS (tested against the evidence);
+  - exceedance means stored slope **strictly greater** than the threshold; equal is
+    not an exceedance; the threshold is applied at 0.01°.
+- **Independent check:**
+  - a planar Horn on raw DN (numpy in a scratch script, and stdlib in
+    `test_slope.IndependentPlanarCrossCheck`) agrees to ≤ 0.036° (≤ 0.011° once the
+    terrain-radius factor is applied);
+  - the remaining relative tan difference is exactly h/R (0.31 % at Athena, 0.11 % at
+    CR1): the planar method measures distance on the 1737.4 km sphere, the 3D method at
+    the terrain's own radius.
+- **Quality indicator (not accuracy):**
+  - footprint cells with a LOLA shot in their own pixel: 69 % (Athena), 80 % (CR1);
+  - cells with no shot anywhere in their 3 × 3 stencil: 3 (Athena), 0 (CR1).
+- **Reproduce:** `python pipeline/slope.py` (both sites; `--site ID`, `--no-rehash`).
+  Runtime about 1 s per site including the re-hash (file cached by the OS); 0.2–0.3 s
+  without.
+- **Outputs:**
+  - `app/public/screening/<site>.slope.json`: 37 184 B (Athena), 37 552 B (CR1);
+    lazy-loaded;
+  - `data/screening/<site>_slope_report.json`: about 5 KB each;
+  - the asset holds identity, observer radius, DEM sha256, method, footprint, the
+    55 × 55 grid of states and 0.01° values, the affine local → cell map (max residual
+    0.0009 / 0.0017 cells ≈ 2–3 cm), check points, the observer cell, stats and
+    100 / 250 / 500 m rings (true ground distance, bilinear DEM height).
+
+### Actual terrain comparison results (500 m radius, same method)
+| | Athena | CR1 (provisional) |
+|---|---|---|
+| Valid coverage | 100 % (1 969 cells) | 100 % (1 964 cells) |
+| Median slope | 2.88° | 5.57° |
+| 95th percentile | 5.90° | 15.15° |
+| Maximum | 13.67° | 21.22° |
+| Above 5° / 10° / 15° / 20° | 10.3 % / 0.15 % / 0 / 0 | 56.5 % / 17.1 % / 5.3 % / 0.25 % |
+| Modeled observer's cell | 2.26° | 0.91° |
+
+At the default illustrative 15° threshold:
+- CR1: "5.3 % of analyzed terrain exceeds the 15° screening threshold within 500 m of
+  the modeled observer."
+- Athena: "No threshold exceedances detected at this DEM scale."
+
+These are 20 m-DEM screening values: not boulders, small craters, bearing strength
+or landing safety. In the same delay +3 d window, Athena shows Sun 48.7 % / Earth
+88.7 % and CR1 shows Sun 59.9 % / Earth 46.9 %. No combined score is formed.
+
+### Interface
+(Superseded by the acceptance pass below: one "Highlight steep terrain" toggle, automatic
+screening in Conditions, unlit overlay colors and shader-drawn rings.)
+- **Terrain layers** (bottom-left of the stage, Site overview): Surface / Slope /
+  Above N°.
+  - Slope uses a fixed 0–30°+ sequential light-to-violet palette (same at both sites,
+    clamped, never rescaled).
+  - Above N° shows exceedances in a strong pink (#ff3d8b). Other cells keep the
+    plain surface ("not a safety rating"); there is no green.
+  - Colors replace the terrain's diffuse color in the lit shader (nearest DEM cell via
+    the affine map), so the display lighting still shows shape.
+  - Rings at 100/250 m (dashed) and the 500 m analysis boundary (solid), labelled.
+  - Turning a layer on frames the analysis area (camera only).
+- **Horizon view** keeps its presentation (no layer is drawn). It shows "Open terrain
+  layers in overview" instead.
+- **Terrain summary** ("Terrain hazard screening", right column under Conditions;
+  opens with a layer or an inspection):
+  - the purpose sentence;
+  - the computed alert; a prominent coverage note when coverage is below 100 %;
+  - the legend;
+  - an editable threshold (1–45°, 0.1° steps; default 15°), with the "illustrative
+    screening setting, not a validated lander capability or universal safety limit"
+    note;
+  - median, 95th percentile, coverage, radius, and the observer cell with its scale;
+  - Method and limits; Return to Surface.
+- **Terrain inspection point:**
+  - Click (not drag) on terrain while a layer is on.
+  - Marker: a diamond with a dashed pin, labelled "Terrain inspection point".
+  - Shows the cell's slope, above / at-or-below the threshold, ground distance from
+    the modeled observer, validity and scale.
+  - Outside the footprint: "No slope data at this point … outside the analysis area".
+  - It changes nothing else (render tests compare status and metrics markup;
+    browser-checked). Clear inspection.
+- **Analysis:** "Terrain hazard screening: matched 500 m footprint" table:
+  - radius, method, median, 95th percentile, area above the threshold, valid
+    coverage;
+  - Sun and Earth center visible for the shown mission (the card values);
+  - the CR1 provisional status;
+  - the same shared threshold.
+- **URL:** `layer=slope|exceed` (absent = surface) and `thr=<deg>` (shared by both
+  views).
+- **Failure:** if a screening asset fails, the summary/Analysis say so with Retry.
+  Surface, timeline, status and Analysis keep working (browser-checked with requests
+  blocked).
+
+### Checks run personally (2026-11-14)
+- `python -m unittest discover -s pipeline/tests`: **91 OK** (76 + 15 in `test_slope.py`).
+  Covered:
+  - flat sphere ≈ 0° at both latitudes;
+  - planes of 0.5–30° in 5 orientations (slope ±1e-6°, aspect ±1e-4°);
+  - an off-centre plane differs only by curvature tilt;
+  - DN scale and projection-scale sensitivity;
+  - boundary and nodata cells are invalid, never flat, and excluded from the
+    denominator;
+  - threshold equality, nearest rank, weighted denominator and the affine fit;
+  - exported identity, footprints, states, stats, mapping, ring distances and
+    evidence;
+  - the independent planar cross-check against the raster.
+- `python pipeline/validate.py`: **136/136**.
+- `npm test`: **264 passed, 13 files** (217 before). New:
+  - `explore/slope.test.ts` (18): identity/refusal, stats = pipeline evidence at
+    6 thresholds, threshold semantics, denominators, mapping of every footprint pixel
+    centre of render levels 0 and 1, sub-pixel vertices, inspection, ground distance;
+  - 9 Explore/Analysis render tests: layers and inspection leave status/metrics
+    unchanged, alerts, Horizon view, URL, Analysis table, clamped-time note, delay
+    text;
+  - 2 projection tests.
+  - Three assertions were updated for intentionally changed wording/fields.
+- `npm run build`: passed (TerrainScene chunk 611 kB / 154 kB gzip; was 603 kB).
+- **Browser** (headed Chrome 157, `puppeteer-core` in the session scratchpad, dev server
+  on port 5190; 1440×900 and 390×844):
+  - both sites × all layers;
+  - threshold 15 → 10 in Explore (CR1 17.1 %) and Analysis (0.2 % / 17.1 %), shared;
+  - inspection inside (CR1 4.5° at 184 m) and outside (3.27 km: no slope data);
+    Clear inspection;
+  - status and mission-comparison text byte-identical before/after inspection;
+  - CR1 → Athena switch with a layer on: the summary title, alert and median
+    switched together;
+  - Smooth/Terrain toggle: the slope summary was unchanged, the status changed with
+    the model;
+  - Horizon view and "Open terrain layers in overview";
+  - Sun crossing navigation with a layer on (switches to Horizon view);
+  - blocked screening requests;
+  - narrow: no horizontal overflow; Conditions before the summary;
+  - no console errors.
+- **Performance** (localhost):
+  - screening asset fetch 10–15 ms;
+  - frame CPU time with a layer on: median 0.7–0.8 ms, p95 1.1–1.8 ms (same as
+    Surface);
+  - inspection raycast against the whole mesh: 44–50 ms (one 202 ms first pick
+    observed at CR1).
+
+### Remaining limitations
+- 20 m DEM screening only: no boulders, small craters, roughness, bearing strength or
+  landing safety. The DEM is interpolated where no shot fell. CR1 stays provisional,
+  and its frame/accuracy are assumed.
+- The inspection point reports the containing cell. The ground distance is the
+  footprint's great-circle definition; the local horizontal is larger by h/R.
+- Overlay colors are lit by the display light and tone-mapped. Read values from the
+  legend, the summary or an inspection, not from the exact on-screen color.
+- Narrow screens: the 500 m ring label can sit under the layer control.
+- Not checked: Firefox/Safari, touch, screen readers, reduced motion in a browser,
+  non-local network.
+- The 5B mesh/profile discrepancy and behind-camera edge-chip approximation are
+  unchanged.
+
+### 5C acceptance pass: automatic screening, simpler controls, reliable colors (2026-11-14)
+
+Same branch, still **uncommitted**. Git re-verified at the start: `main` = `origin/main` =
+`caab643`; the 5C work above is uncommitted on `milestone-5c-terrain-screening`.
+Frontend only:
+- no change to `pipeline/slope.py` or its outputs (no bug found);
+- no change to horizons, exports or meshes;
+- sha256 of the 78 protected files (the earlier 74 plus the 2 slope assets and
+  2 evidence files) identical before and after.
+
+This pass replaces the 5C interface described under "Interface" above: the three-button
+layer control and the separate summary panel.
+
+**What changed**
+- **Automatic screening.**
+  - The active site's slope asset loads on every visit (no overlay needed).
+  - The Conditions panel has a "Terrain screening" row after the solar and Earth groups:
+    - exceedance: "Steep terrain nearby" plus "5.3 % of analyzed area exceeds 15° within
+      500 m." (computed);
+    - none: "No slopes above 15° detected within 500 m at this DEM scale." (neutral
+      hollow marker; never green or "safe").
+  - The modeled observer's own cell is reported separately ("… own cell: 0.9°, not above
+    15°" / "… also exceeds 2° (2.3°)").
+  - One qualification: "20 m DEM; slope measured over approximately 40 m."
+  - Loading, unavailable (with Retry) and incomplete-coverage states.
+  - The logic is the pure function `screeningView`. No asset, or an asset for another
+    site, means "Loading…", so a result is never shown early or for the wrong site.
+  - Independent of date, playback, horizon model, camera and overlay. No toasts.
+- **Controls.**
+  - One stage toggle, "Highlight steep terrain > 15°" (aria-pressed; "On · hide" hides
+    the overlay). In Horizon view it becomes "Show steep terrain in overview".
+  - "Show on terrain" in the screening row switches to the overview, turns on the
+    highlight and frames the 500 m area. Time and mission settings are untouched;
+    reduced motion is honoured (instant camera).
+  - "Terrain details" opens one detail area inside the Conditions panel, scrolled into
+    view. It holds:
+    - the overlay choice Off / Above N° / Full slope map (alternatives, one at a time);
+    - the "Illustrative screening threshold" input;
+    - the legend, stats and "Method and limits";
+    - inspection results (an inspection opens the area).
+  - Turning overlays off leaves the screening and its summary in place.
+  - Old `layer=exceed|slope` links map to highlight / full slope map. `layer=surface`
+    and an absent layer mean off.
+- **Reliable colors.**
+  - Overlay colors are applied after lighting, tone mapping and the sRGB conversion: the
+    legend's sRGB colors at 90 % opacity over the shaded surface, the same at both sites.
+  - Flat per 20 m cell. The full slope map adds faint cell edges when cells are larger
+    than about 4 px.
+  - Outside the 500 m area the terrain is dimmed and keyed "Outside: not assessed".
+    Unhighlighted cells are keyed "not above the threshold; not a safety rating".
+  - Rings (500 m solid, 100/250 m dashed) are drawn in the terrain shader from the
+    footprint's great-circle distance. They are exactly draped, with no z-fighting or
+    protruding chords; this replaces the 5C line rings.
+  - The analysed area's edge is stepped at 20 m beyond the smooth ring, because cell
+    membership is by cell centre. This is visible and correct.
+- **Layout.**
+  - Edge chips are buttons (one name and action per body).
+  - A collision pass stacks or nudges chips clear of each other, the toolbar, the
+    panels, the legend, the toggle and labels. Body labels step sideways off panels.
+  - The overview marker must fit wholly inside the usable area, otherwise a chip is
+    shown.
+  - Ring labels and the "N" letter hide when they would collide.
+  - Directions and markers are never moved by any of this.
+  - Site description: summary shortened to "About CR1", collapsed on a fresh visit;
+    a deliberate expansion is kept for the session (sessionStorage, try/catch).
+
+**Checks run personally**
+- `npm test`: **269 passed, 13 files** (264 before this pass).
+  - The old 5C summary tests were replaced by 13 tests covering:
+    - automatic screening with overlays off at both sites;
+    - threshold updates (10°, 25°) and the separate observer-cell report;
+    - independence from date, model, overlay and camera;
+    - no stale or other-site result (asset primed for Athena only → CR1 "Loading…");
+    - distinct loading/error/none states, with Retry only on error;
+    - incomplete coverage;
+    - the single toggle and detail-area contents;
+    - inspection in the detail area, with Sun/Earth groups and metrics unchanged;
+    - Horizon view;
+    - URL mapping of old layer links and threshold clamping;
+    - the Analysis table.
+- `npm run build`: passed (main chunk 374 kB, TerrainScene 614 kB; three.js stays in
+  the lazy chunk). `python -m unittest discover -s pipeline/tests`: 91 OK.
+- **Browser:** headed Chrome 157, own dev server on port 5190. Ports 5173/5174 are other
+  processes and were not touched.
+  - Fresh load of both sites with the overlay off:
+    - CR1: "Steep terrain nearby / 5.3 % … / own cell 0.9°";
+    - Athena: "No slopes above 15° detected within 500 m at this DEM scale. / own cell
+      2.3°";
+    - site description collapsed; toggle not pressed.
+  - CR1 → Athena switch, every DOM mutation recorded: only "Athena · loading" then
+    "Athena · none".
+  - Show on terrain from Horizon view (CR1, +7 d, 2026-12-10 06:00): overview,
+    `layer=exceed`, time and all mission URL fields unchanged.
+  - In the details area:
+    - threshold 10 → row "17.1 % … exceeds 10°";
+    - full slope map on;
+    - inspection 4.4° at 153 m, then Clear;
+    - toggle off: layer cleared, row still "Steep terrain nearby".
+  - Blocked screening requests: "Terrain screening unavailable (Failed to fetch).
+    Retry"; the mesh still loaded. Retry after unblocking gave "Steep terrain nearby".
+  - Label collisions:
+    - 72 orbit/pan/zoom samples over CR1 2027-01-16, Athena 2026-12-20 and CR1 with
+      the highlight: chips stacked or nudged in 39;
+    - a 12-step Horizon-view yaw sweep;
+    - **zero overlaps** among chips, toolbar, panels, legend, toggle, observer label,
+      "N", ring labels, markers and body labels (after fixing a marker-under-panel case
+      and the "N"/observer overlap found by the first sweeps).
+  - 1366×768: all mission controls through the delay row visible; only the
+    darkness-boundary note needs the panel scroll.
+  - 390×844: no horizontal overflow, no overlaps; ring labels are shown only where
+    they fit.
+  - No console errors.
+  - Screenshots (session scratchpad, not committed): `shots/e/default-*.png`,
+    `details-thr10.png`, `full-slope-map.png`, `inspection.png`, `missing.png`,
+    `narrow*.png`, `desk-1366b.png`, `orbit-*.png`; `shots/f/` for the final sweep.
+- Not verified: Firefox/Safari, touch, screen readers, reduced motion in a browser
+  (the code path is the existing instant camera), non-local network.
+
+### 5C: terrain screening in one place (2026-11-14, after the UX correction below)
+
+User request: no separate bottom-left terrain control; everything terrain-related goes
+in the right-hand "Terrain screening" section. Frontend only, still **uncommitted**:
+HEAD = `main` = `origin/main` = `caab643`. sha256 of the 78 protected and slope files
+unchanged.
+
+**What changed**
+- The bottom-left overlay control (`OverlayControl`) and its CSS were removed. Nothing
+  terrain-related is on the stage except the overlay itself and its ring labels.
+- The Terrain screening row in Conditions now holds:
+  - the warning (unchanged);
+  - a one-line key for the drawn overlay ("Slope >15° highlighted · ring = 500 m
+    assessed area; outside not assessed", the 0–30°+ mini scale, or "Overlay hidden ·
+    screening stays on");
+  - **Full slope map**, which replaces "Frame assessed area". It switches to the full
+    map and frames the 500 m area in Site overview (also from Horizon view). Time and
+    mission are kept; reduced motion gives an instant move. While the map is shown it
+    becomes **Steep areas only** (no camera change);
+  - **Terrain details**.
+- Terrain details now starts with the overlay choice (Steep areas >15° / Full slope map,
+  plus a quieter Hide), then the **illustrative screening threshold** editor with its
+  note, then the full legend. Inspection, statistics and "Source, method and limits"
+  follow. Choices made there never move the camera.
+- While details is open the row's qualification and key lines are hidden (repeated in
+  details). On short screens (height ≤ 820 px) the next-change lines also hide, and at
+  ≤ 760 px the model chip hides too, so the Sun/Earth states, the warning, the overlay
+  choice and the threshold all stay visible.
+- Unchanged: default Steep areas, the single `layer` state, `layer=exceed|slope|hide`
+  URLs, overlay-independent camera, cell-flat unlit colors and the ring-clipped
+  boundary.
+
+**Checks run personally**
+- `npm test`: **275 passed** (tests for the removed stage control replaced: one place,
+  row key and actions, details contents and order, slope-map row action, Hide
+  persistence, warning/Sun/Earth/metrics/time/camera independence, Horizon restoration).
+  `npm run build`: passed.
+- **Browser:** headed Chrome, own server on port 5190, stopped afterwards; 5173/5174
+  untouched.
+  - Fresh CR1: no stage control; Steep areas drawn (pink 1 671 vs about 240 UI pixels);
+    Details closed.
+  - Full slope map: layer slope, camera framed (moved), time and mission URL kept,
+    Details closed.
+  - Steep areas only: camera unchanged.
+  - Details at 10°: row "17.1 % … exceeds 10°", key "Slope >10°".
+  - Details → Full slope map and → Hide: camera unchanged; Hide gives `layer=hide`
+    with the warning still shown.
+  - Horizon view → Full slope map: overview, slope map.
+  - Site switch kept the choice.
+  - Details open at 1440×900, 1366×768, 1280×720 and 390×844: Sun, Earth, warning,
+    overlay choice and threshold all visible; no horizontal overflow.
+  - Collision sweep (72 orbit/pan/zoom samples, Horizon sweep, narrow): no overlaps.
+  - No console errors.
+  - Screenshots (session scratchpad, not committed): `shots/one/default-cr1.png`,
+    `fullmap-cr1.png`, `details-open-1440.png`, `details-1366.png`,
+    `details-1280.png`, `details-390.png`.
+
+### 5C UX correction: highlights by default, one overlay control (2026-11-14)
+(Its bottom-left `OverlayControl` was removed by the follow-up above; the rest stands.)
+
+Same branch, still **uncommitted**. Git re-verified at the start: HEAD = `main` =
+`origin/main` = `caab643`, 23 uncommitted 5C paths. Frontend only: slope method, slope
+assets and every scientific output unchanged (sha256 of the same 78 files identical
+before and after; `git diff` on the tracked protected paths empty).
+
+This supersedes the acceptance pass's controls (stage toggle, "Show on terrain", overlay
+selector in Details).
+
+**What changed**
+- **Default:** without an explicit preference (no `layer` in the URL) the overlay is
+  **Steep areas**. Pink cells appear as soon as this site's slope data loads, with a
+  subtle 500 m boundary. Details stays closed and the camera does not move.
+- **One overlay state** (`scenario.layer`). Only the user changes it: no effect
+  re-enables it on playback, a threshold change, a site switch or a rerender.
+- **URL:**
+  - `layer` is written explicitly: `exceed`, `slope`, or `hide` for hidden, so a Hide
+    survives reloads;
+  - `hide`, `off` and the older `surface` all mean hidden; `exceed`/`slope` links work
+    as before;
+  - an absent `layer` (all older links) now means the steep-areas default.
+- **One control** (stage, bottom-left):
+  - "Terrain overlay: [Steep areas >15°] [Full slope map]" as the two main choices, plus
+    a quieter underlined "Hide" (it reads "Hidden" when active);
+  - a "Threshold 15°" button opens a compact editor with the illustrative-threshold
+    note;
+  - each choice is one click; Details is not needed;
+  - the legend sits with the control:
+    - Steep areas: "Slope >15°" (actual threshold), "Unhighlighted: not above it (not a
+      safety rating)", "500 m assessed area", "Outside: not assessed";
+    - Full slope map: the fixed 0–30°+ scale with the threshold mark.
+  - In Horizon view the control reads "Terrain overlay: … · drawn in Site overview" with
+    a Site overview button. The overlay is never drawn into the authoritative horizon
+    view, and the choice is restored on return.
+- **Camera separated from overlays:**
+  - the overlay-on reframing effect was removed, and the overview default no longer
+    depends on the overlay;
+  - "Show on terrain" became **"Frame assessed area"**, a separate `frame` command:
+    overview plus 500 m framing; time, mission and overlay are unchanged; reduced motion
+    gives an instant move;
+  - the 5B default overview is slightly closer (CR1 3.0 km, Athena 4.8 km, elevation
+    16°) so the assessed area is discoverable; data arrival never moves the camera.
+- **Rendering:**
+  - full slope map: per-cell border lines removed (flat discrete cell colors only);
+  - the overlay is clipped to the exact 500 m ring, giving a smooth boundary instead of
+    the 20 m-stepped edge. Cells are still assigned by their centre; a centre-outside
+    sliver inside the ring stays dimmed (not assessed);
+  - ring opacity restrained (500 m 70 %, 100/250 m dashed 35 %);
+  - the pure `overlayMode()` draws only in the overview and only with the active site's
+    own asset.
+- **Terrain details:** secondary information only (inspection, stats, coverage, cell
+  count, measurement scale, source/method/limits). No mode selector or threshold input.
+  It is a bounded drawer (max-height min(180 px, 26 vh)) and no longer scrolls the
+  panel on open.
+- **Layout fixes found by the checks:**
+  - **Edge chips:** they now take the smallest of four moves that clears blockers while
+    staying inside the stage band below the toolbar (a top chip had been pushed down
+    under the control).
+  - **Observer label:** it takes the first clear spot (right, left or below the pin).
+  - **Narrow layout:** the camera legend moves under the toolbar; the threshold button
+    shortens to "15°".
+  - **Label layout key:** label layout re-runs when the HTML controls change size.
+
+**Checks run personally**
+- `npm test`: **274 passed, 13 files** (269 before).
+  - New or rewritten tests:
+    - fresh-load default highlighting;
+    - one control with a quieter Hide and no selector in Details;
+    - full slope map with Details closed;
+    - an explicit Hide kept across threshold, time, site and model, plus `hide`/`off`/
+      `surface` parsing;
+    - the overlay choice leaving status, metrics, time and camera mode unchanged;
+    - `overlayMode` (other-site asset, Horizon view, restoration) and the URL kept in
+      Horizon view.
+- `npm run build`: passed (main 374.6 kB, TerrainScene 614.2 kB lazy).
+  `python -m unittest discover -s pipeline/tests`: 91 OK.
+- **Browser:** headed Chrome 157, own dev server on port 5190, stopped afterwards.
+  Ports 5173/5174 belong to other processes and were not touched. Pixel counts are
+  stage-screenshot pixels: "pink" is about #ff3d8b; the UI's own pink swatches
+  contribute about 240.
+  - Fresh CR1 (no `layer`): Steep areas active, Details closed, pink 1 779 (cells
+    visible), legend "Slope >15° … 500 m assessed area · Outside: not assessed".
+  - Fresh Athena: "No slopes above 15° detected within 500 m at this DEM scale.",
+    pink 220 (UI only: no patches).
+  - Full slope map in one click: Details still closed, camera position identical
+    (`canvas.dataset.camPos`), violet 10 478, scale legend shown.
+  - Hide: `layer=hide`, screening row unchanged, camera identical, pink back to the UI
+    baseline.
+  - Still hidden after a threshold change to 10°, playback and a CR1 → Athena → CR1
+    switch.
+  - Restore Steep areas at 10°: pink 3 466, row "17.1 % … exceeds 10°".
+  - Switch to Athena with the full slope map: every animation frame read
+    "im2-athena | slope" (no CR1 state); violet 3 882.
+  - Horizon view: no overlay drawn, control "full slope map · drawn in Site overview";
+    back to the overview: slope map restored.
+  - Frame assessed area: camera moved; time and mission URL unchanged.
+  - Details open at 1440×900 and 1366×768: Sun, Earth and the warning stay visible
+    (panel scrollTop 0).
+  - Reloads:
+    - `layer=hide` and `layer=surface` → hidden;
+    - `layer=slope` → slope map;
+    - no `layer` → Steep areas.
+  - Collision sweep (72 orbit/pan/zoom samples, Horizon yaw sweep): no overlaps and no
+    chip outside the stage band.
+  - 1280×800: the control overlaps nothing.
+  - 390×844: no overflow and no label/control/legend/toolbar overlaps (CR1 default and
+    slope map, Athena).
+  - No console errors.
+  - Screenshots (session scratchpad, not committed), all with Details closed:
+    `shots/final/default-cr1.png` (default highlights), `fullmap-cr1.png`,
+    `fullmap-ath.png`, `narrow-slope.png`, `layout-390.png`, `layout-1280.png`;
+    `details-open-1440.png`.
+- Not verified: Firefox/Safari, touch, screen readers, reduced motion in a browser,
+  non-local network. Click behaviour has no DOM unit test (no jsdom in the project; not
+  added); clicks were verified in the browser.
 
 ## Milestone 5B: power/comms framing and guided horizon exploration (2026-11-14)
 

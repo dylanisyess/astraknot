@@ -47,7 +47,7 @@ describe("URL state", () => {
     const s = parseUrlState(u.search);
     expect(s).toEqual({
       arrival: Date.parse("2026-12-08T03:00:00Z"), days: 14, delay: 3, t: Date.parse("2026-12-11T00:00:00Z"),
-      horizon: "terrain", sites: IDS, site: "connecting-ridge-cr1", view: null, mission: null, cam: null,
+      horizon: "terrain", sites: IDS, site: "connecting-ridge-cr1", view: null, mission: null, cam: null, layer: null, thr: null,
     });
     const v = writeUrlState(new URL("http://x/"), {
       arrival: Date.parse("2026-12-08T03:00:00Z"), days: 14, delay: 3, t: "2026-12-11T00:00:00Z",

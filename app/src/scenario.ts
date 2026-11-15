@@ -24,7 +24,8 @@ import {
 import { type ModeAvailability, type SiteProfile, modeAvailability, profileFor, strictHorizon, strictIntervals } from "./sites";
 import { type SelectedStatus, selectedTimeStatus } from "./status";
 import type { Dataset, Horizon, HorizonMode, SiteData, SiteEntry } from "./types";
-import { type CamMode, type MissionKey, type View, DEFAULT_VIEW, parseUrlState, resolveActive, resolveSites, writeUrlState } from "./urlState";
+import { DEFAULT_THRESHOLD_DEG, clampThreshold } from "./explore/slope";
+import { type CamMode, type LayerKey, type MissionKey, type View, DEFAULT_VIEW, parseUrlState, resolveActive, resolveSites, writeUrlState } from "./urlState";
 
 export const DEFAULT_ARRIVAL = "2026-12-05T00:00:00Z";
 export const clampNum = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -93,6 +94,12 @@ export interface Scenario {
   /** Explore camera mode. */
   cam: CamMode;
   setCam: (c: CamMode) => void;
+  /** 5C: terrain layer in the Site overview (display only; never changes visibility). */
+  layer: LayerKey;
+  setLayer: (l: LayerKey) => void;
+  /** 5C: illustrative slope screening threshold (deg); changes only screening classifications. */
+  slopeThr: number;
+  setSlopeThr: (deg: number) => void;
   setCursor: (i: number) => void;
   /** Step the cursor by n samples (10 minutes each), clamped to [i0, i1]. */
   step: (n: number) => void;
@@ -119,6 +126,9 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
   const [playing, setPlaying] = useState(false);
   const [missionRaw, setMissionRaw] = useState<MissionKey>(() => init.mission ?? ((init.delay ?? 3) > 0 ? "delayed" : "baseline"));
   const [cam, setCam] = useState<CamMode>(init.cam ?? "overview");
+  // One overlay state. Default (no explicit preference): steep-area highlights. Only the user changes it.
+  const [layer, setLayer] = useState<LayerKey>(init.layer ?? "exceed");
+  const [slopeThr, setSlopeThrRaw] = useState(() => (init.thr !== null && init.thr !== undefined ? clampThreshold(init.thr) : DEFAULT_THRESHOLD_DEG));
 
   // One horizon model for every compared site; Terrain only when all of them have it.
   const avail = modeAvailability(entries);
@@ -187,10 +197,10 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
   useEffect(() => {
     if (playing) return;
     const url = writeUrlState(new URL(window.location.href), {
-      arrival, days, delay: effDelay, t: activeSite.samples[sel].time_utc, horizon: mode, sites: selIds, site: active, view, mission, cam,
+      arrival, days, delay: effDelay, t: activeSite.samples[sel].time_utc, horizon: mode, sites: selIds, site: active, view, mission, cam, layer, thr: slopeThr,
     });
     window.history.replaceState(null, "", url);
-  }, [arrival, days, effDelay, sel, activeSite, mode, selIds, active, view, playing, mission, cam]);
+  }, [arrival, days, effDelay, sel, activeSite, mode, selIds, active, view, playing, mission, cam, layer, slopeThr]);
 
   // Playback stops at the supported endpoint of the shown window.
   useEffect(() => {
@@ -255,6 +265,12 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
     setMission: setMissionRaw,
     cam,
     setCam,
+    layer,
+    setLayer,
+    slopeThr,
+    setSlopeThr: (deg: number) => {
+      if (Number.isFinite(deg)) setSlopeThrRaw(clampThreshold(deg));
+    },
     setPlaying: (p: boolean) => setPlaying(p && sel < playEnd),
     views,
     activeView,
