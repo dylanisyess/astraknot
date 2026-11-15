@@ -1,0 +1,190 @@
+{
+ "asset_version": "render-terrain-1",
+ "is_rendering_asset": true,
+ "note": "Rendering geometry for 3D Explore. Not scientific data: visibility states come only from the site export's intervals. Positions are observer-relative metres in the renderer frame x = east, y = up, z = -north; curvature is in the positions once; no vertical exaggeration.",
+ "site": {
+  "id": "connecting-ridge-cr1",
+  "name": "Connecting Ridge CR1 (NASA notional study point)",
+  "latitude_deg": -89.468,
+  "longitude_deg_east": 222.6,
+  "horizons_site_altitude_km": 1.9428
+ },
+ "observer": {
+  "observer_radius_m": 1739342.8,
+  "dem_surface_at_site_m": 1941.8205581012812,
+  "eye_above_dem_surface_m": 0.9794418987653444,
+  "ground_below_eye_local_y_m": -0.9794418987653444,
+  "source": "same point as the site export's terrain_horizon.observer (checked to 1e-6 m)"
+ },
+ "frame": {
+  "axes": "x = east, y = up, z = -north (right-handed, Y-up), origin at the observer eye",
+  "direction_formula": "(cos el * sin az, sin el, -cos el * cos az)",
+  "local_frame": "zenith = site radial unit vector (sphere), east = d/dlon, north = d/dlat (terrain_horizon.enu)",
+  "body_frame": "Moon ME/DE421 as the LOLA labels (assumed for the site coordinate; see site export)"
+ },
+ "source_dem": {
+  "product": "LDEM_80S_20M",
+  "file": "data/raw/lola/ldem_80s_20m/ldem_80s_20m.img",
+  "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_80s_20m.img",
+  "sha256": "db44c3b2444acff1af528301c8a6988934b490249aceff0ac55668bdf3eab365",
+  "sha256_verified_this_run": true,
+  "label_lines_samples": [
+   30400,
+   30400
+  ],
+  "map_scale_m": 20.0,
+  "height": "DN x 0.5 m above the 1737.4 km sphere; bilinear between pixel centres",
+  "registration": "pixel centres at I = X/s + N/2 + 0.5, J = -Y/s + N/2 + 0.5 (lola.py, terrain_horizon.Raster)",
+  "anchor_pixel_1based": [
+   14655,
+   15794
+  ],
+  "site_fractional_pixel": [
+   14654.527161335523,
+   15794.241001583838
+  ]
+ },
+ "sampling": {
+  "grid": "square grids in polar-stereographic map space aligned to DEM pixel centres; nested levels",
+  "triangulation": "cell (i,j): (v00, v01, v10) and (v10, v01, v11); index = j * nx + i",
+  "outer_half_width_m": 10240.0,
+  "unmeshed": "Terrain beyond the outer square (half-width 10.24 km in map space) is not meshed. The exported skyline profile is computed from terrain to hundreds of km."
+ },
+ "levels": [
+  {
+   "index": 0,
+   "spacing_m": 2.5,
+   "spacing_px": 0.125,
+   "half_width_m": 640.0,
+   "nx": 513,
+   "ny": 513,
+   "vertex_count": 263169,
+   "triangle_count": 524288,
+   "byte_offset": 0,
+   "byte_length": 3158028,
+   "hole_cells": null,
+   "boundary_vertices_snapped": 1792,
+   "kind": "bilinear interpolation between pixel centres (no added measured detail)",
+   "height_range_m": [
+    1814.0,
+    1958.0
+   ]
+  },
+  {
+   "index": 1,
+   "spacing_m": 20.0,
+   "spacing_px": 1.0,
+   "half_width_m": 2560.0,
+   "nx": 257,
+   "ny": 257,
+   "vertex_count": 66049,
+   "triangle_count": 122880,
+   "byte_offset": 3158028,
+   "byte_length": 792588,
+   "hole_cells": [
+    96,
+    160,
+    96,
+    160
+   ],
+   "boundary_vertices_snapped": 768,
+   "kind": "DEM pixel centres",
+   "height_range_m": [
+    1089.0,
+    1959.0
+   ]
+  },
+  {
+   "index": 2,
+   "spacing_m": 80.0,
+   "spacing_px": 4.0,
+   "half_width_m": 10240.0,
+   "nx": 257,
+   "ny": 257,
+   "vertex_count": 66049,
+   "triangle_count": 122880,
+   "byte_offset": 3950616,
+   "byte_length": 792588,
+   "hole_cells": [
+    96,
+    160,
+    96,
+    160
+   ],
+   "boundary_vertices_snapped": 0,
+   "kind": "every 4th pixel centre (decimated overview)",
+   "height_range_m": [
+    -1232.5,
+    1958.0
+   ]
+  }
+ ],
+ "counts": {
+  "vertices": 395267,
+  "triangles": 770048,
+  "bin_bytes": 4743204
+ },
+ "local_bounds_m": {
+  "x": [
+   -14471.893701657867,
+   14467.362217039421
+  ],
+  "y": [
+   -3235.5203365503776,
+   15.976019666403875
+  ],
+  "z": [
+   -14447.797376506718,
+   14489.363168603008
+  ]
+ },
+ "mesh_check": {
+  "target_deg": 0.05,
+  "target_note": "0.05 deg is a proposed rendering target, not a statement of source-data accuracy.",
+  "azimuths": 3600,
+  "setting_point_inside_mesh": {
+   "n": 3600,
+   "signed_min_deg": -0.00209,
+   "signed_max_deg": 0.10761,
+   "signed_mean_deg": 0.0132,
+   "abs_median_deg": 0.00786,
+   "abs_p95_deg": 0.04672,
+   "abs_max_deg": 0.10761,
+   "n_abs_over_target": 154
+  },
+  "setting_point_beyond_mesh": {
+   "n": 0
+  },
+  "meets_target_inside_mesh": false,
+  "fine_reference": {
+   "method": "terrain_horizon.march on the same LDEM_80S_20M bilinear surface and observer, radial step 0.25 m from 5.0 m to 1000.0 m; azimuths whose profile and fine-march setting points both lie within 950 m.",
+   "mesh_minus_fine_reference": {
+    "n": 3600,
+    "signed_min_deg": -0.00295,
+    "signed_max_deg": 0.00755,
+    "abs_median_deg": 0.00055,
+    "abs_p95_deg": 0.00222,
+    "abs_max_deg": 0.00755,
+    "n_abs_over_target": 0
+   },
+   "fine_reference_minus_profile": {
+    "n": 3600,
+    "signed_min_deg": -0.0,
+    "signed_max_deg": 0.10256,
+    "abs_median_deg": 0.0074,
+    "abs_p95_deg": 0.04456,
+    "abs_max_deg": 0.10256,
+    "n_abs_over_target": 145
+   },
+   "interpretation": "mesh_minus_fine_reference isolates triangulation/stitching error; fine_reference_minus_profile is the exported profile's own radial-sampling effect (5 m steps cut under sharp crests). Neither is a terrain accuracy."
+  },
+  "method": "Exact silhouette of the exported triangles (float64 positions before float32 rounding) from the observer, per 0.1 deg azimuth, by triangle / vertical half-plane intersection; compared with terrain_horizon.horizon.elevation_deg of the site export. 'inside' = the profile's setting point lies within the meshed extent in that azimuth (representation error); 'beyond' = it lies outside (incomplete extent)."
+ },
+ "reproduce": "python pipeline/render_assets.py --site connecting-ridge-cr1",
+ "runtime_s": {
+  "build": 4.6,
+  "check": 6.1
+ },
+ "bin_file": "connecting-ridge-cr1.terrain.bin",
+ "bin_sha256": "e58b1b5ea45f4ffc67fd19c4a566f7cbcf40031e0007fc6f2ac936947580b950"
+}

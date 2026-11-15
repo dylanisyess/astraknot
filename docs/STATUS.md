@@ -5,33 +5,37 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
-## Start here (handoff for a new session, updated 2026-11-14 after the science-review follow-up)
+## Start here (handoff for a new session, updated 2026-11-14 after milestone 5B)
 Read this section first, then `docs/SPEC.md`, `docs/DATA_CONTRACT.md` and
 `docs/SCIENCE_REVIEW.md`. The rest of this file is the detailed record behind it.
 
-**Git snapshot before closeout (2026-11-14):**
-- `main` = `origin/main` = `978f22a` ("Merge pull request #2 from
-  dylanisyess/milestone-4-site-comparison"). Milestones 4A–4D and the CR1 5 m
-  assessment are committed, pushed and merged.
-- The **science-review follow-up** is on branch `science-review-followup`
-  (from `978f22a`) and is **uncommitted, for review**. Nothing is pushed or
-  merged.
-- Older local branches (`milestone-2-mission-window`, `milestone-3-terrain`,
-  `handoff-milestone-2`, `milestone-4-site-comparison`) are historical.
+**Git snapshot (2026-11-14, 5A–5B closeout):**
+- `main` = `origin/main` = `c5e8432` ("Merge pull request #3 from
+  dylanisyess/science-review-followup"). The science-review follow-up is
+  committed (`ca385fc`), pushed and merged. Verified at the start of 5A.
+- **Milestone 5A (first working 3D Explore)** was developed on branch
+  `milestone-5a-explore` (from `c5e8432`). See "Milestone 5A" below.
+- **Milestone 5B (power/comms framing, profile-based observer-view occlusion,
+  four-state timeline, guided crossings, then the completion pass: Sun/Earth
+  markers in both views, scene-first layout, outside-mission navigation,
+  shareable mission/camera state)** is on the same branch on top of 5A. See
+  "Milestone 5B" and "5B completion" below.
+- **Closeout:** 5A–5B are committed as one checkpoint on
+  `milestone-5a-explore` and published through a PR to `main` with the
+  established merge-commit workflow; 5C work starts on
+  `milestone-5c-terrain-screening` from the merged `main`. This snapshot
+  records the reviewed state at commit time, not the merge result: verify
+  live Git/PR state before continuing.
+- Older local branches are historical.
 
-The snapshot above records the reviewed starting state, not the eventual
-commit/merge result. Closeout is authorized: publish the reviewed follow-up
-through a PR using the established merge-commit workflow, then prepare
-`milestone-5a-explore` from merged `main`. Verify live Git/PR state before
-continuing; this closeout authorizes branch preparation only, no 3D work.
+**Primary user experience: Explore (3D, default view).** A 3D view of the
+real LOLA terrain around the fixed modeled observer. The two-site dashboard is
+**Analysis**; both share one scenario and URL (`view=explore|analysis`). Every
+visibility word in both comes from `selectedTimeStatus` (`app/src/status.ts`).
+The rendering meshes are separate assets (`pipeline/render_assets.py`), not
+scientific data; no export, interval or horizon changed.
 
-**Next primary user experience: 3D Explore.** A 3D terrain view around a fixed
-modeled observer becomes the primary view; the existing dashboard stays as
-**Analysis**, with shared site/time/scenario state. The requirements are in
-`docs/SPEC.md`, "3D Explore: requirements for the next milestone". Mesh format
-and design are work for that milestone; nothing 3D is implemented yet.
-
-**Latest (review complete, `science-review-followup`):** post-review cleanup,
+**Previous milestone (science-review follow-up, now merged in PR #3):** post-review cleanup,
 details in "Science-review follow-up" below. No terrain model change, no
 Horizons fetch, no terrain recomputation.
 - Review evidence is in the repo (`pipeline/review/`,
@@ -293,14 +297,16 @@ python pipeline/fetch.py --site connecting-ridge-cr1                 # "0 live r
 python pipeline/crosscheck_metrics.py --site connecting-ridge-cr1 --terrain  # 12-05 +0 d: sun 72.123..., earth 25.446..., dark 62.833 h (touches end)
 python pipeline/crosscheck_metrics.py --site connecting-ridge-cr1    # 12-05 +0 d: sun 100.0, earth 28.373..., dark 0.0 h
 python pipeline/observer_rounding_check.py --site connecting-ridge-cr1  # max 0.0235 deg; sun 13, earth 3 steps
-python -m unittest discover -s pipeline/tests      # Ran 68 tests ... OK (58 before the science-review follow-up)
+python -m unittest discover -s pipeline/tests      # Ran 76 tests ... OK (68 before milestone 5A)
 python pipeline/pgda.py fetch Site01 surf ldec toterr   # 3 x ~41 MB into data/raw/pgda/site01 (~60 KB/s observed)
 python pipeline/terrain_5m.py --site connecting-ridge-cr1   # ~12 min; F5_fixed vs L20: max 0.97 deg, 321 Sun steps
 python pipeline/fetch.py --site im2-athena                           # "0 live request(s) made" (all cached)
 python pipeline/crosscheck_metrics.py --site im2-athena              # 12-05 +0 d: sun 43.353..., dark 190.333 h
 python pipeline/crosscheck_metrics.py --site im2-athena --terrain    # 12-05 +0 d: sun 27.232..., earth 67.262..., dark 244.5 h
 python pipeline/compare_altitude.py --site im2-athena                # earth mean 8.041e-04 deg, sun 2.067e-06 deg
-cd app && npm test                                 # 140 passed (8 files; 134 before completion review)
+cd app && npm test                                 # 217 passed (12 files; 202 after 5B, 173 after 5A, 140 before 5A)
+python pipeline/render_assets.py --site connecting-ridge-cr1        # ~10 s; mesh check vs profile max |d| 0.1076 deg (needs LDEM_80S_20M)
+python pipeline/render_assets.py --site im2-athena                  # ~10 s; mesh check vs profile max |d| 0.1124 deg
 cd app && npm run build                            # builds without errors
 # terrain (needs the 3.47 GB LOLA files; fresh clone: fetch first, ~1-2 min at ~50 MB/s):
 python pipeline/fetch_terrain.py --site im2-athena                   # 4 files, sizes = labels, sha256 recorded
@@ -331,19 +337,31 @@ Environment notes (Windows):
 
 ### Next steps
 
-0. Science-review follow-up: completion review is done. Closeout is authorized
-   through a separate commit and PR; confirm the PR is merged before preparing
-   `milestone-5a-explore` from updated `main`. Branch preparation only is
-   authorized in this closeout; do not start 3D implementation.
-1. Human pass over the 4D browser review checklist below (still unticked).
-   Deployment from a fresh browser session is still untested.
-2. **3D Explore milestone (next primary UX).** Start by specifying the per-site
-   terrain patch as a data-contract addition: same DEM and registration, site
-   identity and sha256, extent and sampling. Include the mesh-versus-profile
-   comparison. Then build the renderer against `selectedTimeStatus`. All
-   requirements, including the tested axis mapping, the fixed observer and
-   distant-horizon handling, are in `docs/SPEC.md`. Keep the dashboard as
-   Analysis with shared URL state.
+0. 5A–5B closeout: one checkpoint commit and a PR to `main` (see the
+   snapshot above). Next branch: `milestone-5c-terrain-screening`.
+   **Bounded 5C follow-up checks (recorded, not yet performed; not verified
+   bugs):**
+   - Overview celestial projection during orbit, pan and zoom. Markers are
+     placed at the direction's vanishing point and tested under camera
+     translation; panning, zooming and orbit extremes, and the behind-camera
+     edge-chip position, have not been checked systematically.
+   - Explore/Analysis handling of time outside the mission windows. Explore
+     views any covered time; Analysis shows the same stored time clamped to
+     its windows. Review whether that interplay is clear to users.
+   - Explanation for disabled delay options at the coverage boundary. Delays
+     whose window would end after the data are disabled, with a tooltip and
+     (when the chosen delay no longer fits) a note; check that Explore
+     explains this clearly enough.
+   - Before any deployment: the minified bundle drops three.js's MIT license
+     comment; ship the notice (README "Third-party software").
+1. Human pass over the 4D browser review checklist and a person's pass over
+   Explore (headed browser, real mouse/touch, Firefox/Safari). Deployment from
+   a fresh browser session is still untested.
+2. Recommended next bounded milestone: user acceptance of Explore, then a
+   static deployment and fresh-session check; measure load on a non-local
+   network (the Athena mesh is 6.5 MB). Optional later feature: DEM-derived
+   slope visualization (no hazard or landing-safety claims). No scientific
+   change.
 3. Still open: how to present CR1's provisional terrain result (for example
    smooth and terrain side by side, or a range across DEMs, eye heights and
    position scenarios). If CR1 terrain is later adopted from the 5 m product,
@@ -356,6 +374,541 @@ To regenerate CR1 from the caches (order matters; all inputs cached, no network)
 `export.py` → `validate.py` → `terrain_horizon.py` (~5 min) →
 `horizon_crosscheck.py` (~5 min; RDR boxes cached) → `export.py` →
 `validate.py` → `observer_rounding_check.py`, all with `--site connecting-ridge-cr1`.
+
+## Milestone 5B: power/comms framing and guided horizon exploration (2026-11-14)
+
+Builds on the uncommitted 5A work on `milestone-5a-explore`. At the start of 5B
+the 5A report was re-verified: `c5e8432`, 5A files present, protected outputs
+unchanged. **Uncommitted, for review.** Frontend only:
+- no Python, export, interval, horizon or render-asset change;
+- no Horizons fetch;
+- Analysis code unchanged.
+
+### Observer-view occlusion (Part 1)
+- **Reproduced from data.** These are mesh/profile cases, separate from the
+  17 interval/instant near-crossings.
+  - CR1: 9 Sun samples and 1 Earth sample have the center *above* the exported
+    profile but *below* the measured mesh silhouette. Example: 2026-12-27 07:50
+    UTC, Sun center +0.012° above the profile, mesh 0.008° above the center.
+    CR1's +0.1° mesh excesses are at azimuths about 2.5° and 60°, where no body
+    passes.
+  - Athena: 10 Earth samples have the center below the profile but above the
+    mesh. Example: 2026-12-04 08:40, −0.0053°.
+  - In 5A the mesh could hide such a body (the positive case).
+- **Treatment (stencil mask).** In the observer view the exported profile is
+  drawn first as a mask of every direction at or below the skyline, down to
+  nadir (`geometry.ts profileMask`).
+  - The DEM mesh is drawn only inside the mask, so the displayed horizon is
+    exactly the profile. Where the mesh is lower, the flat profile band shows.
+  - The Sun and Earth disks are drawn only outside it, so the profile alone
+    decides occlusion: the same rule `selectedTimeStatus` uses for the center.
+  - Disks keep their nominal sizes and exact instantaneous positions.
+  - Near a crossing the drawn center and the step's label can differ; the
+    "Near estimated crossing" explanation is unchanged.
+  - Smooth mode draws the disks on top. Its terrain is clipped to the profile
+    and dimmed, as context only.
+  - The overview shows the unclipped mesh.
+  - The treatment is stated in the legend and in Details.
+- Fixed on the way: a terrain *group* `renderOrder` made three.js draw every
+  sky object before all terrain. Smooth-mode disks were therefore clipped by
+  terrain. Order is now per mesh.
+- The measured mesh/profile discrepancies are unchanged (CR1 max 0.108°,
+  Athena 0.112°, "Milestone 5A" below). **The 0.05° target is still not met
+  by the mesh.** The observer view no longer depends on the mesh for the
+  horizon.
+
+### Power/comms framing, timeline and crossings (Parts 2–5)
+- **Status panel: two groups**, labels from `selectedTimeStatus`
+  (`explore/availability.ts`):
+  - *Solar-power potential*: "Direct sunlight available / blocked /
+    Sunlight status unknown".
+  - *Direct-to-Earth communication*: "Earth visibility window open / Earth
+    below horizon / Earth visibility unknown".
+  - Kept: the near-crossing pill and explanation, instantaneous clearance
+    and el/az, and a "Nominal disk straddles the horizon; its center is
+    above/below it" line.
+  - Next-change wording.
+  - The purpose sentence is in Details, verbatim as specified. No watts,
+    battery or go/no-go wording.
+- **Mission summary** (site panel):
+  - Baseline and delay columns of `computeMetrics` results, the same
+    numbers as the Analysis cards:
+    - direct sunlight %;
+    - Earth window %;
+    - both %;
+    - longest period without direct sunlight, with the existing boundary
+      flags and one combined "may be longer" note.
+  - Clicking a column chooses the active mission (default: delayed when a
+    delay applies).
+- **Four-state timeline** (time bar):
+  - Exported intervals clipped with `mission.clip` over the scenario span
+    (`availabilitySegments`).
+  - States: Sun + Earth (split amber/blue), Sun only (amber, top half),
+    Earth only (blue, bottom half), neither (charcoal).
+  - Unknown and uncovered periods are hatched, never "neither".
+  - The active window is outlined; the rest of the span is dimmed.
+  - Playhead, click and keyboard scrubbing (range input:
+    arrows/Page/Home/End).
+  - Hover/focus tooltip with the interval, UTC bounds and Sun/Earth state;
+    `aria-valuetext` includes the state.
+  - "Outside the … mission · Jump to mission".
+- **Guided crossings.**
+  - Sun/Earth selector, Previous/Next, and a range of "this mission" or
+    "all cached data".
+  - Transitions are interval boundaries where a *known* state flips. Gaps,
+    unknown sides and the data end are excluded.
+  - Navigation:
+    - pauses, then selects a sample 1 h (Sun) or 6 h (Earth) before the
+      transition;
+    - switches to the observer view and looks toward the body
+      (FOV 10°/18°);
+    - sets 10 min/s (Sun) or 1 h/s (Earth);
+    - shows "Sun center crosses the modeled skyline near … UTC" with the
+      10-minute note.
+  - Events outside the shown windows are reported, not navigated.
+  - Messages are tied to site and mode.
+  - Reduced motion uses the existing instant-camera path; it was not
+    browser-tested.
+- **Layout and wording.**
+  - Two-row time bar.
+  - Event card above the camera bar.
+  - Compact site/horizon controls.
+  - Lighting wording: "Display lighting only, not sunlight."
+  - Panel heights account for the time bar.
+  - The narrow-layout time bar is no longer sticky (it covered the camera
+    bar).
+
+### Checks run personally (2026-11-14)
+- `npm test`: **202 passed, 11 files** (173 before 5B).
+  - New: `explore/availability.test.ts` (17) and 12 Explore render tests.
+  - Covered:
+    - four-state composition and unknown/uncovered periods;
+    - clipping and half-open boundaries, with segment durations equal to
+      `computeMetrics` for both sites, models and two windows;
+    - transitions (unknown sides, gaps, range edges, data end, prev/next,
+      none, agreement with `nextChange` on real data, 10-minute grid);
+    - power/comms labels at both near-crossing cases and the final sample;
+    - the purpose text, mission summary values and boundary note;
+    - band states, unknown hatching, outside-mission/Jump, scrubber
+      `aria-valuetext`;
+    - profile mask (top edge = exported profile at both sites, nadir rows,
+      unknown columns omitted) and disk relation.
+  - Five 5A assertions were updated for intentionally changed wording.
+- `npm run build`: passed.
+- Protected outputs: all 14 sha256 unchanged, and `git diff` on data and
+  config is empty. No Python changed, so the Python suite was not rerun
+  (76 OK in 5A).
+- **Browser.**
+  - Setup: Chrome 157 **headed** (visible window) via `puppeteer-core`, ANGLE
+    Intel Arc 140V D3D11, 8-bit stencil, dev server; 1440×900 unless stated.
+  - Occlusion:
+    - CR1 2026-12-27 07:50: the disk straddles the skyline, its center above.
+      The upper half is drawn with no mesh over it; status "Direct sunlight
+      available".
+    - CR1 azimuth 3° (mesh +0.1°): terrain ends exactly at the profile line.
+    - Athena 2026-12-04 08:40: the lower half of Earth is hidden by the
+      profile band; "Earth below horizon".
+    - CR1 2026-12-24 00:00: "available" plus "Near estimated crossing",
+      center 0.0015° below the skyline.
+    - Smooth mode: disk drawn whole over terrain (after the group-order fix).
+  - Crossings:
+    - Athena Sun Next: 2026-12-15 04:30 crossing; selected 03:30, observer
+      view, 10 min/s.
+    - Playback to 04:50: blocked became available; URL `t` written on pause.
+    - Next again: "No later Sun crossing in the delay +3 d mission". Prev
+      returned to the same event.
+    - Earth Next: none in the mission. With all cached data: the 2026-12-31
+      07:20 event reported as outside the windows.
+    - CR1 at 2027-01-29 23:00: "No later … The data ends 2027-01-30 00:00 UTC;
+      that is not a crossing." End key: both unknown, Play disabled.
+  - Timeline:
+    - Click moved the time. Arrow keys stepped and showed the focus tooltip
+      (screenshot).
+    - The hover tooltip text and box were read from the DOM. **No headed
+      screenshot captured the hover tooltip**; the focus tooltip uses the
+      same element.
+    - Home went outside the mission; Jump to mission returned to the window
+      start. Summary column focus worked.
+  - Mission and views:
+    - Delay +7 d matched Analysis. Reload and back to Explore kept the
+      scenario; the active-mission choice is not in the URL.
+    - Overview and observer view for both sites at 1440×900.
+    - 390×844: no horizontal overflow; observer and overview for both sites.
+  - Failure: WebGL disabled showed the message. Status, timeline and crossing
+    navigation still worked without the renderer; Open Analysis opened the
+    dashboard. No console errors except the expected WebGL-disabled messages.
+- Not verified: Firefox/Safari, touch, screen readers, reduced motion in a
+  browser, real-mouse observer-view drag, a hover-tooltip screenshot,
+  non-local network loading.
+
+### Remaining limitations
+- The mesh still differs from the profile by up to about 0.11°; the overview
+  shows that mesh.
+- In the observer view, terrain detail near the skyline is the profile's
+  0.1° outline, not the mesh.
+- Shading is display lighting, and no shadows are computed.
+- Visibility is center-based on the 10-minute grid.
+- CR1 stays provisional; its frame and accuracy are assumed.
+- The active-mission choice and camera mode are not in the URL.
+- On narrow screens a focused scrubber's tooltip can cover the speed
+  control, and the overview's Sun label can touch the right edge.
+- **Next optional feature (not started):** a DEM-derived slope visualization,
+  separate from any hazard or landing-safety claim.
+
+### 5B completion: Sun/Earth in both views, scene-first layout, navigation fixes (2026-11-14)
+
+Same branch, on top of the 5B work above; **uncommitted**. Frontend only: no
+Python, export, interval, horizon or render-asset change.
+
+**What changed**
+- **Site overview body markers.**
+  - Visuals: a warm Sun disk and a blue graticule globe for Earth.
+  - Placement: HTML buttons at each direction's vanishing point (camera
+    position + direction × 200 km), so camera translation cannot shift them
+    against nearby terrain. Each sits on the screen extension of its ray from
+    the fixed observer.
+  - State: from `selectedTimeStatus` (`markerState`). Visible bodies are
+    solid. Below-horizon bodies are dashed outlines labelled "Below observer
+    horizon".
+  - Off-screen bodies: an edge chip on an inset rectangle that avoids the
+    side panels, toolbar and legend.
+  - Click: opens Horizon view centered on the body.
+  - Legend: "Body markers enlarged for orientation".
+  - Removed: the floating mesh-edge label, which overlapped the observer
+    label (the edge is now explained in the legend's info).
+  - Composition: default overview elevation 27° → 13° with a 50° FOV.
+    *Reason:* at 27° the true horizon, where every near-horizon body lies,
+    was above the frame.
+- **Horizon view.**
+  - Kept: nominal 0.53°/1.9° disks, the profile stencil mask and Smooth mode.
+  - New: a restrained limb-shaded Sun texture, and a decorative graticule on
+    Earth (no geography or phase).
+  - New: a center cross inside each dashed selection ring.
+- **Mode names:** "Site overview" and "Horizon view". Look toward Sun/Earth,
+  and a marker click, always enter Horizon view and center the body.
+- **Layout.**
+  - Top bar: identity, Explore/Analysis, "All times UTC". The source badge
+    moved to Details.
+  - Left, *Mission setup*:
+    - site selector with the CR1 badge, and a disclosure for the full
+      site name and coordinates;
+    - horizon model;
+    - arrival date/hour; duration in "days"; arrival delay;
+    - a collapsible *Mission comparison* with an always-visible line for the
+      active mission and a Baseline/+N d selector.
+  - Right, *Conditions*:
+    - the two groups (state, next change, near-crossing/unknown note);
+    - "Simultaneous availability: Yes/No/Unknown";
+    - a *Geometry at this time* disclosure (clearance, el/az, disk relation,
+      DEM model).
+  - Viewport toolbar: one compact strip at the top of the scene.
+  - Legend: one line with an info popover; "Illustrative lighting" stays
+    visible.
+  - Time area: row 1 has playback, ±10 min, the single **Viewing time**
+    readout, "Outside selected mission · Jump to mission" and speed. Row 2
+    has the timeline with "Baseline arrival" and "+N d arrival" markers.
+    Row 3 has the legend (or the hover/focus interval line) and the crossing
+    controls.
+  - The timeline hover/focus detail is now an info line in that row, so it
+    cannot cover any control.
+  - Narrow screens: Mission setup starts collapsed and Conditions comes
+    first. Edge chips shorten and arrival labels drop their times.
+- **Viewing time independent of the missions** (`scenario.ts`).
+  - Explore's `sel` can be anywhere in the coverage, and `statusSel` is
+    computed there.
+  - Analysis keeps its established cursor clamped to its windows.
+  - Arrival, duration, delay and metrics are never changed by navigation.
+  - The timeline widens to include an outside viewing time
+    (`timelineSpan`).
+  - Playback runs to the end of the windows, or past them to the end of the
+    data when started beyond them.
+- **Crossing navigation** (`planCrossing`).
+  - The "all cached data" range now jumps to events outside the missions.
+    The event card shows "Outside selected mission".
+  - Repeated Next/Previous advance between events. Anchor rule: while the
+    viewing time is where the last navigation put it, the reference is that
+    crossing.
+  - The event card shows the live "Crossing in …" countdown, "Jump to
+    crossing" and the 10-minute note.
+  - Lead-ins are unchanged: 1 h for the Sun at 10 min/s, 6 h for Earth at
+    1 h/s.
+  - The selection is cleared when site, model, arrival, duration, delay,
+    mission, body or range changes, and on Jump to mission.
+  - The data end is never a crossing.
+- **Shareable view state:** `mission=baseline|delayed` and
+  `cam=overview|horizon` in the URL (replaceState only, not during playback).
+  Old links still work.
+
+**Checks run personally**
+- `npm test`: **217 passed, 12 files** (202 before).
+  - New: `explore/navigation.test.ts`.
+  - Updated: Explore render and URL tests.
+  - Covered:
+    - repeated Next/Previous; the stale-anchor rule;
+    - mission-range lead clamp; real-data all-range navigation;
+    - the data end;
+    - countdown text; marker states (visible/below/unknown/near-crossing);
+    - edge-point geometry;
+    - a three.js check that the marker NDC is unchanged under camera
+      translation and equals the ray's vanishing point;
+    - URL `mission`/`cam`;
+    - outside-window viewing time (Explore shows it, Analysis clamps,
+      metrics unchanged);
+    - "Simultaneous availability" and the new mode names.
+  - Several earlier assertions were updated for intentionally changed
+    wording and markup.
+- `npm run build`: passed.
+- Protected outputs: all 14 sha256 unchanged. Render assets and Python
+  untouched (5A timestamps). Python tests not rerun.
+- **Browser.**
+  - Setup: headed Chrome 157 (`puppeteer-core`), Intel Arc 140V D3D11, dev
+    server. 1915×1030 to match the user's screenshots; 390×844 narrow.
+  - "Before" set from the pre-change build:
+    the session scratchpad (`shots5c/before/`; local only, not committed) (CR1 and Athena overview and horizon,
+    Athena narrow).
+  - Markers:
+    - CR1 2027-01-16: Earth globe in the sky, collinear with its ray. The
+      Sun's edge chip reads "Below observer horizon".
+    - Orbiting moved bodies to edge chips correctly.
+    - Athena 2026-12-08 after a 180° keyboard orbit: an on-screen dashed Sun
+      marker, "Below observer horizon".
+    - Clicking the Earth marker entered Horizon view centered on Earth, with
+      `cam=horizon` in the URL.
+  - Horizon view:
+    - both sites in Terrain; CR1 Smooth with the disk on top;
+    - CR1's hidden Sun fully masked with the ring at the skyline;
+    - CR1 2026-12-24 near-crossing: "available" plus the explanation.
+  - URL: `mission=baseline&cam=overview` restored, and `cam=horizon`
+    survived a reload.
+  - Crossings:
+    - All cached data, Earth Next ×3: 12-31 07:20, then 01-05 21:00, then
+      01-27 10:50, each "Outside selected mission".
+    - Prev returned to 01-05.
+    - Jump to crossing gave "Crossing now".
+    - Jump to mission returned to 12-08.
+    - Changing the delay cleared the card.
+    - Sun Next with Play: the countdown went from "in 1 h" to "in 30 min".
+  - Endpoint: CR1 2027-01-30 00:00 shows both unknown with the final-sample
+    reason, Play and +10 disabled. "The data ends …; that is not a
+    crossing."
+  - Analysis kept the time; returning kept Horizon view.
+  - Layout: no horizontal overflow at 390 px. No console errors.
+- **Not verified:**
+  - a screenshot of the mouse-hover info line (headed screenshots drop the
+    hover state; its text was read from the DOM, and the keyboard-focus path
+    uses the same element);
+  - Firefox/Safari, touch, screen readers, reduced motion in a browser;
+  - real-mouse drag in Horizon view; non-local network loading.
+
+**Remaining acceptance issues**
+- Edge-chip direction for bodies behind the overview camera is approximate:
+  the chip side is reliable, its position along the edge less so.
+- The mesh still misses the 0.05° target (max 0.108°/0.112°). Horizon view
+  does not depend on the mesh for the horizon.
+- Explore and Analysis share one stored time. Analysis shows it clamped to its
+  windows, so after viewing an outside time, Analysis displays the nearest
+  window edge.
+- Next optional feature (not started): DEM-derived slope visualization,
+  without hazard claims.
+
+## Milestone 5A: first working 3D Explore (2026-11-14)
+
+Branch `milestone-5a-explore` from `c5e8432` (verified: clean tree,
+`main` = `origin/main` = `c5e8432`, science-review follow-up merged in PR #3).
+**Uncommitted, for review.** No Horizons fetch, no terrain download, no
+terrain-product change, no horizon or sensitivity recomputation, no change to
+site exports or intervals.
+
+### What works (observed)
+- **Shell.** Compact top bar with Explore / Analysis. Explore is the default
+  when the URL has no `view`. Old links open Explore with their scenario.
+  `view=analysis` opens the unchanged dashboard. One `useScenario` hook
+  (`app/src/scenario.ts`, moved out of the former `Workspace` without rule
+  changes) holds site, compared sites, UTC time, arrival, duration, delay and
+  horizon mode for both views. URL writes use `replaceState` only and are
+  skipped while playback runs.
+- **Explore layout.** Full-bleed black-sky stage. Left: one site and mission
+  panel (active site, Smooth/Terrain, baseline arrival date and hour, duration,
+  delay, window summary, window metrics; collapsible). Right: selected-time
+  status from `selectedTimeStatus` (state pills, center clearance, el/az, next
+  change, near-crossing and unknown explanations). Bottom: time bar (play/pause,
+  ±10 min, scrubber over Sun/Earth state strips, baseline and delay window
+  markers, selected time shown apart from baseline arrival, speed 1 h/s or
+  6 h/s). Camera bar: Overview / Observer view, Reset, Look toward Sun, Look
+  toward Earth. Details sheet: method, site and frame, mesh, mesh check,
+  limitations, link to Analysis. CR1's provisional badge stays in the site
+  panel.
+- **Overview camera.** Orbit around the observer. Composed oblique default per
+  site. Observer pin and ring, north arrow, Sun/Earth direction rays from the
+  observer (dashed when the status says not visible), outline and label of the
+  meshed extent. In Smooth mode, a translucent 0° reference plane.
+- **Observer view.** The camera is fixed at the exported observer point; only
+  rotation (drag, arrows) and FOV (wheel, +/−) change. Terrain mode draws:
+  - the exported 0.1° profile as the bright skyline (always on top);
+  - a flat "profile silhouette" band where the profile rises above the mesh
+    (angular only, hidden in the overview);
+  - Sun and Earth disks at nominal 0.53° and 1.9°, hidden behind
+    band and mesh;
+  - a larger dashed click ring and an HTML label from the status;
+  - cardinal letters at 0°, a faint dashed 0° reference, and off-screen
+    indicators.
+  Smooth mode makes the 0° line the bright horizon, dims the terrain, draws
+  the disks on top and shows a stage note that terrain does not hide the
+  bodies in this model.
+- **Robustness.**
+  - The renderer (`TerrainScene.tsx`, the only three.js importer) is
+    lazy-loaded; the production build puts it in its own chunk.
+  - Assets are fetched per active site and refused unless they match the
+    site's ID, coordinates, altitude, observer radius, eye height and
+    byte/sha256 layout.
+  - On a site switch the old terrain is removed at once. The loading toast
+    names the new site.
+  - WebGL failure, asset failure and context loss each show a message with
+    Retry/Restart and Open Analysis.
+  - Rendering is on demand only.
+  - Reduced motion makes camera moves instant.
+  - Below 760 px the layout stacks.
+
+### Rendering assets (`pipeline/render_assets.py`)
+Reproduce: `python pipeline/render_assets.py --site <id>` (about 10 s per site,
+reads the cached 1.85 GB LDEM_80S_20M; `--no-rehash` skips re-hashing it).
+- Source: `LDEM_80S_20M`, sha256 `db44c3b2…ab365` re-verified this run against
+  the site export's product record. Read through `terrain_horizon.Raster`,
+  bilinear, with the established pixel-centre registration.
+- Observer: the export's `terrain_horizon.observer` point (checked to 1e-6 m).
+  Eye above the interpolated surface: 1.0196 m (Athena), 0.9794 m (CR1).
+- Mapping:
+  - square grids in polar-stereographic map space aligned to DEM pixel
+    centres;
+  - exact inverse stereographic, then Moon-centred float64 positions;
+  - observer-relative local frame `x = east, y = up, z = −north`, rounded to
+    float32 only at the end.
+
+  Curvature is in the positions once; there is no exaggeration. Nested rings
+  are stitched by moving fine boundary vertices onto coarse edges. Indices are
+  generated in the app with the same triangulation.
+- Levels and sizes:
+
+| Site | Rings (spacing, half-width) | Vertices | Triangles | `.bin` |
+|---|---|---|---|---|
+| CR1 | 2.5 m ±640 m (interpolated); 20 m ±2.56 km; 80 m ±10.24 km (decimated) | 395 267 | 770 048 | 4 743 204 B |
+| Athena | 5 m ±640 m; 20 m ±2.56 km; 40 m ±10.24 km; 160 m ±30.72 km | 543 492 | 1 007 616 | 6 521 904 B |
+
+  Metadata `.terrain.json` is about 6 KB per site. Per-azimuth evidence is in
+  `data/render/<site>_mesh_check.json` (637 KB CR1, 587 KB Athena; its
+  `site_export_sha256` is of the local working-tree bytes). Terrain beyond the
+  outer square is not meshed; the profile is computed to hundreds of km.
+- **Measured mesh silhouette vs the exported profile.**
+  - Method: exact triangle / vertical-half-plane intersection from the
+    observer, 3 600 azimuths.
+  - Coverage: every azimuth's setting point is inside the meshed extent
+    (0 beyond) for both sites.
+
+| | CR1 | Athena |
+|---|---|---|
+| Mesh − profile, signed min / max | −0.0021° / +0.1076° | −0.1124° / +0.0178° |
+| \|Δ\| median / p95 / max | 0.0079° / 0.0467° / 0.1076° | 0.0023° / 0.0107° / 0.1124° |
+| Azimuths over the proposed 0.05° target | 154 | 11 |
+| Mesh − fine march (same DEM), \|Δ\| p95 / max | 0.0022° / 0.0076° (3 600 az, 0.25 m steps to 1 km) | 0.0017° / 0.0095° (1 135 az, 1 m steps to 2 km) |
+| Fine march − profile, max | +0.1026° | +0.0175° |
+
+  **The 0.05° target is missed at both sites; it is a rendering target, not a
+  source-data accuracy.** Causes as measured:
+  - CR1's misses are the mesh standing *above* the profile at crests
+    50–90 m away. A 0.25 m march of the same bilinear DEM agrees with the mesh
+    (≤ 0.0076°), so the excess is the exported profile's own 5 m radial
+    sampling cutting under sharp crests. This was spot-confirmed at azimuths
+    2.5° and 60° (5 m march reproduces the profile exactly). The profile was
+    not changed; status still uses it.
+  - Athena's 11 misses (az 5.1–6.7°) have the mesh *below* the profile where
+    the skyline is set 14.5–15.3 km away in the 160 m decimated ring. There
+    the profile band shows the skyline.
+  - Controls: within 10 km Athena's max |Δ| is ≤ 0.018°. A plain 20 m mesh
+    at CR1 gives max 0.171°, matching the science review's independent
+    0.170–0.275°.
+
+  The bright skyline line is the profile itself and is drawn on top, so this
+  disagreement is visible, not hidden. No terrain is warped.
+
+### Checks run personally (2026-11-14)
+- `npm test`: **173 passed, 10 files** (140 inherited + 33 new:
+  `explore/geometry.test.ts`, `explore/explore.test.tsx`, URL view tests).
+  `npm run build`: passed (TerrainScene chunk 603 kB / 152 kB gzip; Vite's
+  >500 kB chunk notice concerns that lazy chunk).
+- `python -m unittest discover -s pipeline/tests`: **76 OK** (68 + 8 in
+  `test_render_assets.py`: axes, handedness, stereographic round trip,
+  observer at origin, curvature once vs `terrain_horizon.elevation_deg`,
+  negative elevations, triangulation, exported asset identity).
+  `python pipeline/validate.py`: **136/136**.
+- Protected files: sha256 of `app/public/data/*.json` (3) and every
+  `data/terrain/*.json` (11) recorded before work and re-checked after:
+  **all 14 identical**. `git diff` on `app/public/data`, `data/terrain`,
+  `data/horizons`, `pipeline/config.json`: empty.
+- **Browser.**
+  - Setup: Chrome 157 headless via `puppeteer-core` (scratch install, not in
+    the repo), against the Vite dev server and once against `vite preview`.
+    WebGL renderer reported: ANGLE Intel Arc 140V, D3D11.
+  - Viewports 1440×900 (most checks), 1280×800, 390×844.
+  - Screenshots of both sites in both camera modes were inspected by eye.
+  - Results:
+    - Both sites in overview and observer view, Terrain and Smooth.
+    - Look toward Sun/Earth and Reset in both modes; overview mouse drag.
+    - ±10 min stepping across the Athena Earth near-crossing (13:50 → 14:00
+      shows "Near estimated crossing" with the Analysis sentence; back
+      clears it).
+    - Keyboard scrubbing; playback at 6 h/s. During playback the URL `t` and
+      `history.length` were unchanged; pause wrote `t`.
+    - Delay +7 d, hour 06:00 and duration 10 d set in Explore, then read back
+      identically in Analysis and back in Explore.
+    - Analysis reload kept the view and time.
+    - CR1 badge; CR1 Sun near-crossing (2026-12-24 00:00) in the observer
+      view.
+    - Loading state: CR1 status with no Athena terrain.
+    - WebGL disabled (`--disable-webgl`): message plus Open Analysis worked.
+    - CR1 mesh request blocked: CR1-specific error, nothing substituted.
+    - `WEBGL_lose_context`: message, Restart gave one fresh canvas.
+    - 390 px: no horizontal overflow. No console errors except the expected
+      WebGL-disabled and blocked-request messages.
+- **Performance** (same machine and browser, localhost):
+  - Load to terrain-ready: 3.4 s on the dev server, 2.2 s on the production
+    preview (two 1.7 MB site files plus the 6.5 MB Athena mesh).
+  - Site switch: 0.40 s (to CR1), 0.32 s (to Athena) on the dev server.
+  - Overview drag: 120 renders in 1.99 s (60.4/s, display-bound). CPU time
+    per frame: median 1.6 ms, p95 2.6 ms (CPU submit only, not GPU time).
+  - Playback at 6 h/s: 37 renders/s.
+- Not checked: a headed window, real touch, Firefox/Safari, screen readers,
+  reduced-motion in a browser, observer-view mouse drag and wheel FOV by a
+  real pointer, the native date picker, non-local network load times.
+
+### Known limitations
+- Mesh vs profile up to 0.108° (CR1) and 0.112° (Athena), as measured above.
+  In the observer view the mesh can stand a little above the authoritative
+  line at CR1 and occlude part of a disk the status calls visible. The status
+  and line are authoritative; Details states this.
+- Shading is a fixed illustrative light with normals averaged over about
+  10 m (shading only); it does not show modeled sunlight. No shadows.
+- 20 m DEM: relief finer than one to two pixels is not represented. The
+  2.5–5 m rings interpolate and add no measured detail. Coarse rings are
+  decimated and alias distant relief.
+- The CR1 coordinate frame and accuracy remain assumed; CR1 terrain remains
+  provisional; partial disks are not modeled (center-based).
+- Camera mode is not stored in the URL; reload returns to the overview.
+
+### Files
+- New: `pipeline/render_assets.py`, `pipeline/tests/test_render_assets.py`,
+  `app/public/render/<site>.terrain.{json,bin}`,
+  `data/render/<site>_mesh_check.json`, `app/src/scenario.ts`,
+  `app/src/explore/{Explore.tsx,TerrainScene.tsx,geometry.ts,terrainAsset.ts,explore.css,geometry.test.ts,explore.test.tsx}`.
+- Changed:
+  - `app/src/App.tsx`: shell plus `Analysis`, with the dashboard JSX
+    unchanged.
+  - `app/src/urlState.ts`: `view`.
+  - `app/src/main.tsx`: CSS import.
+  - `app/src/app.test.tsx`: requests `view=analysis`.
+  - `app/src/urlState.test.ts`.
+  - `app/package.json` / lock: `three@0.187.0`, `@types/three@0.187.0`,
+    exact pins.
+  - `.gitattributes`: `app/public/render/*.bin binary`.
 
 ## Science-review follow-up (2026-11-14)
 

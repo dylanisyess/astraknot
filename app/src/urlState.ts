@@ -1,9 +1,15 @@
 // URL state: the shared scenario plus which sites are compared and which one drives
-// the panorama/elevation chart. Older single-site links (arrival, days, delay, t,
-// horizon; no sites/site) keep working: they compare all manifest sites and show the
-// first (Athena) in the panorama.
+// the panorama/elevation chart (and the 3D Explore view). Older single-site links
+// (arrival, days, delay, t, horizon; no sites/site/view) keep working: they compare all
+// manifest sites, show the first (Athena), and open the default view (Explore).
 
 import type { HorizonMode } from "./types";
+
+export type View = "explore" | "analysis";
+/** Explore: active mission window and camera mode (shareable view state). */
+export type MissionKey = "baseline" | "delayed";
+export type CamMode = "overview" | "horizon";
+export const DEFAULT_VIEW: View = "explore";
 
 export interface UrlState {
   arrival: number | null;
@@ -13,6 +19,12 @@ export interface UrlState {
   horizon: HorizonMode | null;
   sites: string[] | null;
   site: string | null;
+  /** Explore (3D, default) or Analysis (dashboard). Absent or malformed = default. */
+  view: View | null;
+  /** Explore: active mission ("delayed" applies only with a delay). */
+  mission?: MissionKey | null;
+  /** Explore: camera mode. */
+  cam?: CamMode | null;
 }
 
 export function parseUrlState(search: string): UrlState {
@@ -30,6 +42,9 @@ export function parseUrlState(search: string): UrlState {
   };
   const hz = q.get("horizon");
   const sites = q.get("sites");
+  const view = q.get("view");
+  const mission = q.get("mission");
+  const cam = q.get("cam");
   return {
     arrival: time("arrival"),
     days: num("days"),
@@ -38,6 +53,9 @@ export function parseUrlState(search: string): UrlState {
     horizon: hz === "smooth" || hz === "terrain" ? hz : null,
     sites: sites === null ? null : sites.split(",").map((s) => s.trim()).filter(Boolean),
     site: q.get("site"),
+    view: view === "explore" || view === "analysis" ? view : null,
+    mission: mission === "baseline" || mission === "delayed" ? mission : null,
+    cam: cam === "overview" || cam === "horizon" ? cam : null,
   };
 }
 
@@ -62,6 +80,9 @@ export interface WritableState {
   horizon: HorizonMode;
   sites: string[];
   site: string;
+  view?: View;
+  mission?: MissionKey;
+  cam?: CamMode;
 }
 
 export function writeUrlState(url: URL, s: WritableState): URL {
@@ -73,5 +94,8 @@ export function writeUrlState(url: URL, s: WritableState): URL {
   out.searchParams.set("horizon", s.horizon);
   out.searchParams.set("sites", s.sites.join(","));
   out.searchParams.set("site", s.site);
+  if (s.view) out.searchParams.set("view", s.view);
+  if (s.mission) out.searchParams.set("mission", s.mission);
+  if (s.cam) out.searchParams.set("cam", s.cam);
   return out;
 }

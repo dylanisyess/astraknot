@@ -5,3 +5,5 @@ data/terrain/labels/** -text
 data/terrain/lola_rdr/** -text
 # Cross-check evidence records this report's exact byte SHA-256.
 data/terrain/*_terrain_horizon.json -text
+# 3D Explore rendering meshes: the metadata records their exact byte SHA-256.
+app/public/render/*.bin binary

@@ -47,7 +47,28 @@ describe("URL state", () => {
     const s = parseUrlState(u.search);
     expect(s).toEqual({
       arrival: Date.parse("2026-12-08T03:00:00Z"), days: 14, delay: 3, t: Date.parse("2026-12-11T00:00:00Z"),
-      horizon: "terrain", sites: IDS, site: "connecting-ridge-cr1",
+      horizon: "terrain", sites: IDS, site: "connecting-ridge-cr1", view: null, mission: null, cam: null,
     });
+    const v = writeUrlState(new URL("http://x/"), {
+      arrival: Date.parse("2026-12-08T03:00:00Z"), days: 14, delay: 3, t: "2026-12-11T00:00:00Z",
+      horizon: "terrain", sites: IDS, site: "im2-athena", view: "analysis",
+    });
+    expect(parseUrlState(v.search).view).toBe("analysis");
+  });
+
+  it("an old link without a view opens the default view (Explore); view is validated", () => {
+    expect(parseUrlState("?arrival=2026-12-08T03:00Z&horizon=smooth").view).toBeNull();
+    expect(parseUrlState("?view=analysis").view).toBe("analysis");
+    expect(parseUrlState("?view=explore").view).toBe("explore");
+    expect(parseUrlState("?view=Analysis").view).toBeNull();
+  });
+
+  it("restores Explore's active mission and camera mode; malformed values are ignored", () => {
+    const u = writeUrlState(new URL("http://x/"), {
+      arrival: Date.parse("2026-12-05T00:00:00Z"), days: 14, delay: 3, t: "2026-12-09T00:00:00Z",
+      horizon: "terrain", sites: IDS, site: "im2-athena", view: "explore", mission: "baseline", cam: "horizon",
+    });
+    expect(parseUrlState(u.search)).toMatchObject({ mission: "baseline", cam: "horizon", view: "explore" });
+    expect(parseUrlState("?mission=later&cam=eye")).toMatchObject({ mission: null, cam: null });
   });
 });

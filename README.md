@@ -4,7 +4,19 @@ A NASA Space Apps prototype that shows when the Sun and Earth are above the
 horizon from lunar south-polar sites. It is an educational planning tool, not
 flight-qualified analysis.
 
-**Two-site comparison (milestone 4, interface under review):** the app compares
+**Explore (default view, milestones 5A–5B):** a 3D view of the real LOLA terrain
+around a fixed modeled observer at either site. It frames the challenge directly:
+direct sunlight (solar-power potential) and Earth visibility (direct-to-Earth
+communication windows) at the viewing time, a four-state mission timeline
+(Sun + Earth / Sun only / Earth only / neither) and guided navigation to horizon
+crossings. A *Site overview* orbit and a fixed *Horizon view* from the observer
+are offered. In the horizon view the exported skyline profile alone decides what
+hides the Sun or Earth. The Sun and Earth disks use nominal display angular
+diameters (0.53° and 1.9°), and terrain shading is illustrative, not modeled
+sunlight. Every visibility label comes from the same status function as the
+dashboard. The two-site dashboard described below is the **Analysis** view.
+
+**Two-site comparison (Analysis view, milestone 4):** the app compares
 the IM-2 Athena landing point (84.7906° S, 29.1957° E) with Connecting Ridge CR1,
 a NASA notional study point (89.468° S, 222.6° E; not an actual or approved landing
 site). Both use 60 days (2026-12-01 to 2027-01-30 UTC) of real JPL Horizons Sun
@@ -26,7 +38,8 @@ and [docs/STATUS.md](docs/STATUS.md).
 ```
 app/                 React + TypeScript + Vite frontend
   public/data/       exported data the app loads (manifest.json, <site>.json)
-  src/               UI code and tests (data.test.ts)
+  public/render/     3D rendering meshes (<site>.terrain.json/.bin; not scientific data)
+  src/               UI code and tests; src/explore/ is the 3D Explore view
 pipeline/            Python data preparation (standard library only)
   config.json        site, altitude, interval, chunking, terrain products
   horizons.py        Horizons queries, chunking, retries, cache, parser
@@ -41,9 +54,11 @@ pipeline/            Python data preparation (standard library only)
   fetch_terrain.py   download the selected LOLA products -> data/raw/lola/ (3.47 GB)
   terrain_horizon.py terrain horizon ray march (+ terrain_sensitivity.py)
   horizon_crosscheck.py  pixel-sweep check (independent implementation), LOLA-shot consistency, azimuth sanity check
+  render_assets.py   rendering meshes for Explore from the cached LDEM_80S_20M + mesh-vs-profile check
   tests/             unit tests (synthetic fixtures)
 data/horizons/       raw Horizons responses (byte-for-byte) + request metadata
 data/terrain/        LOLA PDS labels, coverage report, terrain horizon + cross-check reports (committed)
+data/render/         per-azimuth mesh silhouette vs exported profile (rendering evidence)
 data/raw/            large downloads (git-ignored)
 docs/                SPEC.md, DATA_CONTRACT.md, STATUS.md
 ```
@@ -163,3 +178,12 @@ quantity 4 (airless apparent azimuth/elevation of the target center),
   individual LOLA RDR shots via the [ODE GDS service](https://oderest.rsl.wustl.edu/livegds/)
 - [JPL Horizons API](https://ssd-api.jpl.nasa.gov/doc/horizons.html) and
   [Horizons manual](https://ssd.jpl.nasa.gov/horizons/manual.html)
+- 3D rendering meshes: derived from LDEM_80S_20M (same product and registration
+  as the terrain horizon) by `python pipeline/render_assets.py --site <id>`.
+
+## Third-party software
+- [React](https://react.dev/) and React DOM (MIT License).
+- [three.js](https://threejs.org/) 0.187.0 (MIT License, Copyright © 2010-2026
+  three.js authors), used for the 3D Explore view. The minified production
+  bundle does not keep its license comment; ship the license notice with any
+  deployment.
