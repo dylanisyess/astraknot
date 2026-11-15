@@ -12,7 +12,7 @@ describe("URL state", () => {
     expect(s.t).toBe(Date.parse("2026-12-10T00:00:00Z"));
     expect(s.horizon).toBe("smooth");
     const sites = resolveSites(s.sites, IDS);
-    expect(sites).toEqual({ ids: IDS, unknown: [] });
+    expect(sites).toEqual({ ids: IDS, unknown: [], duplicates: [], dropped: [] });
     expect(resolveActive(s.site, sites.ids)).toBe("im2-athena");
   });
 
@@ -28,9 +28,19 @@ describe("URL state", () => {
 
   it("reports unknown site IDs and never invents a site", () => {
     const r = resolveSites(["nope", "im2-athena"], IDS);
-    expect(r).toEqual({ ids: ["im2-athena"], unknown: ["nope"] });
-    expect(resolveSites(["nope"], IDS)).toEqual({ ids: IDS, unknown: ["nope"] });
+    expect(r).toEqual({ ids: ["im2-athena"], unknown: ["nope"], duplicates: [], dropped: [] });
+    expect(resolveSites(["nope"], IDS)).toEqual({ ids: IDS, unknown: ["nope"], duplicates: [], dropped: [] });
     expect(resolveSites([], IDS).ids).toEqual(IDS);
+  });
+
+  it("release 6: duplicates are compared once and reported; more than four sites are capped and reported", () => {
+    const six = ["a", "b", "c", "d", "e", "f"];
+    expect(resolveSites(["b", "b", "a"], six)).toEqual({ ids: ["a", "b"], unknown: [], duplicates: ["b"], dropped: [] });
+    const r = resolveSites(["f", "e", "d", "c", "b", "a"], six);
+    expect(r.ids).toEqual(["a", "b", "c", "d"]); // catalog order, at most MAX_SITES
+    expect(r.dropped).toEqual(["e", "f"]);
+    // no sites named: the first two catalog sites (the whole 60-day release)
+    expect(resolveSites(null, six).ids).toEqual(["a", "b"]);
   });
 
   it("ignores malformed values", () => {

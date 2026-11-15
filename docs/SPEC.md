@@ -16,13 +16,36 @@ This is an educational planning prototype, not a flight-qualified
 landing, power, thermal, or communications analysis tool.
 
 ## Scope
-- Two precisely documented lunar surface points.
+- Four documented catalog points in the expanded feature dataset; one to four
+  selected sites, one active 3D scene, aligned Analysis comparisons.
 - Cached JPL Horizons positions for the Sun and Earth.
-- Approximately 60 days of supported data.
+- Expanded feature coverage: 120 days starting 2026-12-01 at 10-minute sampling,
+  through the endpoint position at 2027-03-31T00:00Z. Accepted two-site 60-day
+  data remains available unchanged for legacy links and explicit selection.
 - Default mission duration: 14 Earth days.
 - Arrival shifts of +1, +3, and +7 days relative to the baseline.
 - Only allow scenarios fully covered by the dataset.
 - UTC throughout the application.
+
+Feature-worktree implementation and current acceptance are recorded in
+[STATUS.md](STATUS.md). Apollo 17 (20.1911 N, 30.7723 E, actual LM landing point)
+and IM-1 Odysseus (80.12759 S, 1.44587 E, actual landing point) join the two
+baseline points below. All four have Smooth and Terrain visibility, local mesh
+and slope screening; models and slope measurement scales are explicit.
+
+Continuous Sun/Earth tracking belongs to fixed-observer Horizon view. Playback,
+stepping and scrubbing retain tracking, manual look-around exits it, zoom
+preserves it, and reset/overview/site changes clear it. Body disks, profile
+masking and near-crossing/unknown semantics remain unchanged.
+
+Offline coordinate-driven preprocessing accepts site configuration or CLI
+coordinates, frame, nominal height and dates. It selects supported products by
+valid coverage and priority, generates observer/horizon/mesh/slope through shared
+sampling, and rejects insufficient coverage. See
+[COORDINATE_PIPELINE.md](COORDINATE_PIPELINE.md). A custom-coordinate browser UI,
+backend queue and global terrain database are outside this release. The optional
+arrival-window finder remains unimplemented. Browser acceptance is partial and
+must not be inferred from passing data checks or builds.
 
 Site A: IM-2 Athena landing point, 84.7906° S, 29.1957° E (LROC).
 Supported interval (milestone 2): 2026-12-01T00:00Z to 2027-01-30T00:00Z.
@@ -34,6 +57,9 @@ Both sites are in the app (two-site comparison, milestone 4D, merged to `main`
 in PR #2). CR1's terrain result is **provisional**: it is highly sensitive to
 near-field DEM relief, the terrain model, eye height and position.
 Choose points with suitable terrain coverage and document sources.
+
+The two-site descriptions below and later milestone requirements retain their
+baseline context; the current expanded scope above supersedes two-site limits.
 
 ## Required user experience
 1. Open a useful preloaded scenario.

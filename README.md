@@ -1,8 +1,28 @@
 # astraknots: Lunar Visibility Navigator
 
 A NASA Space Apps prototype that shows when the Sun and Earth are above the
-horizon from lunar south-polar sites. It is an educational planning tool, not
+horizon from documented lunar sites. It is an educational planning tool, not
 flight-qualified analysis.
+
+**Feature-worktree candidate (2026-11-15, uncommitted):** continuous body
+tracking, a catalog/shortlist of up to four sites, and versioned 120-day data
+(2026-12-01 to 2027-03-31, 10-minute samples). Athena, CR1, Apollo 17 and Odysseus
+have Smooth/Terrain visibility, local meshes and slope screening. Accepted
+two-site 60-day data remains unchanged. The dataset and comparison model are
+explicit; different slope measurement scales are disclosed.
+
+[Coordinate-driven offline preprocessing](docs/COORDINATE_PIPELINE.md) documents
+how to generate observer, skyline, mesh and slope for another supported coordinate
+using configuration or CLI inputs without processing-code edits. It includes the
+third-coordinate smoke test, missing-coverage rejection and NASA source provenance.
+Apollo's mesh agreement target and the Odysseus kernel/DEM height difference
+remain explicit limitations. [Current status and acceptance](docs/STATUS.md)
+records 101 Python tests, 317 frontend tests, passing production build and
+136/266 dataset checks. Browser acceptance is partial because the automation
+tool stopped during final checks; this candidate has not been deployed.
+
+The milestone descriptions below describe the accepted two-site baseline;
+the feature candidate above extends its site count, coverage and terrain sources.
 
 **Explore (default view, milestones 5A–5C):** a 3D view of the real LOLA terrain
 around a fixed modeled observer at either site. It frames the challenge directly:
@@ -49,7 +69,8 @@ and [docs/STATUS.md](docs/STATUS.md).
 ```
 app/                 React + TypeScript + Vite frontend
   public/data/       exported data the app loads (manifest.json, <site>.json)
-  public/render/     3D rendering meshes (<site>.terrain.json/.bin; not scientific data)
+  public/render/     3D rendering meshes (<site>.terrain.json/.bin) and wide context
+                     terrain (<site>.context.json/.bin); display only, not scientific data
   public/screening/  terrain screening slope grids (<site>.slope.json; lazy-loaded)
   src/               UI code and tests; src/explore/ is the 3D Explore view
 pipeline/            Python data preparation (standard library only)
@@ -67,6 +88,7 @@ pipeline/            Python data preparation (standard library only)
   terrain_horizon.py terrain horizon ray march (+ terrain_sensitivity.py)
   horizon_crosscheck.py  pixel-sweep check (independent implementation), LOLA-shot consistency, azimuth sanity check
   render_assets.py   rendering meshes for Explore from the cached LDEM_80S_20M + mesh-vs-profile check
+  context_terrain.py wide context rings (to 92 km) around each detailed mesh, from the cached local DEMs
   slope.py           DEM-derived slope within 500 m of each observer (terrain hazard screening)
   tests/             unit tests (synthetic fixtures)
 data/horizons/       raw Horizons responses (byte-for-byte) + request metadata
@@ -197,6 +219,8 @@ quantity 4 (airless apparent azimuth/elevation of the target center),
   [Horizons manual](https://ssd.jpl.nasa.gov/horizons/manual.html)
 - 3D rendering meshes: derived from LDEM_80S_20M (same product and registration
   as the terrain horizon) by `python pipeline/render_assets.py --site <id>`.
+- 3D context terrain (coarse rings to 92 km for orientation): sampled from the
+  cached local DEMs by `python pipeline/context_terrain.py` (all sites, a few seconds).
 - Terrain screening slopes: derived from the same LDEM_80S_20M by
   `python pipeline/slope.py` (needs the cached 1.85 GB raster; about 1 s per site).
 

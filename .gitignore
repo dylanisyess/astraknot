@@ -152,3 +152,10 @@ vite.config.ts.timestamp-*
 __pycache__/
 *.py[cod]
 data/raw/
+data/prepared/*/rays/
+# Superseded/partial recovery experiments are retained locally, excluded from release.
+data/prepared/e319864a5befc9a2ebe9cefb6b45ae91fee91192d8ec085fe2692bf64cffabe8/
+data/prepared/c5bc6b9fa8f2435ed4ad2df196223a0c26782dbb4bd688a26f8cc3ad8d571d7c/
+data/prepared/460b82845724869e2e202fcf0fc91402adfa1063727ca06c4f5888a6dddc693c/
+data/prepared/5e26f6c1dec9793228f8374f539a5e3e11d28b0fd5f65ea42686a70aeb7ea25b/
+data/prepared/ad7de77e0a2e4fa00484986568306b67096b76ec9a734ae255944eb0396d9036/

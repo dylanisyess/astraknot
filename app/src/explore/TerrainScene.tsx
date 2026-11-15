@@ -19,21 +19,25 @@ import type { BodyStatus, SelectedStatus } from "../status";
 import type { HorizonMode, SiteData } from "../types";
 import { type Vec3, azDelta, directionFromAzEl, gridIndices, needsFlip, obliqueCamera, profileMask, smoothNormals, stitchNormals } from "./geometry";
 import { type TerrainAsset, type TerrainAssetMeta, loadTerrainAsset, terrainMatchesSite } from "./terrainAsset";
+import { blockingPoint, blockingText } from "./blocking";
+import { type ContextAsset, type ContextState, contextIndices, contextPositions, loadContextAsset, nearFootprint } from "./contextTerrain";
 import { MARKER_TEXT, markerState } from "./availability";
 import { edgePoint } from "./geometry";
+import { TRACK_ENGAGE_MS, type TrackBody, blendPose, trackTarget } from "./tracking";
 import { EXCEED_COLOR, OVERLAY_ALPHA, SLOPE_STOPS, type SlopeAsset, type TerrainLayer, hexRgb, overlayMode, thresholdCentideg } from "./slope";
 
 export type CameraMode = "overview" | "eye";
 export interface CameraCommand {
-  /** "frame": overview framing of the 500 m assessed area (never sent by an overlay change). */
-  kind: "reset" | "sun" | "earth" | "frame";
+  /** "frame": overview framing of the 500 m assessed area (never sent by an overlay change).
+   *  "fov": set the observer-view field of view only (crossing navigation's initial framing). */
+  kind: "reset" | "frame" | "fov";
   n: number;
-  /** Optional field of view for "look toward" in the observer view (deg). */
+  /** Field of view for "fov" (deg). */
   fov?: number;
 }
 export type AssetState =
   | { state: "loading"; siteId: string }
-  | { state: "ready"; siteId: string; meta: TerrainAssetMeta }
+  | { state: "ready"; siteId: string; meta: TerrainAssetMeta; context?: ContextState }
   | { state: "error"; siteId: string; message: string };
 
 export interface SceneProps {
@@ -51,6 +55,10 @@ export interface SceneProps {
   onAssetState: (s: AssetState) => void;
   onFatal: (message: string) => void;
   onLook: (body: "sun" | "earth") => void;
+  /** Body whose modeled direction the Horizon view keeps centred, or null (tracking.ts). */
+  track?: TrackBody | null;
+  /** The user looked elsewhere (drag or arrow keys) while tracking: the parent stops tracking. */
+  onTrackBreak?: () => void;
   /** 5C terrain layer (Site overview only; the Horizon view keeps its presentation). */
   layer?: TerrainLayer;
   /** Screening asset of this site, or null while it is not loaded (Surface is drawn). */
@@ -185,6 +193,7 @@ export default function TerrainScene(props: SceneProps) {
     setCamera: (mode: CameraMode, animate: boolean) => void;
     command: (c: CameraCommand) => void;
     setSlope: (a: SlopeAsset | null) => void;
+    setTrack: (b: TrackBody | null) => void;
   } | null>(null);
   const [lost, setLost] = useState(false);
 
@@ -204,6 +213,10 @@ export default function TerrainScene(props: SceneProps) {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
+    // Smooth model: the Sun/Earth disks are clipped at the observer's 0° horizontal plane (y = 0),
+    // so a body below the smooth horizon is hidden by it (status still comes only from status.ts).
+    renderer.localClippingEnabled = true;
+    const zeroClip = [new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)];
     const canvas = renderer.domElement;
     canvas.className = "scene-canvas";
     canvas.tabIndex = 0;
@@ -261,6 +274,11 @@ export default function TerrainScene(props: SceneProps) {
     // No group renderOrder: three.js sorts by a group's order before an object's, which would
     // force the whole terrain after (or before) every sky object. Order is set per mesh instead.
     scene.add(terrain);
+    // Wide context terrain (coarse rings around the detailed mesh). Its own group: drawn with
+    // the same material (so the Horizon view clips it to the profile), never raycast.
+    const contextGroup = new THREE.Group();
+    scene.add(contextGroup);
+    let context: ContextAsset | null = null;
     let edgeLine: Line2 | null = null;
     let asset: TerrainAsset | null = null;
 
@@ -281,6 +299,13 @@ export default function TerrainScene(props: SceneProps) {
       earth: makeLine([[0, 0, 0], [0, 0, 1]], COLORS.earth, 3, { depthTest: false, dash: [0.05, 0.035] }),
     };
     rays.sun.renderOrder = rays.earth.renderOrder = 21;
+    // Terrain mode, body hidden: the eye's line of sight to the terrain that sets the skyline
+    // at the body's azimuth (unit +z, aimed and scaled per frame).
+    const sight = {
+      sun: makeLine([[0, 0, 0], [0, 0, 1]], COLORS.sun, 2.2, { depthTest: false, opacity: 0.95 }),
+      earth: makeLine([[0, 0, 0], [0, 0, 1]], COLORS.earth, 2.2, { depthTest: false, opacity: 0.95 }),
+    };
+    sight.sun.renderOrder = sight.earth.renderOrder = 22;
     const refPlane = new THREE.Mesh(
       new THREE.CircleGeometry(1, 128).rotateX(-Math.PI / 2),
       new THREE.MeshBasicMaterial({ color: 0xdcdad3, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide }),
@@ -289,7 +314,7 @@ export default function TerrainScene(props: SceneProps) {
     // terrain inspection point: a dashed pin, unlike the observer's solid pin
     const inspPin = makeLine([[0, 0, 0], [0, 1, 0]], 0xffffff, 1.6, { depthTest: false, dashed: true, dash: [0.12, 0.08] });
     inspPin.renderOrder = 22;
-    overview.add(obsRing, pin, north, rays.sun, rays.earth, refPlane, inspPin);
+    overview.add(obsRing, pin, north, rays.sun, rays.earth, sight.sun, sight.earth, refPlane, inspPin);
     let slopeAsset: SlopeAsset | null = null;
     let ringsOn = false;
     const setSlope = (a: SlopeAsset | null) => {
@@ -414,6 +439,8 @@ export default function TerrainScene(props: SceneProps) {
       offSun: chip("sun"),
       offEarth: chip("earth"),
       inspect: mk("lbl-inspect", '<span class="insp-mark" aria-hidden="true"></span><span class="lbl-name">Terrain inspection point</span>'),
+      blockSun: mk("lbl-block lbl-block-sun"),
+      blockEarth: mk("lbl-block lbl-block-earth"),
     };
     const ringLabels = [100, 250, 500].map((r) => ({ r, el: mk("lbl-ring", r === 500 ? "500 m · analysis area" : `${r} m`) }));
     const cardinals = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"].map((t, k) => ({ az: k * 45, el: mk(k % 2 ? "lbl-card minor" : "lbl-card", t) }));
@@ -506,6 +533,9 @@ export default function TerrainScene(props: SceneProps) {
     };
     const onMove = (e: PointerEvent) => {
       if (!drag || camMode !== "eye" || e.pointerId !== drag.id) return;
+      // looking elsewhere ends tracking (a click without movement does not)
+      if (tracking && press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 3) breakTrack();
+      if (tracking) return;
       const k = eye.fov / Math.max(1, canvas.clientHeight);
       eye.yaw = (((eye.yaw - (e.clientX - drag.x) * k) % 360) + 360) % 360;
       eye.pitch = THREE.MathUtils.clamp(eye.pitch + (e.clientY - drag.y) * k, -85, 85);
@@ -526,6 +556,8 @@ export default function TerrainScene(props: SceneProps) {
     const onKey = (e: KeyboardEvent) => {
       const step = e.shiftKey ? 10 : 2;
       if (camMode === "eye") {
+        // arrow keys look elsewhere and end tracking; +/- only zoom and keep it
+        if (tracking && e.key.startsWith("Arrow")) breakTrack();
         if (e.key === "ArrowLeft") eye.yaw = (eye.yaw - step + 360) % 360;
         else if (e.key === "ArrowRight") eye.yaw = (eye.yaw + step) % 360;
         else if (e.key === "ArrowUp") eye.pitch = Math.min(85, eye.pitch + step);
@@ -557,8 +589,50 @@ export default function TerrainScene(props: SceneProps) {
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);
     canvas.addEventListener("pointercancel", onUp);
-    canvas.addEventListener("wheel", onWheel, { passive: false });
+    // on the host, so a wheel over an overlay button (e.g. a body ring) still zooms the observer view
+    host.addEventListener("wheel", onWheel, { passive: false });
     canvas.addEventListener("keydown", onKey);
+
+    // ---------------------------------------------------------------- body tracking (tracking.ts)
+    // `tracking` is the body being followed; `engage` animates only the start or a body switch.
+    let tracking: TrackBody | null = null;
+    let engage: { from: { yaw: number; pitch: number }; t0: number } | null = null;
+    function breakTrack() {
+      if (!tracking) return;
+      tracking = null; // local stop at once; the parent clears its state through the callback
+      engage = null;
+      canvas.dataset.track = "";
+      propsRef.current.onTrackBreak?.();
+    }
+    const setTrack = (b: TrackBody | null) => {
+      if (b === tracking) return;
+      tracking = b;
+      canvas.dataset.track = b ?? "";
+      if (b) {
+        anim = null; // a running reset/look animation would fight the tracked direction
+        engage = propsRef.current.reducedMotion ? null : { from: { yaw: eye.yaw, pitch: eye.pitch }, t0: performance.now() };
+      } else engage = null;
+      requestRender();
+    };
+    /** Point the eye view at the tracked body's direction at the selected time (FOV untouched). */
+    const applyTracking = () => {
+      if (!tracking || camMode !== "eye") return;
+      const tg = trackTarget(propsRef.current.status[tracking].geometry);
+      canvas.dataset.trackState = tg.kind;
+      if (tg.kind === "missing") {
+        engage = null; // explicit missing state: hold still, never aim at a stale target
+        return;
+      }
+      let pose = { yaw: tg.yaw, pitch: tg.pitch };
+      if (engage) {
+        const f = Math.min(1, (performance.now() - engage.t0) / TRACK_ENGAGE_MS);
+        pose = blendPose(engage.from, pose, ease(f));
+        if (f >= 1) engage = null;
+      }
+      eye.yaw = pose.yaw;
+      eye.pitch = pose.pitch;
+      applyEye();
+    };
 
     // ---------------------------------------------------------------- animation (only while moving)
     let anim: { t0: number; dur: number; step: (f: number) => void } | null = null;
@@ -616,6 +690,7 @@ export default function TerrainScene(props: SceneProps) {
       const smooth = p.mode === "smooth";
       const ready = terrainMatchesSite(asset, p.site.site.id);
       terrain.visible = ready;
+      contextGroup.visible = ready && context !== null && context.siteId === p.site.site.id;
       if (edgeLine) edgeLine.visible = ready && camMode === "overview";
       terrainMat.color.setHex(smooth ? COLORS.terrainSmooth : COLORS.terrain);
       overview.visible = camMode === "overview";
@@ -661,13 +736,28 @@ export default function TerrainScene(props: SceneProps) {
         // Terrain: after the mesh, only outside the profile mask (the mesh never hides a body).
         // Smooth: on top of everything; the 0° model ignores terrain.
         dsk.renderOrder = smooth ? 30 : 5;
-        (dsk.material as THREE.MeshBasicMaterial).stencilWrite = !smooth && masked;
+        const dm = dsk.material as THREE.MeshBasicMaterial;
+        dm.stencilWrite = !smooth && masked;
+        // smooth: hidden below 0° (the smooth model's horizon); terrain: hidden by the profile mask
+        if ((dm.clippingPlanes?.length ?? 0) !== (smooth ? 1 : 0)) {
+          dm.clippingPlanes = smooth ? zeroClip : [];
+          dm.needsUpdate = true;
+        }
         const rm = ray.material as LineMaterial;
         rm.dashed = s.visible !== true;
         rm.opacity = s.visible === null ? 0.5 : 1;
         rm.transparent = true;
         rm.needsUpdate = true;
         ray.lookAt(d[0], d[1], d[2]);
+      }
+      for (const b of ["sun", "earth"] as const) {
+        const bp = camMode === "overview" ? blockingPoint(p.site, st[b], p.mode) : null;
+        const line = sight[b];
+        line.visible = bp !== null;
+        if (!bp) continue;
+        const [x, y, z] = bp.position;
+        line.lookAt(x, y, z);
+        line.scale.setScalar(Math.hypot(x, y, z));
       }
     };
 
@@ -695,9 +785,16 @@ export default function TerrainScene(props: SceneProps) {
         const ob = obstacles.find((o) => hit2(r, o));
         if (ob) el.style.marginLeft = `${((ob.l + ob.r) / 2 > (r.l + r.r) / 2 ? ob.l - r.r - 4 : ob.r - r.l + 4).toFixed(0)}px`;
       }
+      // a blocked-view label sits right of its point, or left of it when a panel or the edge is in the way
+      for (const el of [lab.blockSun, lab.blockEarth]) {
+        delete el.dataset.flip;
+        if (!shown(el)) continue;
+        const q = box(el);
+        if (q.r > w - 4 || obstacles.some((o) => hit2(q, o))) el.dataset.flip = "true";
+      }
       // the observer label takes the first clear spot: right of the pin, left of it, or below it
       if (shown(lab.observer) && camMode === "overview") {
-        const others = [...bodyLabels, ...markers.map((m) => m.btn)].filter(shown).map(box);
+        const others = [...bodyLabels, lab.blockSun, lab.blockEarth, ...markers.map((m) => m.btn)].filter(shown).map(box);
         for (const tr of ["", "calc(-100% - 10px) -50%", "-50% 14px"]) {
           lab.observer.style.translate = tr;
           const o = box(lab.observer);
@@ -705,7 +802,7 @@ export default function TerrainScene(props: SceneProps) {
         }
       }
       const fixed: Box[] = [...obstacles];
-      for (const el of [lab.observer, lab.inspect, ...bodyLabels, ...markers.map((m) => m.btn)]) if (shown(el)) fixed.push(box(el));
+      for (const el of [lab.observer, lab.inspect, lab.blockSun, lab.blockEarth, ...bodyLabels, ...markers.map((m) => m.btn)]) if (shown(el)) fixed.push(box(el));
       for (const el of [lab.offSun, lab.offEarth]) {
         if (!shown(el)) continue;
         const bx = Number(el.dataset.bx);
@@ -799,6 +896,17 @@ export default function TerrainScene(props: SceneProps) {
           const q = ring.points[((Math.round(((camAz + off) / 360) * n) % n) + n) % n];
           place(rl.el, [q[0], q[1] + 1.2, q[2]], w, h, cam);
         }
+        for (const b of ["sun", "earth"] as const) {
+          const el = b === "sun" ? lab.blockSun : lab.blockEarth;
+          const bp = blockingPoint(p.site, st[b], p.mode);
+          if (!bp) {
+            el.style.display = "none";
+            continue;
+          }
+          const t = blockingText(b === "sun" ? "Sun" : "Earth", bp);
+          el.innerHTML = `<span class="blk-mark" aria-hidden="true"></span><span class="lbl-name">${t.title}</span><span class="lbl-sub">${t.sub}</span>`;
+          place(el, bp.position, w, h, cam);
+        }
         const ins = p.inspection;
         if (ins) {
           inspPin.position.set(ins[0], ins[1], ins[2]);
@@ -809,6 +917,7 @@ export default function TerrainScene(props: SceneProps) {
         lab.observer.style.display = "none";
         lab.north.style.display = "none";
         lab.inspect.style.display = "none";
+        lab.blockSun.style.display = lab.blockEarth.style.display = "none";
         for (const rl of ringLabels) rl.el.style.display = "none";
       }
       // body labels
@@ -880,6 +989,9 @@ export default function TerrainScene(props: SceneProps) {
             el.style.translate = `-50% calc(-100% - ${(ring / 2 + 5).toFixed(0)}px)`;
             if (at) placed.push({ el, x: at.x, y: at.y, gap: ring / 2 + 5, r: ring / 2 });
             hit.style.display = "";
+            // the tracked body sits at the view centre: its ring lets drags and wheel reach the canvas
+            hit.style.pointerEvents = tracking === b ? "none" : "";
+            hit.dataset.tracked = tracking === b ? "true" : "false";
             hit.style.width = hit.style.height = `${ring.toFixed(0)}px`;
             hit.style.transform = `translate(${(pt.x - ring / 2).toFixed(1)}px, ${(pt.y - ring / 2).toFixed(1)}px)`;
             hit.setAttribute("aria-label", `${name}: ${s.visible === null ? "Unknown" : s.visible ? "Visible" : "Not visible"}. Center the view on the ${name}.`);
@@ -987,6 +1099,11 @@ export default function TerrainScene(props: SceneProps) {
         anim.step(f);
         if (f >= 1) anim = null;
       }
+      applyTracking();
+      // observer-view pose, read by browser checks (display only)
+      canvas.dataset.eyeYaw = eye.yaw.toFixed(4);
+      canvas.dataset.eyePitch = eye.pitch.toFixed(4);
+      canvas.dataset.eyeFov = eye.fov.toFixed(3);
       const w = host.clientWidth;
       const h = host.clientHeight;
       const t0 = performance.now();
@@ -998,7 +1115,7 @@ export default function TerrainScene(props: SceneProps) {
       canvas.dataset.frames = String(frames);
       canvas.dataset.frameMs = (performance.now() - t0).toFixed(2);
       canvas.dataset.camPos = overviewCam.position.toArray().map((x) => x.toFixed(2)).join(",");
-      if (anim) raf = requestAnimationFrame(frame);
+      if (anim || engage) raf = requestAnimationFrame(frame);
     };
     function requestRender() {
       if (!raf && !disposed) raf = requestAnimationFrame(frame);
@@ -1030,10 +1147,13 @@ export default function TerrainScene(props: SceneProps) {
     // ---------------------------------------------------------------- site switching
     let abort: AbortController | null = null;
     const clearTerrain = () => {
-      for (const m of [...terrain.children]) {
-        terrain.remove(m);
-        (m as THREE.Mesh).geometry.dispose();
+      for (const g of [terrain, contextGroup]) {
+        for (const m of [...g.children]) {
+          g.remove(m);
+          (m as THREE.Mesh).geometry.dispose();
+        }
       }
+      context = null;
       if (edgeLine) {
         overview.remove(edgeLine);
         edgeLine.geometry.dispose();
@@ -1074,6 +1194,61 @@ export default function TerrainScene(props: SceneProps) {
       skyline = makeLine(pts, COLORS.skyline, 1.6, { depthTest: false });
       skyline.renderOrder = 40;
       sky.add(curtain, skyline);
+      resize();
+    };
+    /** Dashed outline of a grid's outer boundary (the meshed extent), lifted slightly above it. */
+    const setOutline = (P: Float32Array, n: number, lift: number, dash: [number, number]) => {
+      if (edgeLine) {
+        overview.remove(edgeLine);
+        edgeLine.geometry.dispose();
+        (edgeLine.material as LineMaterial).dispose();
+        edgeLine = null;
+      }
+      const ring: Vec3[] = [];
+      const stepE = Math.max(1, Math.floor(n / 64));
+      const at = (i: number, j: number): Vec3 => {
+        const k = 3 * (j * n + i);
+        return [P[k], P[k + 1] + lift, P[k + 2]];
+      };
+      for (let i = 0; i < n; i += stepE) ring.push(at(i, 0));
+      for (let j = 0; j < n; j += stepE) ring.push(at(n - 1, j));
+      for (let i = n - 1; i > 0; i -= stepE) ring.push(at(i, n - 1));
+      for (let j = n - 1; j > 0; j -= stepE) ring.push(at(0, j));
+      ring.push(at(0, 0));
+      edgeLine = makeLine(ring.filter((q) => q.every(Number.isFinite)), 0xbdbab2, 1.2, { dashed: true, dash, opacity: 0.85 });
+      overview.add(edgeLine);
+    };
+    const buildContext = (c: ContextAsset, outer: { nx: number; ny: number }, outerPositions: Float32Array) => {
+      const footprint = nearFootprint(outer, outerPositions);
+      const rObs = c.meta.observer.observer_radius_m;
+      const built: { n: number; normals: Float32Array; positions: Float32Array }[] = [];
+      for (const lv of c.levels) {
+        const pos = contextPositions(lv.meta, lv.heights, rObs, c.meta.reference_radius_m);
+        const idx = contextIndices(lv.meta, pos, footprint);
+        // unreferenced no-data vertices: park at the origin so bounds stay finite
+        for (let k = 0; k < pos.length; k += 3) if (!Number.isFinite(pos[k + 1])) pos[k] = pos[k + 1] = pos[k + 2] = 0;
+        const g = new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        g.setIndex(new THREE.BufferAttribute(idx, 1));
+        g.computeVertexNormals();
+        g.computeBoundingSphere();
+        const m = new THREE.Mesh(g, terrainMat);
+        m.renderOrder = 3;
+        contextGroup.add(m);
+        built.push({ n: lv.meta.nx, normals: g.getAttribute("normal").array as Float32Array, positions: pos });
+      }
+      // shade across the nested rings without seams (shading only)
+      for (let li = 0; li + 1 < c.levels.length; li++) {
+        const coarse = c.levels[li + 1].meta;
+        stitchNormals(built[li].normals, built[li].n, built[li + 1].normals, built[li + 1].n, coarse.spacing_m / c.levels[li].meta.spacing_m, coarse.hole_cells![0]);
+        (contextGroup.children[li] as THREE.Mesh).geometry.getAttribute("normal").needsUpdate = true;
+        (contextGroup.children[li + 1] as THREE.Mesh).geometry.getAttribute("normal").needsUpdate = true;
+      }
+      const last = built[built.length - 1];
+      setOutline(last.positions, last.n, 30, [4000, 3000]);
+      context = c;
+      // let the overview zoom out far enough to see the whole context area
+      controls.maxDistance = Math.max(propsRef.current.overviewDist * 6, c.meta.outer_half_width_m * 2.5);
       resize();
     };
     const setSite = (site: SiteData) => {
@@ -1119,25 +1294,23 @@ export default function TerrainScene(props: SceneProps) {
           }
           // outline of the meshed extent (outer level boundary), drawn in the overview
           const lv = a.levels[a.levels.length - 1];
-          const n = lv.meta.nx;
-          const P = lv.positions;
-          const ring: Vec3[] = [];
-          const stepE = Math.max(1, Math.floor(n / 64));
-          const at = (i: number, j: number): Vec3 => {
-            const k = 3 * (j * n + i);
-            return [P[k], P[k + 1] + 4, P[k + 2]];
-          };
-          for (let i = 0; i < n; i += stepE) ring.push(at(i, 0));
-          for (let j = 0; j < n; j += stepE) ring.push(at(n - 1, j));
-          for (let i = n - 1; i > 0; i -= stepE) ring.push(at(i, n - 1));
-          for (let j = n - 1; j > 0; j -= stepE) ring.push(at(0, j));
-          ring.push(at(0, 0));
-          edgeLine = makeLine(ring, 0xbdbab2, 1.2, { dashed: true, dash: [400, 300], opacity: 0.85 });
-          overview.add(edgeLine);
+          setOutline(lv.positions, lv.meta.nx, 4, [400, 300]);
           asset = a;
           resize();
-          propsRef.current.onAssetState({ state: "ready", siteId: id, meta: a.meta });
+          propsRef.current.onAssetState({ state: "ready", siteId: id, meta: a.meta, context: { state: "loading" } });
           requestRender();
+          // then the wide context rings around it (display only; a failure keeps the detailed mesh)
+          loadContextAsset(import.meta.env.BASE_URL, site, a.meta, ac.signal)
+            .then((c) => {
+              if (ac.signal.aborted || disposed || propsRef.current.site.site.id !== id || asset !== a) return;
+              buildContext(c, lv.meta, lv.positions);
+              propsRef.current.onAssetState({ state: "ready", siteId: id, meta: a.meta, context: { state: "ready", meta: c.meta } });
+              requestRender();
+            })
+            .catch((e: unknown) => {
+              if (ac.signal.aborted || disposed || propsRef.current.site.site.id !== id) return;
+              propsRef.current.onAssetState({ state: "ready", siteId: id, meta: a.meta, context: { state: "error", message: e instanceof Error ? e.message : String(e) } });
+            });
         })
         .catch((e: unknown) => {
           if (ac.signal.aborted || disposed) return;
@@ -1164,26 +1337,30 @@ export default function TerrainScene(props: SceneProps) {
     const command = (c: CameraCommand) => {
       const p = propsRef.current;
       const dur = 650;
+      if (c.kind === "fov") {
+        // field of view only; direction stays with tracking (or where the user looks)
+        const from = eye.fov;
+        const to = THREE.MathUtils.clamp(c.fov ?? from, 6, 95);
+        animate(dur, (f) => {
+          eye.fov = from + (to - from) * ease(f);
+          applyEye();
+        });
+        return;
+      }
       if (c.kind === "frame") {
         if (camMode === "overview") overviewTo(new THREE.Vector3(...obliqueCamera(p.lookAz, TERRAIN_ELEV_DEG, TERRAIN_DIST_M)), dur);
         return;
       }
       if (c.kind === "reset") {
+        // the parent stops tracking before a reset reaches here
         if (camMode === "eye") eyeTo(eyeDefault(p.lookAz), dur);
         else overviewTo(overviewDefault(), dur);
-        return;
-      }
-      const g = p.status[c.kind].geometry;
-      if (g.azimuthDeg === null || g.elevationDeg === null) return;
-      if (camMode === "eye") eyeTo({ yaw: g.azimuthDeg, pitch: g.elevationDeg, fov: c.fov ?? Math.min(eye.fov, c.kind === "sun" ? 24 : 30) }, dur);
-      else {
-        const r = overviewCam.position.length();
-        overviewTo(new THREE.Vector3(...obliqueCamera(g.azimuthDeg, 22, r)), dur);
       }
     };
 
-    api.current = { render: requestRender, setSite, update: requestRender, setCamera, command, setSlope };
+    api.current = { render: requestRender, setSite, update: requestRender, setCamera, command, setSlope, setTrack };
     setCamera(propsRef.current.camera, false);
+    setTrack(propsRef.current.track ?? null);
     setSite(propsRef.current.site);
     resize();
 
@@ -1198,7 +1375,7 @@ export default function TerrainScene(props: SceneProps) {
       canvas.removeEventListener("pointerup", onUp);
       canvas.removeEventListener("pointerup", onClickUp);
       canvas.removeEventListener("pointercancel", onUp);
-      canvas.removeEventListener("wheel", onWheel);
+      host.removeEventListener("wheel", onWheel);
       canvas.removeEventListener("keydown", onKey);
       canvas.removeEventListener("webglcontextlost", onLost);
       clearTerrain();
@@ -1226,6 +1403,9 @@ export default function TerrainScene(props: SceneProps) {
   useEffect(() => {
     api.current?.setCamera(props.camera, true);
   }, [props.camera]);
+  useEffect(() => {
+    api.current?.setTrack(props.track ?? null);
+  }, [props.track]);
   useEffect(() => {
     if (props.command) api.current?.command(props.command);
   }, [props.command]);

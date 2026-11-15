@@ -1,0 +1,85 @@
+{
+  "dataset_id": "lvn-2026-12-01-60d",
+  "coverage_start_utc": "2026-12-01T00:00:00Z",
+  "coverage_end_utc": "2027-01-30T00:00:00Z",
+  "sample_step_seconds": 600,
+  "sites": [
+    {
+      "id": "im2-athena",
+      "name": "IM-2 Athena landing point (Mons Mouton region)",
+      "latitude_deg": -84.7906,
+      "longitude_deg_east": 29.1957,
+      "coordinate_frame": "Lunar Mean Earth/polar axis (ME) body-fixed frame, planetocentric latitude, east-positive longitude. ASSUMED: the LROC page does not name its frame; LRO products use the ME frame by project convention. Horizons interprets the submitted coordinates in MOON_ME (DE421-based).",
+      "coordinate_source_url": "https://lroc.im-ldi.com/images/1408",
+      "coordinate_source_title": "LROC: IM-2 Athena Seen Obliquely (M. Robinson, 10 March 2025) - gives 84.7906° S, 29.1957° E",
+      "observer_height_above_surface_m": 1,
+      "surface_elevation_m": 5321.9,
+      "surface_elevation_reference": "Height above the 1737.4 km LOLA reference sphere, LDEM_80S_20M (PDS LRO-L-LOLA-4-GDR-V1.0 V2.0) bilinear at the site; consistent with 1131 LOLA RDR shots within ~600 m (DEM - shot mean -0.26 m, sd 0.67 m). The DEM was gridded from LOLA RDR shots, so this checks our reading of the product (scaling, reference, projection, interpolation), not the terrain independently. See data/terrain/im2-athena_site_elevation_report.json.",
+      "horizons_site_altitude_km": 5.3229,
+      "horizons_altitude_reference": "Height above the Horizons reference body for the Moon: a 1737.4 km sphere (response header 'Center radii'), the same reference as LOLA heights.",
+      "altitude_conversion_note": "horizons_site_altitude_km = (surface_elevation_m + observer_height_above_surface_m) / 1000 = (5321.9 m + 1 m) / 1000 = 5.3229 km. Both heights are relative to the same 1737.4 km sphere, so no datum conversion is needed. Rounding: the bilinear LDEM_80S_20M surface is 5321.8804 m; it was rounded to 0.1 m (5321.9 m) before forming the Horizons altitude, so the submitted point is 1.0196 m above the interpolated surface (nominal 1 m). The terrain horizon uses the same submitted point, so Sun/Earth directions and skyline refer to one observer. Measured effect of the 0.0196 m: skyline <= 0.0034 deg (nearest skyline point 330 m), 1 of 8640 Sun steps (2026-12-30 sunset, one 10-minute step), no demo-window metric change; Sun/Earth directions ~3e-9 deg. No absolute vertical accuracy of the surface value is claimed: LOLA RDR shots near the site (the DEM's own source data) agree with the DEM to mean -0.26 m, sd 0.67 m, max |4.71| m (1131 shots within ~600 m), and the 8 shots within 30 m span 5321.75-5322.69 m; these are consistency and local-spread figures, not an accuracy. Terrain within 100 m of the coordinate spans -4.4 to +4.6 m (a height range, not an uncertainty; the coordinate's accuracy is not stated). Horizons echo: Center geodetic 5.3229 km exactly; |Center cylindric| = 1742.7228895 km, 10.5 mm below 1737.4 + 5.3229 km, explained by the printed precision (Dz is given to 0.1 m), so the echo confirms the radius only to about +/-5 cm.",
+      "horizon_model": "smooth",
+      "coordinate_source_retrieved_at_utc": "2026-11-14",
+      "coordinate_source_product": "LROC featured image 1408",
+      "catalog": {
+        "short_name": "Athena",
+        "location_type": "actual_landing_point",
+        "location_label": "Intuitive Machines IM-2 Athena lander, landed 2025-03-06; point located in LROC imagery",
+        "provisional_note": null
+      }
+    },
+    {
+      "id": "connecting-ridge-cr1",
+      "name": "Connecting Ridge CR1 (NASA notional study point)",
+      "latitude_deg": -89.468,
+      "longitude_deg_east": 222.6,
+      "coordinate_frame": "ME/DE421 body-fixed, planetocentric latitude, east-positive longitude, following cached LOLA labels; equivalence to source coordinate frame not demonstrated. ASSUMED: NASA section 7.3.3 and Figure 0.1 do not specify the frame realization or latitude type for this tuple.",
+      "coordinate_source_url": "https://ntrs.nasa.gov/api/citations/20230007818/downloads/ACD-50044%20Lunar%20Surface%20Data%20Book%20Rev%20A.pdf#page=46",
+      "coordinate_source_title": "NASA Lunar Surface Data Book ACD-50044 Rev A, section 7.3.3 p.46: CR1 (89.468 S, 222.6 E), assumed landing point in a notional traverse scenario",
+      "coordinate_source_retrieved_at_utc": "2026-11-14",
+      "coordinate_source_product": "ACD-50044 Revision A, NTRS 20230007818, section 7.3.3 p.46; Figure 0.1 p.38",
+      "point_type": "notional_study_location",
+      "point_description": "study location / hypothetical landing point; not an observed landing or a designated mission destination",
+      "coordinate_accuracy_note": "not stated; published decimal places are not a measured uncertainty",
+      "observer_height_above_surface_m": 1,
+      "surface_elevation_m": 1941.8,
+      "surface_elevation_reference": "Height above the 1737.4 km LOLA reference sphere, LDEM_80S_20M V2.0, bilinear at the published point interpreted in ME. Rounded to 0.1 m. Absolute vertical accuracy and source-frame equivalence are not established. No local RDR shot consistency check performed. See data/terrain/connecting-ridge-cr1_site_elevation_report.json.",
+      "horizons_site_altitude_km": 1.9428,
+      "horizons_altitude_reference": "Height above the Horizons reference body for the Moon: a 1737.4 km sphere (response header 'Center radii'), the same reference as LOLA heights. Submitted 2026-11-14 (milestone 4C).",
+      "altitude_conversion_note": "horizons_site_altitude_km = (surface_elevation_m + observer_height_above_surface_m) / 1000 = (1941.8 m + 1 m) / 1000 = 1.9428 km. Both heights are relative to the same 1737.4 km sphere, so no datum conversion is needed. Rounding: the bilinear LDEM_80S_20M surface is 1941.8206 m; it was rounded to 0.1 m (1941.8 m) before forming the Horizons altitude, so the submitted point is 0.9794 m above the interpolated surface (nominal 1 m, 0.0206 m lower). The terrain horizon uses the same submitted point (r = 1737.4 km + 1942.8 m), so Sun/Earth directions and skyline refer to one observer. No absolute vertical accuracy of the surface value is claimed; no local LOLA RDR shot consistency check was made at the site point; the nearest 20 m DEM pixel has no LOLA shot (interpolated height). Horizons echo (all 12 responses): Center geodetic 222.6, -89.468, 1.9428 exactly; Center cylindric Dxy 16.14983 km and Dz -1739.268 km equal the submitted point rounded to the printed 5 and 3 decimals, so |r| (177 mm above 1737.4 + 1.9428 km as printed) confirms the radius only to about +/-0.5 m, the printed precision of Dz near the pole.",
+      "horizon_model": "smooth",
+      "preparation_status": "positions fetched and terrain horizon computed in milestone 4C; shown in the two-site app since milestone 4D (merged in PR #2)",
+      "catalog": {
+        "short_name": "CR1",
+        "location_type": "study_location",
+        "location_label": "Assumed landing point in a notional NASA traverse study; not an actual or approved landing site",
+        "provisional_note": "Provisional: sensitive to terrain model"
+      }
+    }
+  ],
+  "terrain": {
+    "source": "PDS Geosciences Node, LRO-L-LOLA-4-GDR-V1.0, polar products V2.0 (LOLA data through 2017-02-02)",
+    "near_field_product": "LDEM_80S_20M",
+    "near_field_counts": "LDEC_80S_20M",
+    "far_field_product": "LDEM_75S_60M",
+    "far_field_counts": "LDEC_75S_60M",
+    "planning_product": "LDEM_75S_240M",
+    "selection_evidence": "data/terrain/im2-athena_lola_coverage_report.json (python pipeline/terrain_check.py)",
+    "rule": "Use LDEM_80S_20M wherever the ray is inside it; continue rays that leave it (azimuths ~320-351 deg, 165-190 km) in LDEM_75S_60M. Stop a ray only when terrain at the global LOLA maximum height (+100 m) could no longer exceed the running horizon. If a ray leaves every file first, that azimuth's horizon is null (unknown), never flat."
+  },
+  "targets": [
+    {
+      "key": "sun",
+      "command": "10",
+      "name": "Sun (body center)"
+    },
+    {
+      "key": "earth",
+      "command": "399",
+      "name": "Earth (body center, not Earth-Moon barycenter)"
+    }
+  ],
+  "horizons_chunk_days": 10,
+  "dataset_dir": "app/public/data",
+  "dataset_status": "accepted 60-day release (milestones 1-5C); files kept byte-identical in app/public/data/. Revalidate with: python pipeline/validate.py --config pipeline/datasets/lvn-2026-12-01-60d.json"
+}

@@ -10,6 +10,8 @@ import {
   type SlopeAsset,
   cellOf,
   clampThreshold,
+  fmtPixelM,
+  reproduceCommand,
   coverageNote,
   groundDistanceM,
   inspect,
@@ -218,5 +220,21 @@ describe("terrain inspection reads slope only", () => {
   it("ground distance is the footprint's great-circle definition", () => {
     const ring = a.rings.find((r) => r.radius_m === 250)!;
     for (const p of ring.points.slice(0, 20)) expect(Math.abs(groundDistanceM(p, a.observer.observer_radius_m) - 250)).toBeLessThan(0.01);
+  });
+});
+
+describe("display labels for coordinate-pipeline assets", () => {
+  it("rounds full-precision DEM pixel sizes and keeps whole ones", () => {
+    expect(fmtPixelM(59.225293797166955)).toBe("59.2");
+    expect(fmtPixelM(19.85192002049153)).toBe("19.9");
+    expect(fmtPixelM(20)).toBe("20");
+  });
+  it("replaces the complete.json pointer with the documented command and keeps real commands", () => {
+    for (const id of ["apollo17-lm", "im1-odysseus"]) {
+      const a = slopeAssetOf(id);
+      expect(reproduceCommand(a.reproduce, id, "fallback")).toBe(`python pipeline/prepare_site.py --config pipeline/config.json --site ${id}`);
+    }
+    expect(reproduceCommand("python pipeline/slope.py --site im2-athena", "im2-athena", "fallback")).toBe("python pipeline/slope.py --site im2-athena");
+    expect(reproduceCommand(undefined, "x", "fallback")).toBe("fallback");
   });
 });

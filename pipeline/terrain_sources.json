@@ -1,0 +1,10 @@
+{
+  "registry_version": "terrain-sources-1",
+  "selection_rule": "First valid bilinear sample by priority. Local observer/mesh/slope requires a source with ground pixel spacing <=100 m. Coarser sources are distant-horizon fallbacks only. No extrapolation or filling nodata with zero.",
+  "sources": [
+    {"id":"LDEM_80S_20M","adapter":"pds_polar","priority":10,"counts":"LDEC_80S_20M","local":true},
+    {"id":"LDEM_75S_60M","adapter":"pds_polar","priority":20,"counts":"LDEC_75S_60M","local":true},
+    {"id":"sldem2015_512_00n_30n_000_045_float","adapter":"sldem_cylindrical","priority":10,"local":true},
+    {"id":"LDEM_64","adapter":"pds_cylindrical","priority":100,"local":false}
+  ]
+}

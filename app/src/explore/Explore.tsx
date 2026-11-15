@@ -8,7 +8,8 @@
 import { Component, type ReactNode, Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { compass, fmtDeg, fmtLat, fmtLonEast, fmtUtc, nearestIndex } from "../data";
 import { type Availability, type DarkRun, type TimeWindow, fmtDuration, fmtHours, fromUtcDateHour, nextChange, utcDateString, utcHour } from "../mission";
-import type { Scenario, SiteView } from "../scenario";
+import type { ReadyScenario, Scenario, SiteView } from "../scenario";
+import { MixedTerrainNotice, SiteChips } from "../SiteCatalog";
 import { terrainModelLabel } from "../sites";
 import { type BodyStatus, NEAR_CROSSING, horizonName, nearCrossingExplanation, signedClearance, unknownText } from "../status";
 import type { HorizonMode } from "../types";
@@ -31,10 +32,12 @@ import {
 } from "./availability";
 import { diskRelation } from "./geometry";
 import type { TerrainAssetMeta } from "./terrainAsset";
+import type { ContextMeta } from "./contextTerrain";
 import type { Vec3 } from "./geometry";
 import { ScreeningRow, TerrainDetails } from "./TerrainScreening";
-import { inspect, screeningView } from "./slope";
+import { inspect, reproduceCommand, screeningView } from "./slope";
 import { useSlopeAssets } from "./useSlope";
+import { type TrackBody, trackSummary } from "./tracking";
 
 const TerrainScene = lazy(() => import("./TerrainScene"));
 
@@ -92,13 +95,15 @@ class SceneBoundary extends Component<{ onError: (m: string) => void; children: 
 }
 
 export interface ExploreProps {
-  sc: Scenario;
+  sc: ReadyScenario;
   /** For tests: start with a terrain inspection point (renderer frame). */
   initialInspection?: Vec3;
   /** For tests: start with the terrain detail area open. */
   initialTerrainDetails?: boolean;
   /** For tests: start in the renderer-failure state (as after a WebGL failure). */
   initialFatal?: string;
+  /** For tests: start tracking a body (Horizon view). */
+  initialTrack?: TrackBody;
 }
 
 interface EventMsg {
@@ -124,9 +129,23 @@ export function timelineSpan(domain: TimeWindow, selT: number): TimeWindow {
   return domain;
 }
 
-export default function Explore({ sc, initialFatal, initialInspection, initialTerrainDetails }: ExploreProps) {
+export default function Explore({ sc, initialFatal, initialInspection, initialTerrainDetails, initialTrack }: ExploreProps) {
   const camera: CameraMode = sc.cam === "horizon" ? "eye" : "overview";
-  const setCamera = (c: CameraMode) => sc.setCam(c === "eye" ? "horizon" : "overview");
+  const v = sc.activeView;
+  const siteId = v.entry.id;
+  // Body tracking (tracking.ts) belongs to one site: changing site clears it at once (and pauses
+  // playback, scenario.ts), so nothing moves unexpectedly while that site's assets load.
+  const [trackRaw, setTrackRaw] = useState<{ siteId: string; body: TrackBody } | null>(initialTrack ? { siteId, body: initialTrack } : null);
+  const track: TrackBody | null = trackRaw && trackRaw.siteId === siteId && camera === "eye" ? trackRaw.body : null;
+  useEffect(() => {
+    if (trackRaw && (trackRaw.siteId !== siteId || camera !== "eye")) setTrackRaw(null);
+  }, [siteId, camera, trackRaw]);
+  const stopTracking = () => setTrackRaw(null);
+  /** Switching to the Site overview stops tracking (no automatic overview tracking). */
+  const setCamera = (c: CameraMode) => {
+    if (c === "overview") stopTracking();
+    sc.setCam(c === "eye" ? "horizon" : "overview");
+  };
   const [command, setCommand] = useState<CameraCommand | null>(null);
   const [asset, setAsset] = useState<AssetState | null>(null);
   const [fatal, setFatal] = useState<string | null>(initialFatal ?? null);
@@ -144,14 +163,14 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
   const [evMsg, setEvMsg] = useState<EventMsg | null>(null);
   const anchor = useRef<CrossingAnchor | null>(null);
   const reducedMotion = useReducedMotion();
-  const v = sc.activeView;
-  const siteId = v.entry.id;
   // 5C terrain screening: an inspection point belongs to one site and never moves the observer.
   const [inspRaw, setInsp] = useState<{ siteId: string; p: Vec3 } | null>(initialInspection ? { siteId, p: initialInspection } : null);
   const insp = inspRaw && inspRaw.siteId === siteId ? inspRaw.p : null;
   const terrainActive = sc.layer !== "surface" || insp !== null;
   // Screening loads automatically for the active site, whatever the overlay, date or model.
-  const slopeLoad = useSlopeAssets([v.data], true);
+  // Capabilities come from the catalog: a site without an asset is never requested or substituted.
+  const caps = sc.catalogSite(siteId).capabilities;
+  const slopeLoad = useSlopeAssets([v.data], caps.slope_screening.available);
   const slopeState = slopeLoad.states[siteId] ?? { state: "idle" as const };
   const slopeAsset = slopeState.state === "ready" && slopeState.asset.site.id === siteId ? slopeState.asset : null;
   const screening = screeningView(slopeState, siteId, sc.slopeThr);
@@ -178,10 +197,15 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
   }, [siteId, sc.mode, sc.arrival, sc.days, sc.effDelay, sc.mission, evBody, evRange]);
 
   const cmd = (kind: CameraCommand["kind"], fov?: number) => setCommand((c) => ({ kind, n: (c?.n ?? 0) + 1, fov }));
-  /** Look toward a body: always in horizon view, centered on it. */
-  const look = (b: "sun" | "earth", fov?: number) => {
-    setCamera("eye");
-    cmd(b, fov);
+  /** Track a body: enter the Horizon view and keep its modeled direction centred. Switching body is immediate. */
+  const startTracking = (b: TrackBody) => {
+    sc.setCam("horizon");
+    setTrackRaw({ siteId, body: b });
+  };
+  /** Reset stops tracking, then restores the default view. */
+  const reset = () => {
+    stopTracking();
+    cmd("reset");
   };
   /** Full slope map, in the Site overview, framed on the 500 m assessed area (time and mission unchanged; reduced motion: instant). */
   const slopeMapFramed = () => {
@@ -194,6 +218,7 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
   // The asset state is only meaningful for the site it was reported for.
   const assetHere = asset && asset.siteId === siteId ? asset : { state: "loading" as const, siteId };
   const meta: TerrainAssetMeta | null = assetHere.state === "ready" ? assetHere.meta : null;
+  const contextMeta: ContextMeta | null = assetHere.state === "ready" && assetHere.context?.state === "ready" ? assetHere.context.meta : null;
   const msg = evMsg && evMsg.siteId === siteId && evMsg.mode === sc.mode ? evMsg : null;
 
   // ---------------------------------------------------------------- guided horizon crossings
@@ -212,7 +237,10 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
     sc.setSel(nearestIndex(sc.times, plan.targetT));
     anchor.current = plan.anchor;
     setSpeed(evBody === "sun" ? SPEEDS[0] : SPEEDS[1]);
-    look(evBody, evBody === "sun" ? 10 : 18);
+    // Crossing navigation tracks the event's body. A first engagement frames the crossing
+    // (narrower field of view); while already tracking, the user's field of view is kept.
+    if (!track) cmd("fov", evBody === "sun" ? 10 : 18);
+    startTracking(evBody);
     setEvMsg({ ...base, kind: "event", text: transitionText(plan.x, sc.mode), x: plan.x });
   };
   const jumpToCrossing = () => {
@@ -223,9 +251,18 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
   };
 
   return (
-    <main className="explore" id="explore" data-site={siteId} data-camera={camera} data-mode={sc.mode}>
+    <main className="explore" id="explore" data-site={siteId} data-camera={camera} data-mode={sc.mode} data-tracking={track ?? undefined}>
       <div className="stage">
-        {fatal ? (
+        {!caps.terrain_3d.available ? (
+          <div className="scene-message" role="status" data-testid="no-3d">
+            <strong>No 3D terrain for {v.profile.short}.</strong>
+            <span>{caps.terrain_3d.reason}. No other terrain is shown in its place.</span>
+            <span>Status, the timeline and the full comparison in Analysis still work.</span>
+            <div className="msg-actions">
+              <button type="button" className="primary" onClick={() => sc.setView("analysis")}>Open Analysis</button>
+            </div>
+          </div>
+        ) : fatal ? (
           <div className="scene-message scene-error" role="alert" data-testid="scene-fatal">
             <strong>The 3D view is unavailable.</strong>
             <span>{fatal}</span>
@@ -251,7 +288,9 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
                 reducedMotion={reducedMotion}
                 onAssetState={setAsset}
                 onFatal={setFatal}
-                onLook={(b) => look(b)}
+                onLook={(b) => startTracking(b)}
+                track={track}
+                onTrackBreak={stopTracking}
                 layer={sc.layer}
                 slope={slopeAsset}
                 thresholdDeg={sc.slopeThr}
@@ -267,13 +306,14 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
             </Suspense>
           </SceneBoundary>
         )}
-        <ViewToolbar camera={camera} setCamera={setCamera} onReset={() => cmd("reset")} onLook={(b) => look(b)} status={st} />
-        {!fatal && assetHere.state === "loading" && (
+        <ViewToolbar camera={camera} setCamera={setCamera} onReset={reset} track={track} onTrack={(b) => (track === b ? stopTracking() : startTracking(b))} />
+        {track && <TrackIndicator body={track} s={st[track]} mode={sc.mode} reducedMotion={reducedMotion} onStop={stopTracking} />}
+        {!fatal && caps.terrain_3d.available && assetHere.state === "loading" && (
           <div className="scene-toast" role="status" data-testid="asset-loading">
             <span className="spinner" aria-hidden="true" /> Loading {v.profile.short} terrain…
           </div>
         )}
-        {!fatal && assetHere.state === "error" && (
+        {!fatal && caps.terrain_3d.available && assetHere.state === "error" && (
           <div className="scene-message scene-error" role="alert" data-testid="asset-error">
             <strong>{v.profile.short} terrain could not be loaded.</strong>
             <span>{assetHere.message}</span>
@@ -290,7 +330,7 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
           </p>
         )}
         {msg && <EventCard msg={msg} selT={sc.selT} onJump={jumpToCrossing} onClose={() => setEvMsg(null)} outsideMission={msg.x ? msg.x.t < win.w.start || msg.x.t >= win.w.end : false} />}
-        <SceneLegend camera={camera} mode={sc.mode} meta={meta} />
+        <SceneLegend camera={camera} mode={sc.mode} meta={meta} context={contextMeta} />
       </div>
 
       <MissionPanel sc={sc} focus={win.key} open={setupOpen} onToggle={() => setSetupOpen((o) => !o)} />
@@ -305,6 +345,11 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
           compact={tdOpen}
           terrain={
             <>
+              {!caps.slope_screening.available ? (
+                <div className="ts-row small" data-testid="screening-unavailable">
+                  <p><strong>Terrain screening: not available for {v.profile.short}.</strong> {caps.slope_screening.reason}.</p>
+                </div>
+              ) : (
               <ScreeningRow
                 view={screening}
                 siteShort={v.profile.short}
@@ -316,7 +361,8 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
                 onSteep={() => sc.setLayer("exceed")}
                 onRetry={slopeLoad.retry}
               />
-              {tdOpen && (
+              )}
+              {tdOpen && caps.slope_screening.available && (
                 <TerrainDetails
                   state={slopeAsset ? slopeState : { state: "loading" }}
                   siteShort={v.profile.short}
@@ -348,7 +394,7 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
         onCrossing={goCrossing}
         onJumpMission={() => { setEvMsg(null); anchor.current = null; }}
       />
-      {details && <DetailsSheet v={v} mode={sc.mode} meta={meta} assetState={assetHere} onClose={() => setDetails(false)} onAnalysis={() => sc.setView("analysis")} />}
+      {details && <DetailsSheet v={v} mode={sc.mode} meta={meta} assetState={assetHere} contextMeta={contextMeta} onClose={() => setDetails(false)} onAnalysis={() => sc.setView("analysis")} />}
     </main>
   );
 }
@@ -420,7 +466,7 @@ function useSessionFlag(key: string): [boolean, (v: boolean) => void] {
   ];
 }
 
-function MissionPanel({ sc, focus, open, onToggle }: { sc: Scenario; focus: MissionKey; open: boolean; onToggle: () => void }) {
+function MissionPanel({ sc, focus, open, onToggle }: { sc: ReadyScenario; focus: MissionKey; open: boolean; onToggle: () => void }) {
   const [aboutOpen, setAboutOpen] = useSessionFlag(ABOUT_KEY);
   const v = sc.activeView;
   const meta = v.data.site;
@@ -435,16 +481,7 @@ function MissionPanel({ sc, focus, open, onToggle }: { sc: Scenario; focus: Miss
         </button>
       </div>
       <div className="panel-sitebar">
-        <div className="seg" role="radiogroup" aria-label="Site">
-          {sc.ds.sites.map((e) => {
-            const short = sc.views.find((x) => x.entry.id === e.id)?.profile.short ?? (e.id === "im2-athena" ? "Athena" : e.id === "connecting-ridge-cr1" ? "CR1" : e.id);
-            return (
-              <button key={e.id} type="button" role="radio" aria-checked={sc.active === e.id} className={sc.active === e.id ? "seg-b on" : "seg-b"} onClick={() => sc.setActive(e.id)} data-site-btn={e.id}>
-                {short}
-              </button>
-            );
-          })}
-        </div>
+        <SiteChips sc={sc} theme="explore" />
         {provisional && (
           <p className="badge-prov" data-field="provisional" title="CR1's terrain result is highly sensitive to near-field relief, the terrain model, eye height and position. See Details.">
             {provisional}
@@ -469,8 +506,7 @@ function MissionPanel({ sc, focus, open, onToggle }: { sc: Scenario; focus: Miss
                   role="radio"
                   aria-checked={sc.mode === m}
                   className={sc.mode === m ? "seg-b on" : "seg-b"}
-                  disabled={m === "terrain" && !sc.avail.terrain}
-                  title={m === "terrain" && !sc.avail.terrain ? `Unavailable for ${sc.avail.missing.map((x) => x.id).join(", ")}` : m === "smooth" ? "0° horizontal reference; terrain ignored" : "LOLA terrain skyline"}
+                  title={m === "terrain" && !sc.avail.terrain ? `No terrain horizon for ${sc.avail.missing.map((x) => x.id).join(", ")}` : m === "smooth" ? "0° horizontal reference; terrain ignored" : "Terrain skyline"}
                   onClick={() => sc.setMode(m)}
                   data-mode-btn={m}
                 >
@@ -479,9 +515,7 @@ function MissionPanel({ sc, focus, open, onToggle }: { sc: Scenario; focus: Miss
               ))}
             </div>
           </div>
-          {sc.terrainRequestedButMissing && (
-            <p className="note-err small" role="alert">Terrain is not available for {sc.avail.missing.map((m) => m.id).join(", ")}; every site uses the smooth model.</p>
-          )}
+          <MixedTerrainNotice sc={sc} />
           <div className="ctl-row">
             <label className="ctl grow">
               <span className="ctl-label">Baseline arrival (UTC)</span>
@@ -586,7 +620,7 @@ function darkEdge(m: Availability<DarkRun | null>) {
  * same values as the Analysis cards). The mission buttons choose the mission shown on the
  * timeline and searched for crossings; the collapsed line keeps the active mission's numbers.
  */
-export function MissionSummary({ sc, focus, setFocus, initialOpen = false }: { sc: Pick<Scenario, "activeView" | "effDelay" | "baseW" | "actW">; focus: MissionKey; setFocus: (f: MissionKey) => void; initialOpen?: boolean }) {
+export function MissionSummary({ sc, focus, setFocus, initialOpen = false }: { sc: Pick<ReadyScenario, "activeView" | "effDelay" | "baseW" | "actW">; focus: MissionKey; setFocus: (f: MissionKey) => void; initialOpen?: boolean }) {
   const [open, setOpen] = useState(initialOpen);
   const v = sc.activeView;
   const cols: { key: MissionKey; label: string; short: string; w: TimeWindow; m: typeof v.base }[] = [{ key: "baseline", label: "Baseline", short: "Baseline", w: sc.baseW, m: v.base }];
@@ -700,7 +734,7 @@ export function ConditionsPanel({ v, st, mode, open, onToggle, onDetails, terrai
         <button type="button" className="icon-btn panel-toggle" aria-expanded={open} onClick={onToggle} aria-label={open ? "Collapse current conditions" : "Expand current conditions"}>{Icon.chevron}</button>
       </div>
       <p className="model-chip small" data-field="model" data-mode={mode}>
-        {mode === "terrain" ? "Terrain skyline (LOLA)" : "Smooth model · 0° horizontal reference, terrain ignored"}
+        {mode === "terrain" ? `Terrain skyline (${terrainModelLabel(v.data) ?? "terrain model"})` : "Smooth model · 0° horizontal reference, terrain ignored"}
       </p>
       <StatusGroup s={st.sun} kind="power" v={v} mode={mode} />
       <StatusGroup s={st.earth} kind="comms" v={v} mode={mode} />
@@ -717,7 +751,7 @@ export function ConditionsPanel({ v, st, mode, open, onToggle, onDetails, terrai
             <dl className="geo">
               <GeometryRow s={st.sun} name="Sun" mode={mode} />
               <GeometryRow s={st.earth} name="Earth" mode={mode} />
-              <div className="geo-row"><dt>Model</dt><dd>{mode === "terrain" ? terrainModelLabel(v.data) ?? "LOLA" : "0° plane (smooth)"}</dd></div>
+              <div className="geo-row"><dt>Model</dt><dd>{mode === "terrain" ? terrainModelLabel(v.data) ?? "terrain model" : "0° plane (smooth)"}</dd></div>
             </dl>
             <p className="muted small">Body centers, classified per exported 10-minute step. Camera movement never changes this status.</p>
           </details>
@@ -729,9 +763,7 @@ export function ConditionsPanel({ v, st, mode, open, onToggle, onDetails, terrai
 
 // ------------------------------------------------------------------ viewport toolbar (top of the scene)
 
-function ViewToolbar({ camera, setCamera, onReset, onLook, status }: { camera: CameraMode; setCamera: (c: CameraMode) => void; onReset: () => void; onLook: (b: "sun" | "earth") => void; status: SiteView["statusSel"] }) {
-  const noSun = status.sun.geometry.azimuthDeg === null;
-  const noEarth = status.earth.geometry.azimuthDeg === null;
+function ViewToolbar({ camera, setCamera, onReset, track, onTrack }: { camera: CameraMode; setCamera: (c: CameraMode) => void; onReset: () => void; track: TrackBody | null; onTrack: (b: TrackBody) => void }) {
   return (
     <div className="view-toolbar" role="toolbar" aria-label="View">
       <div className="seg seg-dark" role="radiogroup" aria-label="Camera mode">
@@ -744,15 +776,51 @@ function ViewToolbar({ camera, setCamera, onReset, onLook, status }: { camera: C
       </div>
       <span className="tb-sep" aria-hidden="true" />
       <button type="button" className="tool-btn ghost" onClick={onReset} data-cam-cmd="reset" title="Reset view" aria-label="Reset view">{Icon.reset}<span>Reset</span></button>
-      <button type="button" className="tool-btn ghost tool-sun" onClick={() => onLook("sun")} disabled={noSun} data-cam-cmd="sun" title="Look toward the Sun (horizon view)">{Icon.sun}<span>Look toward Sun</span></button>
-      <button type="button" className="tool-btn ghost tool-earth" onClick={() => onLook("earth")} disabled={noEarth} data-cam-cmd="earth" title="Look toward Earth (horizon view)">{Icon.earth}<span>Look toward Earth</span></button>
+      {(["sun", "earth"] as const).map((b) => {
+        const name = b === "sun" ? "Sun" : "Earth";
+        const on = track === b;
+        return (
+          <button
+            key={b}
+            type="button"
+            className={`tool-btn ghost tool-${b}${on ? " tracking" : ""}`}
+            onClick={() => onTrack(b)}
+            aria-pressed={on}
+            data-track-btn={b}
+            title={on ? `Stop tracking the ${name}` : `Track the ${name}: Horizon view, kept centred on its modeled direction as time changes`}
+          >
+            {b === "sun" ? Icon.sun : Icon.earth}<span>{on ? `Tracking ${name}` : `Track ${name}`}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Active-tracking indicator: which body, where it is relative to the horizon, and Stop tracking. */
+function TrackIndicator({ body, s, mode, reducedMotion, onStop }: { body: TrackBody; s: BodyStatus; mode: HorizonMode; reducedMotion: boolean; onStop: () => void }) {
+  const name = body === "sun" ? "Sun" : "Earth";
+  const sum = trackSummary(s, body, mode);
+  return (
+    <div className={`track-indicator track-${body}`} role="status" data-testid="track-indicator" data-track={body} data-state={sum.state}>
+      <p className="ti-main">
+        <span className="ti-dot" aria-hidden="true" />
+        <strong>Tracking {name}</strong>
+        <span className="ti-line num" data-field="track-line">{sum.line}</span>
+        {mode === "smooth" && <span className="ti-model">Smooth model: terrain ignored</span>}
+        <button type="button" className="tool-btn compact ti-stop" onClick={onStop} data-testid="stop-tracking">Stop tracking</button>
+      </p>
+      {sum.note && <p className="ti-note small" data-field="track-note">{sum.note}</p>}
+      <p className="ti-foot small muted">
+        The view follows the modeled direction at each 10-minute sample{reducedMotion ? " (no transition animation: reduced motion)" : ""}; it does not refine event times. Dragging to look elsewhere stops tracking; zooming keeps it.
+      </p>
     </div>
   );
 }
 
 // ------------------------------------------------------------------ compact legend with an info disclosure
 
-function SceneLegend({ camera, mode, meta }: { camera: CameraMode; mode: HorizonMode; meta: TerrainAssetMeta | null }) {
+function SceneLegend({ camera, mode, meta, context }: { camera: CameraMode; mode: HorizonMode; meta: TerrainAssetMeta | null; context: ContextMeta | null }) {
   const [info, setInfo] = useState(false);
   const extent = meta ? `${(meta.sampling.outer_half_width_m / 1000).toFixed(1)} km` : null;
   return (
@@ -786,7 +854,13 @@ function SceneLegend({ camera, mode, meta }: { camera: CameraMode; mode: Horizon
             <ul>
               <li>Rays start at the fixed modeled observer and point along the Sun and Earth directions at the selected time. Markers sit at the far end of those directions; their size is for orientation, not angular size.</li>
               <li>Outlined markers are below the observer’s horizon in the selected model. Click a marker to view it at the horizon.</li>
-              <li>The terrain is the real 20 m DEM mesh, true scale{extent ? `, meshed to ${extent} (dashed outline)` : ""}.</li>
+              <li>When terrain hides the Sun or Earth, a ringed point marks the terrain that sets the skyline on the observer’s line of sight (often only tens or hundreds of metres away). The camera is far above the 1 m eye, so that rise rarely looks like a barrier from here; Horizon view shows it as the observer sees it.</li>
+              <li>
+                The terrain is the real {meta ? `${meta.source_dem.product} ` : ""}DEM mesh, true scale
+                {extent && context
+                  ? `: detailed to ${extent}, then coarser context terrain to ${(context.outer_half_width_m / 1000).toFixed(0)} km (dashed outline) so nearby craters and massifs are visible. Zoom out to see it all.`
+                  : extent ? `, meshed to ${extent} (dashed outline).` : "."}
+              </li>
             </ul>
           ) : (
             <ul>
@@ -810,7 +884,7 @@ function segmentText(s: Segment) {
 }
 
 function TimeBar({ sc, win, speed, setSpeed, evBody, setEvBody, evRange, setEvRange, onCrossing, onJumpMission }: {
-  sc: Scenario;
+  sc: ReadyScenario;
   win: { key: MissionKey; label: string; w: TimeWindow };
   speed: Speed;
   setSpeed: (s: Speed) => void;
@@ -981,9 +1055,10 @@ function TimeBar({ sc, win, speed, setSpeed, evBody, setEvBody, evRange, setEvRa
 const f5 = (x: number | undefined) => (x === undefined ? "n/a" : `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(3)}°`);
 const a3 = (x: number | undefined) => (x === undefined ? "n/a" : `${x.toFixed(3)}°`);
 
-function DetailsSheet({ v, mode, meta, assetState, onClose, onAnalysis }: {
-  v: SiteView; mode: HorizonMode; meta: TerrainAssetMeta | null; assetState: AssetState; onClose: () => void; onAnalysis: () => void;
+function DetailsSheet({ v, mode, meta, assetState, contextMeta, onClose, onAnalysis }: {
+  v: SiteView; mode: HorizonMode; meta: TerrainAssetMeta | null; assetState: AssetState; contextMeta: ContextMeta | null; onClose: () => void; onAnalysis: () => void;
 }) {
+  const ctxState = assetState.state === "ready" ? assetState.context : undefined;
   useEffect(() => {
     const f = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", f);
@@ -1004,16 +1079,16 @@ function DetailsSheet({ v, mode, meta, assetState, onClose, onAnalysis }: {
         <div className="sheet-body">
           <section>
             <h3>What the availability means</h3>
-            <p className="small">Sources: Sun and Earth positions from JPL Horizons (cached, airless, 10-minute samples); terrain and skyline from LOLA polar DEMs. All times UTC.</p>
+            <p className="small">Sources: Sun and Earth positions from JPL Horizons (cached, airless, 10-minute samples); terrain and skyline from {v.data.terrain_horizon ? Object.keys(v.data.terrain_horizon.horizon.resolution.dem_pixel_m).join(" and ") : "no terrain model (smooth model only)"}. All times UTC.</p>
             <p className="small purpose" data-testid="purpose-note">{PURPOSE_NOTE}</p>
             <p className="small">Visibility refers to body <strong>centers</strong>, classified per exported 10-minute step; crossing times are estimates on that grid. Part of a disk can be above the {horizonName(mode)} while its center is not.</p>
           </section>
           <section>
             <h3>What this view shows</h3>
             <ul>
-              <li>The fixed <strong>modeled observer</strong>: the exported observer point, {s.observer_height_above_surface_m} m nominal above the LOLA surface{v.data.terrain_horizon?.observer ? ` (eye ${v.data.terrain_horizon.observer.eye_above_dem_surface_m.toFixed(3)} m above the interpolated surface)` : ""}. Moving the camera never moves it or changes any status.</li>
+              <li>The fixed <strong>modeled observer</strong>: the exported observer point, {s.observer_height_above_surface_m} m nominal above the DEM surface{v.data.terrain_horizon?.observer ? ` (eye ${v.data.terrain_horizon.observer.eye_above_dem_surface_m.toFixed(3)} m above the interpolated surface)` : ""}. Moving the camera never moves it or changes any status.</li>
               <li>{mode === "terrain"
-                ? <><strong>Observer view uses the exported skyline profile for the horizon.</strong> The bright line is the 0.1° profile that decides status. Terrain is clipped to that line, and only the profile hides the Sun or Earth; the simplified mesh, which differs from the profile by up to about 0.1°, never adds or removes occlusion here. Where the mesh is lower than the profile, the profile is filled as a flat band (an angular outline, not 3D geometry). The overview shows the unclipped mesh.</>
+                ? <><strong>Observer view uses the exported skyline profile for the horizon.</strong> The bright line is the 0.1° profile that decides status. Terrain is clipped to that line, and only the profile hides the Sun or Earth; the simplified meshes, which differ from the profile (the detailed mesh by up to about 0.1°, the coarser context rings by more), never add or remove occlusion here. Where the meshes are lower than the profile, the profile is filled as a flat band (an angular outline, not 3D geometry). The overview shows the unclipped mesh.</>
                 : "Smooth mode: status uses the 0° horizontal reference plane. Terrain is drawn for context only and does not hide the Sun or Earth."}</li>
               <li>The Sun and Earth are drawn at <strong>nominal</strong> sizes (0.53° and 1.9°) at their exact centers; the dataset holds no diameters. Near a crossing the drawn center and the step’s label can briefly disagree: that is the “{NEAR_CROSSING}” case, explained in the status panel.</li>
               <li>Terrain brightness is display lighting from a fixed direction; it does not show sunlight at the observer or on the ground. No shadows are computed.</li>
@@ -1037,7 +1112,7 @@ function DetailsSheet({ v, mode, meta, assetState, onClose, onAnalysis }: {
             {meta && (
               <>
                 <p className="small">
-                  {meta.source_dem.product} (sha256 <code>{meta.source_dem.sha256.slice(0, 12)}…</code>), the same DEM and registration as the terrain horizon. Heights are bilinear between 20 m pixel centres; finer mesh spacing interpolates and adds no measured detail. No vertical exaggeration; curvature is in the vertex positions once. Shading normals are averaged over about 10 m (shading only).
+                  {meta.source_dem.product} (sha256 <code>{meta.source_dem.sha256.slice(0, 12)}…</code>), the same DEM and registration as the terrain horizon. Heights are bilinear between DEM pixel centres; finer mesh spacing interpolates and adds no measured detail. No vertical exaggeration; curvature is in the vertex positions once. Shading normals are averaged over about 10 m (shading only).
                 </p>
                 <div className="table-scroll plain">
                   <table className="mini-table">
@@ -1050,11 +1125,42 @@ function DetailsSheet({ v, mode, meta, assetState, onClose, onAnalysis }: {
                   </table>
                 </div>
                 <p className="small">
-                  {meta.counts.vertices.toLocaleString("en-US")} vertices, {meta.counts.triangles.toLocaleString("en-US")} triangles, {(meta.counts.bin_bytes / 1e6).toFixed(1)} MB. {meta.sampling.unmeshed}
+                  {meta.counts.vertices.toLocaleString("en-US")} vertices, {meta.counts.triangles.toLocaleString("en-US")} triangles, {(meta.counts.bin_bytes / 1e6).toFixed(1)} MB.{" "}
+                  {contextMeta
+                    ? `Beyond the ${(meta.sampling.outer_half_width_m / 1000).toFixed(2)} km detailed square, coarser context terrain continues to ${(contextMeta.outer_half_width_m / 1000).toFixed(0)} km (below); beyond that, terrain is represented only by the exported skyline in Horizon view.`
+                    : meta.sampling.unmeshed}
                 </p>
               </>
             )}
           </section>
+          {meta && (
+            <section data-testid="context-details">
+              <h3>Context terrain (rendering asset)</h3>
+              {ctxState?.state === "loading" && <p className="muted small">Loading…</p>}
+              {ctxState?.state === "error" && <p className="note-err small">Not loaded: {ctxState.message}. The detailed mesh, status and Analysis are unaffected.</p>}
+              {contextMeta && (
+                <>
+                  <p className="small">
+                    Coarser rings around the detailed mesh for orientation, so nearby craters and massifs are visible: {contextMeta.sources_used.join(", ")}, sampled bilinearly from
+                    the same cached DEMs and source priority as the terrain horizon. No invented detail, no vertical exaggeration; curvature once. Where the two meshes meet,
+                    context cells inside the detailed square are omitted and the rest sit slightly below it (at most 0.05 % of the distance plus 1 m), so the detailed mesh
+                    is always the visible surface. Display only: never used for status, metrics or the skyline.
+                  </p>
+                  <div className="table-scroll plain">
+                    <table className="mini-table">
+                      <thead><tr><th scope="col">Ring</th><th scope="col">Spacing</th><th scope="col">Half-width</th><th scope="col">Source</th></tr></thead>
+                      <tbody>
+                        {contextMeta.levels.map((l) => (
+                          <tr key={l.index}><td>{l.index + 1}</td><td className="num">{l.spacing_m} m</td><td className="num">{(l.half_width_m / 1000).toFixed(2)} km</td><td>{l.sources_used.join(", ")}{l.nodata_vertices ? ` (${l.nodata_vertices} points without data, not drawn)` : ""}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="small">Reproduce: <code>{contextMeta.reproduce}</code></p>
+                </>
+              )}
+            </section>
+          )}
           {mc && inside && (
             <section>
               <h3>Mesh silhouette vs exported skyline</h3>
@@ -1073,7 +1179,7 @@ function DetailsSheet({ v, mode, meta, assetState, onClose, onAnalysis }: {
           )}
           <section>
             <p className="small">
-              Reproduce: <code>{meta?.reproduce ?? `python pipeline/render_assets.py --site ${v.entry.id}`}</code>
+              Reproduce: <code>{reproduceCommand(meta?.reproduce, v.entry.id, `python pipeline/render_assets.py --site ${v.entry.id}`)}</code>
             </p>
             <button type="button" className="primary" onClick={onAnalysis}>Open Analysis for the full comparison</button>
           </section>

@@ -57,7 +57,7 @@ export interface SlopeAsset {
   observer_cell: { cell: [number, number]; slope_deg: number | null };
   stats: { median_deg: number | null; p95_deg: number | null; max_deg: number | null; min_deg: number | null };
   default_threshold_deg: number;
-  shot_quality: { fraction_cells_with_lola_shot: number; cells_with_no_shot_in_3x3: number };
+  shot_quality: { fraction_cells_with_lola_shot: number | null; cells_with_no_shot_in_3x3: number | null };
   rings: { radius_m: number; is_analysis_boundary: boolean; points: [number, number, number][] }[];
   reproduce: string;
 }
@@ -357,4 +357,20 @@ export function screeningView(state: SlopeState | undefined, siteId: string, thr
 export function overlayMode(layer: TerrainLayer, camera: "overview" | "eye", assetSiteId: string | null, siteId: string): 0 | 1 | 2 {
   if (camera !== "overview" || assetSiteId === null || assetSiteId !== siteId) return 0;
   return layer === "slope" ? 1 : layer === "exceed" ? 2 : 0;
+}
+
+/** DEM pixel size for display: at most one decimal (the source records full float precision). */
+export const fmtPixelM = (m: number) => String(Number(m.toFixed(1)));
+
+/** Placeholder written by pipeline/prepare_site.py: its exact command lives in the prepared bundle's complete.json. */
+export const GENERIC_REPRODUCE_PLACEHOLDER = "See complete.json command";
+
+/**
+ * Command shown under "Reproduce". Coordinate-pipeline assets record only a pointer to
+ * complete.json (which is not served), so the documented config command is shown instead.
+ */
+export function reproduceCommand(recorded: string | null | undefined, siteId: string, fallback: string): string {
+  if (!recorded) return fallback;
+  if (recorded === GENERIC_REPRODUCE_PLACEHOLDER) return `python pipeline/prepare_site.py --config pipeline/config.json --site ${siteId}`;
+  return recorded;
 }

@@ -164,6 +164,9 @@ def terrain_block(cfg: dict, site: dict, samples: list[dict]) -> tuple[dict | No
     after the independent check (horizon_crosscheck.py) has been run; never from
     anything else. Values are rounded first and the intervals are classified
     from the rounded profile, so the app gets exactly what was classified."""
+    if site.get("prepared_terrain"):
+        import prepared_export
+        return prepared_export.terrain_block(site, samples)
     terrain_report = sites.report_path(site["id"], "terrain_horizon")
     terrain_crosscheck = sites.report_path(site["id"], "horizon_crosscheck")
     if not terrain_report.exists():
@@ -421,9 +424,12 @@ def dump_site(data: dict) -> str:
 
 def main() -> int:
     ap = sites.parser(description=__doc__)
+    sites.add_config_arg(ap, CONFIG)
     args = ap.parse_args()
-    cfg = json.loads(CONFIG.read_text("utf-8"))
+    cfg = sites.load_config(args.config)
     selected = sites.cli_sites(ap, args, cfg, batch=True)
+    OUT_DIR = sites.dataset_dir(cfg)
+    rel = OUT_DIR.relative_to(sites.REPO_ROOT).as_posix()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     manifest_sites = []
     prepared = [(site, export_site(cfg, site)) for site in selected]
@@ -443,7 +449,7 @@ def main() -> int:
         (OUT_DIR / fname).write_text(dump_site(data), "utf-8")
         manifest_sites.append({"id": site["id"], "name": site["name"], "file": fname})
         json.loads((OUT_DIR / fname).read_text("utf-8"))  # the hand-formatted file must parse
-        print(f"wrote app/public/data/{fname}: {len(data['samples'])} samples, "
+        print(f"wrote {rel}/{fname}: {len(data['samples'])} samples, "
               f"{len(data['visibility_intervals'])} smooth-horizon interval(s)"
               + (f", {len(data['terrain_horizon']['visibility_intervals'])} terrain-horizon interval(s)"
                  if "terrain_horizon" in data else ", no terrain horizon"))
@@ -459,7 +465,7 @@ def main() -> int:
         "is_synthetic": False,
     }
     (OUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", "utf-8")
-    print("wrote app/public/data/manifest.json")
+    print(f"wrote {rel}/manifest.json")
     return 0
 
 

@@ -245,7 +245,9 @@ class ExportedAssets(unittest.TestCase):
     def test_evidence_matches_asset(self):
         for sid, a in self.a.items():
             ev = json.loads((REPO / "data" / "screening" / f"{sid}_slope_report.json").read_text("utf-8"))
-            self.assertEqual(ev["asset_sha256"], __import__("sites").sha256(ASSETS[sid]))
+            # Text assets are committed as LF; Windows may check them out as CRLF.
+            canonical = ASSETS[sid].read_bytes().replace(b"\r\n", b"\n")
+            self.assertEqual(ev["asset_sha256"], __import__("hashlib").sha256(canonical).hexdigest())
             self.assertEqual(ev["stats"]["median_deg"], a["stats"]["median_deg"])
             for e in ev["stats"]["exceedance"]:
                 self.assertLess(e["abs_difference"], 1e-3)  # equal-area weighting is justified

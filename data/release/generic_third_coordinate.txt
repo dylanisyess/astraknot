@@ -1,0 +1,2 @@
+BUILD coordinate-smoke-20n fingerprint=d029381f847ce1f0fc820596b1b698069abcc934718775ac7232c791c8c010ab surface=-2619.644558 m source=sldem2015_512_00n_30n_000_045_float; 3600 rays
+COMPLETE data\prepared\d029381f847ce1f0fc820596b1b698069abcc934718775ac7232c791c8c010ab; eye=1.044558 m; refine max=0.007669 deg

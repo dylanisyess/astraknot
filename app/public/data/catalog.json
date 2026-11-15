@@ -1,0 +1,104 @@
+{
+  "catalog_version": "1",
+  "dataset_id": "lvn-2026-12-01-60d",
+  "manifest_sha256_lf": "0162b4366756783f207b24311ace12999306bb24c64c9ee75e0ba18ccd3f16d7",
+  "note": "Site list and data capabilities for the app's catalog; derived from the dataset's files and assets. Not visibility data. Hashes and sizes are of the files with LF line endings.",
+  "sites": [
+    {
+      "id": "im2-athena",
+      "name": "IM-2 Athena landing point (Mons Mouton region)",
+      "short_name": "Athena",
+      "latitude_deg": -84.7906,
+      "longitude_deg_east": 29.1957,
+      "location_type": "actual_landing_point",
+      "location_label": "Intuitive Machines IM-2 Athena lander, landed 2025-03-06; point located in LROC imagery",
+      "file": "im2-athena.json",
+      "file_sha256_lf": "38e093cbf7fc83180971ab4b155c02b7fea1c659fa93e19022059faa20566355",
+      "file_bytes_lf": 1715036,
+      "capabilities": {
+        "positions": {
+          "available": true,
+          "coverage_start_utc": "2026-12-01T00:00:00Z",
+          "coverage_end_utc": "2027-01-30T00:00:00Z",
+          "sample_step_seconds": 600,
+          "samples": 8641
+        },
+        "smooth_visibility": {
+          "available": true
+        },
+        "terrain_horizon": {
+          "available": true,
+          "products": [
+            "LDEM_80S_20M",
+            "LDEM_75S_60M"
+          ],
+          "near_pixel_m": 20.0,
+          "unknown_azimuths": 0,
+          "covers_positions": true
+        },
+        "terrain_3d": {
+          "available": true,
+          "source_product": "LDEM_80S_20M",
+          "bytes": 6528627,
+          "near_spacing_m": 5.0
+        },
+        "slope_screening": {
+          "available": true,
+          "source_product": "LDEM_80S_20M",
+          "dem_pixel_m": 20.0,
+          "baseline_m": 39.917,
+          "radius_m": 500.0
+        },
+        "provisional": null
+      }
+    },
+    {
+      "id": "connecting-ridge-cr1",
+      "name": "Connecting Ridge CR1 (NASA notional study point)",
+      "short_name": "CR1",
+      "latitude_deg": -89.468,
+      "longitude_deg_east": 222.6,
+      "location_type": "study_location",
+      "location_label": "Assumed landing point in a notional NASA traverse study; not an actual or approved landing site",
+      "file": "connecting-ridge-cr1.json",
+      "file_sha256_lf": "cee129498e76d8846b2d76d42d09d3dcf597038109aaf6511922f01e9bc5d288",
+      "file_bytes_lf": 1715913,
+      "capabilities": {
+        "positions": {
+          "available": true,
+          "coverage_start_utc": "2026-12-01T00:00:00Z",
+          "coverage_end_utc": "2027-01-30T00:00:00Z",
+          "sample_step_seconds": 600,
+          "samples": 8641
+        },
+        "smooth_visibility": {
+          "available": true
+        },
+        "terrain_horizon": {
+          "available": true,
+          "products": [
+            "LDEM_80S_20M",
+            "LDEM_75S_60M"
+          ],
+          "near_pixel_m": 20.0,
+          "unknown_azimuths": 0,
+          "covers_positions": true
+        },
+        "terrain_3d": {
+          "available": true,
+          "source_product": "LDEM_80S_20M",
+          "bytes": 4749503,
+          "near_spacing_m": 2.5
+        },
+        "slope_screening": {
+          "available": true,
+          "source_product": "LDEM_80S_20M",
+          "dem_pixel_m": 20.0,
+          "baseline_m": 39.999,
+          "radius_m": 500.0
+        },
+        "provisional": "Provisional: sensitive to terrain model"
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "index_version": "1",
+  "default_dataset_id": "lvn-2026-12-01-120d",
+  "legacy_dataset_id": "lvn-2026-12-01-60d",
+  "datasets": [
+    { "id": "lvn-2026-12-01-120d", "label": "120 days · 4 sites", "dir": "data/lvn-2026-12-01-120d/" },
+    { "id": "lvn-2026-12-01-60d", "label": "Accepted 60 days · 2 sites", "dir": "data/" }
+  ]
+}

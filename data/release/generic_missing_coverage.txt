@@ -1,0 +1,10 @@
+python : ERROR: No local (<=100 m pixels) terrain at latitude 40.00000000, east longitude 180.00000000. Cached 
+footprints: ['LDEM_80S_20M', 'sldem2015_512_00n_30n_000_045_float', 'LDEM_75S_60M', 'LDEM_64']. Missing sources: []. 
+Supply/register SLDEM2015 tile covering lat 30..60, east lon 180..225 (e.g. 512 px/deg float tile; verify its actual 
+PDS label/filename); no flat substitute.
+At line:2 char:1
++ python pipeline/prepare_site.py --id missing-coverage-smoke --name 'M ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ERROR: No local...lat substitute.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

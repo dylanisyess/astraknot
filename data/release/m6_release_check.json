@@ -1,0 +1,192 @@
+{
+  "checked_at_utc": "2026-11-15T12:02:03.714289+00:00",
+  "network_requests": 0,
+  "head": "c5ea5c317b9e96636f8d8f4034acda453d832963",
+  "baseline_reference": "245adc6",
+  "baseline_files": [
+    {
+      "file": "app/public/data/manifest.json",
+      "sha256_actual_checkout_bytes": "3304633ee0630f07146b69a17832f3af422b12fcec3a16b93f37178a84486061",
+      "sha256_lf": "0162b4366756783f207b24311ace12999306bb24c64c9ee75e0ba18ccd3f16d7",
+      "matches_accepted_git_with_checkout_eol": true
+    },
+    {
+      "file": "app/public/data/im2-athena.json",
+      "sha256_actual_checkout_bytes": "201ca9f848c19c991415b60fac1aaa82cb8ccb7b0c3d50193f085d5c6c1620fb",
+      "sha256_lf": "38e093cbf7fc83180971ab4b155c02b7fea1c659fa93e19022059faa20566355",
+      "matches_accepted_git_with_checkout_eol": true
+    },
+    {
+      "file": "app/public/data/connecting-ridge-cr1.json",
+      "sha256_actual_checkout_bytes": "3b146adcc33258452fd896a90e79418351229a0ffcbfe51fbf4fda3359afda81",
+      "sha256_lf": "cee129498e76d8846b2d76d42d09d3dcf597038109aaf6511922f01e9bc5d288",
+      "matches_accepted_git_with_checkout_eol": true
+    }
+  ],
+  "datasets": [
+    {
+      "version": "60d",
+      "checks": 136,
+      "passed": 136
+    },
+    {
+      "version": "120d",
+      "checks": 266,
+      "passed": 266
+    }
+  ],
+  "cache": [
+    {
+      "site": "im2-athena",
+      "target": "sun",
+      "verified_chunks": 12,
+      "samples": 17281,
+      "start": "2026-12-01T00:00:00Z",
+      "end": "2027-03-31T00:00:00Z"
+    },
+    {
+      "site": "im2-athena",
+      "target": "earth",
+      "verified_chunks": 12,
+      "samples": 17281,
+      "start": "2026-12-01T00:00:00Z",
+      "end": "2027-03-31T00:00:00Z"
+    },
+    {
+      "site": "connecting-ridge-cr1",
+      "target": "sun",
+      "verified_chunks": 12,
+      "samples": 17281,
+      "start": "2026-12-01T00:00:00Z",
+      "end": "2027-03-31T00:00:00Z"
+    },
+    {
+      "site": "connecting-ridge-cr1",
+      "target": "earth",
+      "verified_chunks": 12,
+      "samples": 17281,
+      "start": "2026-12-01T00:00:00Z",
+      "end": "2027-03-31T00:00:00Z"
+    },
+    {
+      "site": "im1-odysseus",
+      "target": "sun",
+      "verified_chunks": 12,
+      "samples": 17281,
+      "start": "2026-12-01T00:00:00Z",
+      "end": "2027-03-31T00:00:00Z"
+    },
+    {
+      "site": "im1-odysseus",
+      "target": "earth",
+      "verified_chunks": 12,
+      "samples": 17281,
+      "start": "2026-12-01T00:00:00Z",
+      "end": "2027-03-31T00:00:00Z"
+    },
+    {
+      "site": "apollo17-lm",
+      "target": "sun",
+      "verified_chunks": 12,
+      "samples": 17281,
+      "start": "2026-12-01T00:00:00Z",
+      "end": "2027-03-31T00:00:00Z"
+    },
+    {
+      "site": "apollo17-lm",
+      "target": "earth",
+      "verified_chunks": 12,
+      "samples": 17281,
+      "start": "2026-12-01T00:00:00Z",
+      "end": "2027-03-31T00:00:00Z"
+    }
+  ],
+  "regression": [
+    {
+      "site": "im2-athena",
+      "identical_old_samples": 8641,
+      "identical_profiles_and_observer": true,
+      "identical_smooth_and_terrain_states_over_entire_old_coverage": true
+    },
+    {
+      "site": "connecting-ridge-cr1",
+      "identical_old_samples": 8641,
+      "identical_profiles_and_observer": true,
+      "identical_smooth_and_terrain_states_over_entire_old_coverage": true
+    }
+  ],
+  "computed_endpoint": "2027-03-31T00:00:00Z",
+  "payload": [
+    {
+      "file": "app/public/data/catalog.json",
+      "bytes": 3567,
+      "gzip_bytes": 1053,
+      "sha256": "00d28c50d96ee806d69595d3db63ce686ef19fb9881f93d40d0da349e3f0b109"
+    },
+    {
+      "file": "app/public/data/connecting-ridge-cr1.json",
+      "bytes": 1725674,
+      "gzip_bytes": 299363,
+      "sha256": "3b146adcc33258452fd896a90e79418351229a0ffcbfe51fbf4fda3359afda81"
+    },
+    {
+      "file": "app/public/data/datasets.json",
+      "bytes": 336,
+      "gzip_bytes": 180,
+      "sha256": "45daded17b99ea24e000b2ce66ca1396c4ed5c292fc6db787ba5bc0f4ac32e41"
+    },
+    {
+      "file": "app/public/data/im2-athena.json",
+      "bytes": 1724801,
+      "gzip_bytes": 324245,
+      "sha256": "201ca9f848c19c991415b60fac1aaa82cb8ccb7b0c3d50193f085d5c6c1620fb"
+    },
+    {
+      "file": "app/public/data/manifest.json",
+      "bytes": 593,
+      "gzip_bytes": 323,
+      "sha256": "3304633ee0630f07146b69a17832f3af422b12fcec3a16b93f37178a84486061"
+    },
+    {
+      "file": "app/public/data/lvn-2026-12-01-120d/apollo17-lm.json",
+      "bytes": 3399289,
+      "gzip_bytes": 654722,
+      "sha256": "89116d3a805dd4ed950a2803a77522644a2a146911fdde0caa9bec1d5a4f1c9f"
+    },
+    {
+      "file": "app/public/data/lvn-2026-12-01-120d/catalog.json",
+      "bytes": 4719,
+      "gzip_bytes": 1438,
+      "sha256": "1b1e56e802cf88122d2bdd53156bae7c55045457432f17706d6af73bced733fe"
+    },
+    {
+      "file": "app/public/data/lvn-2026-12-01-120d/connecting-ridge-cr1.json",
+      "bytes": 3257775,
+      "gzip_bytes": 553048,
+      "sha256": "c1fc84cb593acc173fda6e1903476945b60eee2cd4ec061e42a1ac62e29c5541"
+    },
+    {
+      "file": "app/public/data/lvn-2026-12-01-120d/im1-odysseus.json",
+      "bytes": 3362160,
+      "gzip_bytes": 640063,
+      "sha256": "6f86e32778c6c83a4467716f5b9c6ff4cf8422c18e3a8997e6728614abc25531"
+    },
+    {
+      "file": "app/public/data/lvn-2026-12-01-120d/im2-athena.json",
+      "bytes": 3254589,
+      "gzip_bytes": 582632,
+      "sha256": "c34cb79e35964c7c89e7cd49e5822658244f6bb14cc8c09b5055850721f969e4"
+    },
+    {
+      "file": "app/public/data/lvn-2026-12-01-120d/manifest.json",
+      "bytes": 881,
+      "gzip_bytes": 403,
+      "sha256": "3e4bb2e73b304e7a23fcf356b7a1950cbbb30e77d51cc4cb449da11b2d8fd9b5"
+    }
+  ],
+  "apollo17_surface_dem": {
+    "bytes": 1415577600,
+    "sha256": "9a3ce2afd311cef9a25e7e7f632a0c623a669c29e5da661d97698da1ef3532d7",
+    "rehashed": true
+  }
+}

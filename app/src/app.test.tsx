@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { Workspace } from "./App";
 import { checkSites } from "./data";
 import { terrainProblem } from "./horizon";
-import type { Dataset, Manifest, SiteData } from "./types";
+import type { Catalog, Dataset, Manifest, SiteData } from "./types";
 
 const dataDir = new URL("../public/data/", import.meta.url);
 const readJson = <T,>(name: string): T => JSON.parse(readFileSync(new URL(name, dataDir), "utf-8")) as T;
@@ -18,6 +18,7 @@ function dataset(mutate?: (files: SiteData[]) => void): Dataset {
   const times = checkSites(manifest, files);
   return {
     manifest,
+    catalog: readJson<Catalog>("catalog.json"),
     times,
     sites: files.map((d, k) => {
       const p = terrainProblem(d);
@@ -146,16 +147,40 @@ describe("URL restoration and model consistency", () => {
     expect(text(render("?horizon=smooth"))).not.toContain("Provisional: sensitive to terrain model");
   });
 
-  it("if one site lacks terrain, every site is shown with the smooth model (never mixed)", () => {
+  it("if one site lacks terrain, Terrain is never mixed: it shows no results and a common Smooth comparison is offered", () => {
     const ds = dataset((f) => {
       delete f[1].terrain_horizon;
     });
     const html = render("?horizon=terrain", ds);
     const t = text(html);
-    expect(t).toContain("Terrain horizon requested but not available for connecting-ridge-cr1");
-    expect(text(block(html, "article", "im2-athena"))).toContain("Smooth 0° horizon (terrain ignored)");
-    expect(text(block(html, "article", "connecting-ridge-cr1"))).toContain("Smooth 0° horizon (terrain ignored)");
-    expect(text(block(html, "article", "im2-athena"))).toContain("43.4 %"); // Athena smooth baseline Sun
+    // explicit explanation naming the site, and an explicit Smooth offer (no automatic fallback)
+    expect(html).toContain('data-testid="mixed-terrain"');
+    expect(t).toMatch(/Terrain comparison is unavailable for this set: CR1 has no terrain horizon/);
+    expect(t).toContain("Compare all 2 sites with the Smooth model");
+    // Athena keeps its terrain result; CR1 shows no metrics at all (never smooth values in Terrain mode)
+    expect(text(block(html, "article", "im2-athena"))).toContain("Terrain: 20 m LOLA model");
+    expect(text(block(html, "article", "im2-athena"))).toContain("27.2 %"); // Athena terrain baseline Sun
+    expect(text(block(html, "article", "im2-athena"))).not.toContain("43.4 %"); // ...not its smooth value
+    const cr1 = text(block(html, "article", "connecting-ridge-cr1"));
+    expect(cr1).toContain("CR1: no terrain horizon");
+    expect(cr1).not.toMatch(/\d+\.\d %/);
+    // the explicit common Smooth comparison shows every site with the smooth model
+    const sm = render("?horizon=smooth", ds);
+    expect(text(block(sm, "article", "im2-athena"))).toContain("Smooth 0° horizon (terrain ignored)");
+    expect(text(block(sm, "article", "connecting-ridge-cr1"))).toContain("Smooth 0° horizon (terrain ignored)");
+    expect(text(block(sm, "article", "im2-athena"))).toContain("43.4 %");
+    expect(sm).not.toContain('data-testid="mixed-terrain"');
+  });
+
+  it("the active site lacking terrain in Terrain mode: an explanation, no other site's data", () => {
+    const ds = dataset((f) => {
+      delete f[1].terrain_horizon;
+    });
+    const html = render("?horizon=terrain&site=connecting-ridge-cr1&view=explore", ds);
+    expect(html).toContain('data-testid="active-pending"');
+    expect(html).toContain('data-state="no-terrain"');
+    expect(html).not.toContain('id="explore"'); // no 3D view of another site in its place
+    expect(text(html)).not.toContain("Athena landing point"); // only the chip's short name
   });
 
   it("delays that leave the common coverage are disabled (latest arrival)", () => {
