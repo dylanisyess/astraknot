@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DataError, checkSite, elevationDomain, fmtDeg, fmtUtc, loadDataset, nearestIndex } from "./data";
+import { DataError, checkSite, checkSites, elevationDomain, fmtDeg, fmtUtc, loadDataset, nearestIndex } from "./data";
 import type { Manifest, SiteData } from "./types";
 
 const dataDir = new URL("../public/data/", import.meta.url);
@@ -23,11 +23,52 @@ describe("real exported dataset", () => {
     expect(span).toBe(60 * 86_400_000);
   });
 
-  it("loads through loadDataset with a fetch stub", async () => {
+  it("loads every manifest site through loadDataset with a fetch stub", async () => {
     const stub = (async (u: string) =>
       new Response(readFileSync(new URL(u.replace(/^base\/data\//, ""), dataDir)))) as unknown as typeof fetch;
     const ds = await loadDataset("base/", stub);
-    expect(ds.site.samples[0].time_utc).toBe(manifest.coverage_start_utc);
+    expect(ds.sites.map((s) => s.id)).toEqual(manifest.sites.map((s) => s.id));
+    expect(ds.sites.map((s) => s.id)).toEqual(["im2-athena", "connecting-ridge-cr1"]);
+    for (const s of ds.sites) {
+      expect(s.data.site.id).toBe(s.id);
+      expect(s.data.samples[0].time_utc).toBe(manifest.coverage_start_utc);
+      expect(s.terrainProblem).toBeNull();
+    }
+    expect(ds.times).toHaveLength(8641);
+  });
+});
+
+describe("multi-site identity checks (real files, deliberately mismatched)", () => {
+  const manifest = readJson<Manifest>("manifest.json");
+  const files = manifest.sites.map((e) => readJson<SiteData>(e.file));
+  const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+
+  it("accepts the exported pair and returns the shared times", () => {
+    expect(checkSites(manifest, files)).toHaveLength(8641);
+  });
+  it("rejects a file whose site ID differs from its manifest entry (swapped files)", () => {
+    expect(() => checkSites(manifest, [files[1], files[0]])).toThrow(/contains site connecting-ridge-cr1, not im2-athena/);
+  });
+  it("rejects a manifest entry pointing at another site's file", () => {
+    const m = clone(manifest);
+    m.sites[1].file = "im2-athena.json";
+    expect(() => checkSites(m, files)).toThrow(/expected connecting-ridge-cr1\.json/);
+  });
+  it("rejects duplicate IDs and a name that differs from the manifest", () => {
+    const m = clone(manifest);
+    m.sites[1] = { ...m.sites[0] };
+    expect(() => checkSites(m, [files[0], files[0]])).toThrow(/more than once/);
+    const n = clone(manifest);
+    n.sites[1].name = "Something else";
+    expect(() => checkSites(n, files)).toThrow(/name differs/);
+  });
+  it("rejects sites whose sample times differ", () => {
+    const f = clone(files[1]);
+    f.samples = f.samples.map((x) => ({ ...x, time_utc: new Date(Date.parse(x.time_utc) + 600_000).toISOString().replace(".000Z", "Z") }));
+    const m = clone(manifest);
+    m.coverage_start_utc = f.samples[0].time_utc;
+    m.coverage_end_utc = f.samples[f.samples.length - 1].time_utc;
+    expect(() => checkSites(m, [files[0], f])).toThrow(DataError);
   });
 });
 

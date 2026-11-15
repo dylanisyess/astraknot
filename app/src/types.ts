@@ -25,6 +25,8 @@ export interface SiteMeta {
   horizons_altitude_reference: string;
   altitude_conversion_note?: string;
   horizon_model: "smooth" | "terrain";
+  /** Added in milestone 3; absent in older files (= ["smooth"]). */
+  available_horizon_models?: ("smooth" | "terrain")[];
   is_synthetic: boolean;
 }
 
@@ -54,6 +56,66 @@ export interface Horizon {
   processing_notes: string;
 }
 
+export interface VisibilityInterval {
+  start_utc: string;
+  end_utc: string;
+  sun_visible: boolean | null;
+  earth_visible: boolean | null;
+}
+
+export interface TerrainHorizonBlock {
+  horizon: Horizon & {
+    search_extent: {
+      stopping_rule: string;
+      h_max_m: number;
+      h_max_basis: string;
+      stop_distance_km_min_median_max: [number, number, number];
+      unknown_azimuths: number;
+    };
+    resolution: {
+      azimuth_step_deg: number;
+      radial_step_m: [number, number];
+      radial_step_change_km: number;
+      first_sample_m: number;
+      dem_pixel_m: Record<string, number>;
+    };
+  };
+  /** Per-azimuth columns, parallel to horizon.azimuth_deg; null where the horizon is unknown. */
+  setting_points: {
+    note: string;
+    products: string[];
+    distance_km: (number | null)[];
+    height_m: (number | null)[];
+    lat_deg: (number | null)[];
+    lon_deg_east: (number | null)[];
+    product_index: (number | null)[];
+    shot_count: (number | null)[];
+  };
+  products: { name: string; role: string; content: string; map_scale_m_at_pole: number; url: string; sha256: string | null }[];
+  observer?: { observer_radius_m: number; dem_surface_at_site_m: number; eye_above_dem_surface_m: number };
+  checks: {
+    near_field?: { min_setting_distance_m: number; first_sample_m: number; max_change_ignoring_terrain_within_20_to_300m_deg: number };
+    /** Sensitivity scenarios (observer moved 100 m), not a measured uncertainty. Deltas vs the nominal point. */
+    site_shift_scenarios?: {
+      note: string;
+      rows: {
+        direction: string;
+        description: string;
+        skyline_max_abs_change_deg: number;
+        skyline_max_change_at_azimuth_deg: number;
+        skyline_median_abs_change_deg: number;
+        demo_windows: string[];
+        sun_pct_change_pp: (number | null)[];
+        earth_pct_change_pp: number[];
+        longest_dark_change_h: (number | null)[];
+      }[];
+    };
+    [k: string]: unknown;
+  };
+  visibility_method: string;
+  visibility_intervals: VisibilityInterval[];
+}
+
 export interface SiteData {
   schema_version: string;
   site: SiteMeta;
@@ -61,17 +123,25 @@ export interface SiteData {
   samples: Sample[];
   horizon: Horizon;
   visibility_method: string;
-  visibility_intervals: {
-    start_utc: string;
-    end_utc: string;
-    sun_visible: boolean | null;
-    earth_visible: boolean | null;
-  }[];
+  visibility_intervals: VisibilityInterval[];
+  /** Milestone 3, additive: terrain horizon and its own intervals. */
+  terrain_horizon?: TerrainHorizonBlock;
+}
+
+export type HorizonMode = "smooth" | "terrain";
+
+/** One manifest site after the loader's checks. */
+export interface SiteEntry {
+  id: string;
+  data: SiteData;
+  /** Why the terrain horizon cannot be offered for this site (missing or failed a loader check), or null. */
+  terrainProblem: string | null;
 }
 
 export interface Dataset {
   manifest: Manifest;
-  site: SiteData;
-  /** Parsed sample times in epoch milliseconds, same order as samples. */
+  /** In manifest order. Every site shares exactly the same sample times. */
+  sites: SiteEntry[];
+  /** Parsed sample times in epoch milliseconds, identical for every site. */
   times: number[];
 }

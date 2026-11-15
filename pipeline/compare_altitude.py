@@ -10,6 +10,7 @@ import json
 import math
 import statistics
 import sys
+import sites
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -17,7 +18,6 @@ import horizons as hz  # noqa: E402
 
 CONFIG = Path(__file__).resolve().parent / "config.json"
 OLD = {"start": "2026-12-01T00:00:00Z", "end": "2026-12-02T00:00:00Z", "alt_km": 0}
-REPORT = hz.REPO_ROOT / "data" / "horizons" / "altitude_comparison.json"
 
 
 def unit(az: float, el: float) -> tuple[float, float, float]:
@@ -33,10 +33,13 @@ def separation_deg(az1, el1, az2, el2) -> float:
 
 
 def main() -> int:
+    ap = sites.parser(description=__doc__)
+    args = ap.parse_args()
     cfg = json.loads(CONFIG.read_text("utf-8"))
-    site = cfg["sites"][0]
+    site = sites.cli_sites(ap, args, cfg)[0]
+    report_path = sites.report_path(site["id"], "altitude_comparison")
     old_site = {**site, "horizons_site_altitude_km": OLD["alt_km"]}
-    out = {"old_altitude_km": OLD["alt_km"], "new_altitude_km": site["horizons_site_altitude_km"],
+    out = {"site": sites.identity(site), "old_altitude_km": OLD["alt_km"], "new_altitude_km": site["horizons_site_altitude_km"],
            "interval": [OLD["start"], OLD["end"]], "targets": {}}
     for tgt in cfg["targets"]:
         old_p = hz.build_params(old_site, tgt["command"], OLD["start"], OLD["end"], cfg["sample_step_seconds"])
@@ -59,10 +62,10 @@ def main() -> int:
         sd = out["targets"][tgt["key"]]
         print(f"{tgt['key']:5s} n={len(common)}  separation deg: min {min(sep):.3e} mean {statistics.fmean(sep):.3e} "
               f"max {max(sep):.3e} | d_el mean {statistics.fmean(d_el):+.3e} | d_az mean {statistics.fmean(d_az):+.3e}")
-    REPORT.write_text(json.dumps(out, indent=2) + "\n", "utf-8")
-    print(f"wrote {REPORT.relative_to(hz.REPO_ROOT)}")
+    report_path.write_text(json.dumps(out, indent=2) + "\n", "utf-8", newline="\n")
+    print(f"wrote {report_path.relative_to(hz.REPO_ROOT)}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(sites.run(main))

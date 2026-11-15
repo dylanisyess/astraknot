@@ -19,20 +19,21 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sites
 import horizons as hz  # noqa: E402
 
 CONFIG = Path(__file__).resolve().parent / "config.json"
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = sites.parser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--refresh", action="store_true", help="ignore cache and re-download")
     ap.add_argument("--print-urls", action="store_true", help="print query URLs and exit")
     args = ap.parse_args()
 
     cfg = json.loads(CONFIG.read_text("utf-8"))
     live = 0
-    for site in cfg["sites"]:
+    for site in sites.cli_sites(ap, args, cfg, batch=True):
         for tgt in cfg["targets"]:
             for (s, e), params in hz.site_queries(cfg, site, tgt):
                 label = f"{site['id']} / {tgt['key']} / {s} .. {e}"
@@ -61,4 +62,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(sites.run(main))

@@ -3,3 +3,5 @@
 data/horizons/** -text
 data/terrain/labels/** -text
 data/terrain/lola_rdr/** -text
+# Cross-check evidence records this report's exact byte SHA-256.
+data/terrain/*_terrain_horizon.json -text

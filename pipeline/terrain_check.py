@@ -12,8 +12,9 @@ Checks (all requests sequential; big files go to git-ignored data/raw/lola/):
      the global lunar maximum height could no longer rise above the running
      horizon. Rays that leave the file first are UNKNOWN, never flat.
 
-    python pipeline/terrain_check.py
-Writes data/terrain/lola_coverage_report.json.
+    python pipeline/terrain_check.py --site ID
+    python pipeline/terrain_check.py --site ID --offline  # no HEAD or downloads
+Writes data/terrain/<site_id>_lola_coverage_report.json.
 """
 from __future__ import annotations
 
@@ -21,6 +22,7 @@ import json
 import math
 import statistics
 import sys
+import sites
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -28,7 +30,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lola  # noqa: E402
 
 CONFIG = Path(__file__).resolve().parent / "config.json"
-REPORT = lola.REPO_ROOT / "data" / "terrain" / "lola_coverage_report.json"
 
 CANDIDATES = ["LDEM_875S_5M", "LDEM_875S_10M", "LDEM_875S_20M", "LDEM_85S_10M", "LDEM_85S_20M",
               "LDEM_85S_40M", "LDEM_80S_20M", "LDEM_80S_40M", "LDEM_80S_80M", "LDEM_75S_30M",
@@ -72,12 +73,26 @@ def elev_angle(r_obs: float, r_tgt: float, theta: float) -> float:
     return math.atan2(r_tgt * math.cos(theta) - r_obs, r_tgt * math.sin(theta))
 
 
+def seam_summary(seam):
+    def summary(key):
+        values = [row[key] for row in seam]
+        return {"mean_m": statistics.fmean(values), "max_abs_m": max(map(abs, values))} if values else None
+    return {"points": seam, "vs_75S_60M": summary("diff_20m_minus_60m"),
+            "vs_75S_240M": summary("diff_20m_minus_240m"),
+            "note": "No sampled planning ray needed a seam comparison" if not seam else "sampled seam consistency"}
+
+
 def main() -> int:
+    ap = sites.parser(description=__doc__)
+    ap.add_argument("--offline", action="store_true", help="cached terrain only; no HTTP requests")
+    args = ap.parse_args()
+    lola.OFFLINE = args.offline
     cfg = json.loads(CONFIG.read_text("utf-8"))
-    site = cfg["sites"][0]
+    site = sites.cli_sites(ap, args, cfg)[0]
+    report_path = sites.report_path(site["id"], "lola_coverage_report")
     lat, lon = site["latitude_deg"], site["longitude_deg_east"]
     report: dict = {"generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "site": {"id": site["id"], "latitude_deg": lat, "longitude_deg_east": lon},
+                    "site": sites.identity(site),
                     "source": {"archive": "PDS Geosciences Node", "data_set_id": "LRO-L-LOLA-4-GDR-V1.0",
                                "polar_dir": lola.POLAR_DIR, "projection_catalog": lola.PDS_BASE + "/catalog/dsmap_polar.cat"}}
 
@@ -86,7 +101,8 @@ def main() -> int:
     print("product          grid         m/pix  bytes-ok  edge-lat  corner-lat  site-inside  min-edge-dist")
     for name in CANDIDATES + COUNT_PRODUCTS:
         lbl = lola.load_label(name)
-        size = lola.head_size(lbl.url)
+        local = lola.RAW_DIR / lbl.name.lower() / f"{lbl.name.lower()}.img"
+        size = (local.stat().st_size if local.exists() else None) if args.offline else lola.head_size(lbl.url)
         b = lola.polar_bounds(lbl)
         fi, fj = lola.polar_inverse(lbl, lat, lon)
         ins = inside(lbl, fi, fj)
@@ -104,8 +120,10 @@ def main() -> int:
             "frame": lbl.fields.get("COORDINATE_SYSTEM_NAME"),
             "latitude_type": lbl.fields.get("KEYWORD_LATITUDE_TYPE"),
             "missing_constant": lbl.fields.get("MISSING_CONSTANT"),
-            "http_content_length": size, "label_implied_bytes": lbl.expected_bytes,
-            "bytes_match": size == lbl.expected_bytes, **b,
+            "http_content_length": None if args.offline else size, "label_implied_bytes": lbl.expected_bytes,
+            "local_file_bytes": local.stat().st_size if local.exists() else None,
+            "size_check_method": "local IMG size only (offline)" if args.offline else "HTTP HEAD Content-Length",
+            "bytes_match": None if size is None else size == lbl.expected_bytes, **b,
             "site_pixel_1based": [fi, fj], "site_inside": ins,
             "site_to_edge_km_min": min(edges) if edges else None,
             "site_to_edge_km_max": max(edges) if edges else None,
@@ -145,7 +163,7 @@ def main() -> int:
           f"{rms['east_left']:.0f} m (90E left) over {pts} points -> {'OK' if ok else 'INCONCLUSIVE'}")
     if not ok:
         print("Orientation not confirmed; stopping before any terrain use.", file=sys.stderr)
-        REPORT.write_text(json.dumps(report, indent=1) + "\n", "utf-8")
+        report_path.write_text(json.dumps(report, indent=1) + "\n", "utf-8")
         return 1
 
     # 4. terrain + shot counts at the site (20 m) ---------------------------------
@@ -270,20 +288,15 @@ def main() -> int:
             seam.append({"az_deg": r["az_deg"], "dist_km": r["edge_80S_km"] - back_km,
                          "h_80S_20M_m": h20, "h_75S_60M_m": h60, "h_75S_240M_m": h240,
                          "diff_20m_minus_60m": h20 - h60, "diff_20m_minus_240m": h20 - h240})
-    d60 = [s["diff_20m_minus_60m"] for s in seam]
-    d240 = [s["diff_20m_minus_240m"] for s in seam]
-    report["seam_check"] = {"points": seam,
-                            "vs_75S_60M": {"mean_m": statistics.fmean(d60), "max_abs_m": max(map(abs, d60))},
-                            "vs_75S_240M": {"mean_m": statistics.fmean(d240), "max_abs_m": max(map(abs, d240))}}
+    report["seam_check"] = seam_summary(seam)
     print(f"seam check, {len(seam)} points near the 80S edge (nearest-pixel 20 m vs 60 m / bilinear 240 m):")
-    print(f"  80S_20M - 75S_60M : mean {statistics.fmean(d60):+.1f} m, max |diff| {max(map(abs, d60)):.1f} m")
-    print(f"  80S_20M - 75S_240M: mean {statistics.fmean(d240):+.1f} m, max |diff| {max(map(abs, d240)):.1f} m")
+    print(json.dumps(report["seam_check"], indent=1) if not seam else "seam statistics recorded")
 
-    REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text(json.dumps(report, indent=1) + "\n", "utf-8")
-    print(f"\nwrote {REPORT.relative_to(lola.REPO_ROOT)}")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(report, indent=1) + "\n", "utf-8")
+    print(f"\nwrote {report_path.relative_to(lola.REPO_ROOT)}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(sites.run(main))

@@ -350,3 +350,150 @@ tbody tr:hover { background: var(--surface-0); }
   table.compare td { border: 0; padding: 0; text-align: left; white-space: normal; }
   table.compare td::before { content: attr(data-label); display: block; font-size: 0.72rem; color: var(--text-muted); font-weight: 400; }
 }
+
+/* ---------------------------------------------------------------- milestone 3: terrain horizon */
+:root {
+  --terrain-fill: #d9d6cd;
+  --terrain-ridge: #6b6a66;
+  --smooth-fill: #ebe9e3;
+  --info-bg: #eef3f9;
+  --info-ink: #1f3a5c;
+  --info-border: #c7d7ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --terrain-fill: #3a3935;
+    --terrain-ridge: #a9a89f;
+    --smooth-fill: #262624;
+    --info-bg: #17222f;
+    --info-ink: #c9dcf2;
+    --info-border: #2c3f55;
+  }
+}
+:root[data-theme="dark"] {
+  --terrain-fill: #3a3935;
+  --terrain-ridge: #a9a89f;
+  --smooth-fill: #262624;
+  --info-bg: #17222f;
+  --info-ink: #c9dcf2;
+  --info-border: #2c3f55;
+}
+
+.banner-terrain { background: var(--info-bg); color: var(--info-ink); border-color: var(--info-border); }
+.horizon-mode { margin: 8px 0 4px; }
+.horizon-mode p { margin-top: 6px; }
+
+.panorama-wrap { position: relative; margin: 8px 0 4px; }
+.panorama { display: block; touch-action: pan-y; user-select: none; cursor: crosshair; }
+.panorama .grid { stroke: var(--grid); stroke-width: 1; }
+.panorama .grid-v { stroke: var(--grid); }
+.panorama .axis { stroke: var(--axis); }
+.panorama .tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.panorama .tick-major { fill: var(--text-secondary); font-weight: 600; }
+.panorama .tick-sub { font-size: 10px; }
+.panorama .terrain-fill.terrain-terrain { fill: var(--terrain-fill); }
+.panorama .terrain-fill.terrain-smooth { fill: var(--smooth-fill); }
+.panorama .terrain-ridge { fill: none; stroke: var(--terrain-ridge); stroke-width: 1.5; stroke-linejoin: round; }
+.panorama .terrain-ridge.terrain-smooth { stroke-dasharray: 5 4; stroke: var(--horizon); }
+.panorama .terrain-unknown { fill: url(#pano-hatch); opacity: 0.8; }
+.panorama .hatch-bg { fill: var(--surface-1); }
+.panorama .hatch-line { stroke: var(--hatch); stroke-width: 2; }
+.panorama .zero-line { stroke: var(--horizon); stroke-width: 1; stroke-dasharray: 5 4; opacity: 0.7; }
+.panorama .zero-label { fill: var(--text-muted); font-size: 10px; }
+.panorama .track { fill: none; stroke-width: 1.5; opacity: 0.35; stroke-linejoin: round; }
+.panorama .track-sun { stroke: var(--series-sun); }
+.panorama .track-earth { stroke: var(--series-earth); }
+.panorama .crosshair { stroke: var(--axis); stroke-dasharray: 2 3; }
+.panorama .marker-shape { stroke: var(--surface-1); stroke-width: 2; }
+.panorama .marker-sun .marker-shape { fill: var(--series-sun); }
+.panorama .marker-earth .marker-shape { fill: var(--series-earth); }
+.panorama .marker-below .marker-shape, .panorama .marker-unknown .marker-shape { fill: var(--surface-1); stroke-width: 2; stroke-dasharray: 3 2; }
+.panorama .marker-sun.marker-below .marker-shape, .panorama .marker-sun.marker-unknown .marker-shape { stroke: var(--series-sun); }
+.panorama .marker-earth.marker-below .marker-shape, .panorama .marker-earth.marker-unknown .marker-shape { stroke: var(--series-earth); }
+.panorama .marker-label { font-size: 11.5px; paint-order: stroke; stroke: var(--surface-1); stroke-width: 3px; stroke-linejoin: round; }
+.panorama .marker-name { fill: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+.panorama .marker-sub { fill: var(--text-secondary); font-size: 10.5px; }
+.pano-summary { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 2px; font-size: 0.85rem; }
+
+.chip-terrain-terrain { background: var(--terrain-fill); border: 1px solid var(--terrain-ridge); }
+.chip-terrain-smooth { background: var(--smooth-fill); border: 1px dashed var(--horizon); }
+.marker-key { display: inline-block; width: 11px; height: 11px; border-radius: 50%; }
+.marker-key-sun { background: var(--series-sun); }
+.marker-key-earth { background: var(--series-earth); }
+.marker-key-hidden { border: 2px dashed var(--text-secondary); background: var(--surface-1); }
+
+.chart .hseries { fill: none; stroke-width: 1.25; stroke-dasharray: 4 3; opacity: 0.85; }
+.chart .hseries-sun { stroke: var(--series-sun); }
+.chart .hseries-earth { stroke: var(--series-earth); }
+.swatch-h-sun { background: none; height: 0; border-top: 2px dashed var(--series-sun); }
+.swatch-h-earth { background: none; height: 0; border-top: 2px dashed var(--series-earth); }
+
+.facts-box { margin: 6px 0 10px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+.facts-box summary { cursor: pointer; color: var(--text-secondary); font-weight: 600; }
+.facts-box .facts { margin-top: 8px; }
+.dark-note summary { cursor: pointer; }
+.dark-note p { margin-top: 6px; }
+
+/* review fixes: site-position scenarios note */
+.site-shift { margin: 6px 0 4px; border-left: 3px solid var(--border); padding: 4px 0 4px 10px; }
+.site-shift summary { cursor: pointer; color: var(--text-secondary); margin-top: 4px; }
+.site-shift details p { margin-top: 6px; }
+.shift-table th, .shift-table td { padding: 4px 8px; white-space: nowrap; }
+.shift-table thead th { white-space: normal; vertical-align: bottom; }
+
+/* ---------------------------------------------------------------- milestone 4: two-site comparison */
+.locator-card { display: flex; flex-direction: column; gap: 8px; }
+.locator { margin: 0; display: grid; justify-items: center; gap: 6px; }
+.locator svg { max-width: 100%; height: auto; }
+.locator .loc-edge { fill: var(--surface-0); stroke: var(--border); }
+.locator .loc-ring { fill: none; stroke: var(--grid); }
+.locator .loc-tick { fill: var(--text-muted); font-size: 9px; }
+.locator .loc-pole { stroke: var(--text-secondary); stroke-width: 1.2; }
+.locator .loc-site circle { fill: var(--accent); stroke: var(--surface-1); stroke-width: 1.5; }
+.locator .loc-site text { fill: var(--text-primary); font-size: 11px; font-weight: 600; paint-order: stroke; stroke: var(--surface-0); stroke-width: 3px; }
+.locator .loc-off { opacity: 0.4; }
+.locator figcaption { justify-self: stretch; }
+.site-toggles { border: 0; padding: 0; margin: 0; display: grid; gap: 4px; }
+.site-toggles legend { color: var(--text-muted); margin-bottom: 2px; }
+
+.window-line { margin-top: 12px; color: var(--text-secondary); }
+
+.compare-grid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+.compare-foot { grid-column: 1 / -1; }
+.site-compare { display: flex; flex-direction: column; gap: 6px; }
+.site-compare.active-site { border-color: var(--text-secondary); box-shadow: inset 0 0 0 1px var(--text-secondary); }
+.site-compare .coords { font-size: 1.1rem; }
+.model-line { color: var(--text-secondary); }
+.provisional {
+  color: var(--warn-ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-weight: 600;
+}
+.provisional .small { font-weight: 400; }
+.at-time { color: var(--text-secondary); }
+.show-btn { align-self: flex-start; }
+.assessment { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 8px; }
+.assessment summary { cursor: pointer; font-weight: 600; }
+.assessment p, .assessment ul { margin: 6px 0; }
+.assessment ul { padding-left: 18px; display: grid; gap: 4px; }
+h4 { font-size: 0.85rem; margin: 10px 0 4px; }
+.shift-table { font-size: 0.8rem; }
+.shift-table th, .shift-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+
+.site-select { margin: 10px 0 0; }
+.timeline .track-label { fill: var(--text-primary); font-size: 13px; font-weight: 700; }
+.timeline .track-note { fill: var(--warn-ink); font-size: 11px; font-weight: 600; }
+.timeline .track-sep { stroke: var(--border); }
+
+.site-sources h3 { margin-top: 4px; }
+.sources-card .common-limits { margin-top: 14px; }
+
+@media (max-width: 640px) {
+  .shift-table { display: block; overflow-x: auto; }
+}
+.site-compare .compare td, .site-compare .compare th { padding: 6px 8px; }
+.site-compare .compare thead th { white-space: normal; vertical-align: bottom; line-height: 1.25; }
+.site-compare .table-scroll.plain { overflow-x: visible; }

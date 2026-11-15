@@ -32,6 +32,7 @@ LABEL_DIR = REPO_ROOT / "data" / "terrain" / "labels"      # committed (small)
 RAW_DIR = REPO_ROOT / "data" / "raw" / "lola"               # git-ignored (large)
 USER_AGENT = "lunar-visibility-pipeline/0.1 (python urllib)"
 PAUSE_S = 0.5
+OFFLINE = False  # enabled by preparation CLIs; missing cache must fail, never download
 R_REF_M = 1737400.0  # LOLA reference sphere (labels: OFFSET, A/B/C_AXIS_RADIUS)
 
 
@@ -40,6 +41,8 @@ def _utc_now() -> str:
 
 
 def _get(url: str, byte_range: tuple[int, int] | None = None) -> tuple[bytes, dict]:
+    if OFFLINE:
+        raise RuntimeError(f"Offline: source is not cached: {url}")
     headers = {"User-Agent": USER_AGENT}
     if byte_range:
         headers["Range"] = f"bytes={byte_range[0]}-{byte_range[1]}"
@@ -56,6 +59,8 @@ def _get(url: str, byte_range: tuple[int, int] | None = None) -> tuple[bytes, di
 
 
 def head_size(url: str) -> int:
+    if OFFLINE:
+        raise RuntimeError(f"Offline: HEAD request disabled: {url}")
     req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=120) as r:
         size = int(r.headers["Content-Length"])
@@ -145,7 +150,7 @@ def load_label(name: str, kind: str = "polar") -> Label:
 # equations literally (sample 1 at the left, line 1 at the top), they would
 # place 90 E to the LEFT of the pole. We have not established whether that is
 # an error in the text or in our reading, so we do not rely on them. What IS
-# independently checked is the mapping we use: it matches the global
+# checked against other data is the mapping we use: it matches the global
 # cylindrical LDEM_64 (terrain_check.py) and individual LOLA RDR laser shots
 # (site_elevation.py: DEM - shot mean -0.26 m over 1131 shots), while the
 # east/west-mirrored mapping is off by ~5.9 km in height at the same points.
@@ -239,6 +244,70 @@ def download_full(lbl: Label) -> tuple[Path, dict]:
     return path, meta
 
 
+def download_stream(lbl: Label, chunk_bytes: int = 8 << 20, max_attempts: int = 5,
+                    progress: bool = True) -> tuple[Path, dict]:
+    """Download a whole IMG to data/raw/lola/<name>/<name>.img WITHOUT holding it
+    in memory: streamed in chunks to a .part file, resumed with an HTTP Range
+    request after an interruption, then checked against the label-implied
+    size before it is renamed into place. sha256 is computed from the final
+    file on disk. Use this (not download_full) for the 0.2-1.9 GB products."""
+    d = RAW_DIR / lbl.name.lower()
+    path = d / f"{lbl.name.lower()}.img"
+    part = path.with_suffix(".img.part")
+    meta_path = d / "download.meta.json"
+    if path.exists() and meta_path.exists():
+        meta = json.loads(meta_path.read_text("utf-8"))
+        if path.stat().st_size == lbl.expected_bytes == meta.get("bytes"):
+            return path, meta
+        raise RuntimeError(f"{path} exists but its size does not match the label/metadata; delete it and re-run")
+    d.mkdir(parents=True, exist_ok=True)
+    want = lbl.expected_bytes
+    started = _utc_now()
+    status, headers = None, {}
+    for attempt in range(1, max_attempts + 1):
+        have = part.stat().st_size if part.exists() else 0
+        if have == want:
+            break
+        if have > want:
+            raise RuntimeError(f"{part}: {have} bytes, more than the label implies ({want})")
+        req_headers = {"User-Agent": USER_AGENT}
+        if have:
+            req_headers["Range"] = f"bytes={have}-"
+        req = urllib.request.Request(lbl.url, headers=req_headers)
+        try:
+            with urllib.request.urlopen(req, timeout=300) as r:
+                status, headers = r.status, dict(r.headers.items())
+                if have and status != 206:
+                    raise RuntimeError(f"resume not honoured (HTTP {status})")
+                t0, got = time.time(), 0
+                with open(part, "ab") as f:
+                    while chunk := r.read(chunk_bytes):
+                        f.write(chunk)
+                        got += len(chunk)
+                        if progress and got % (128 << 20) < chunk_bytes:
+                            rate = got / max(time.time() - t0, 1e-6) / 1e6
+                            print(f"  {lbl.name}: {(have + got) / 1e6:,.0f} / {want / 1e6:,.0f} MB "
+                                  f"({rate:.1f} MB/s)", flush=True)
+        except (OSError, RuntimeError) as e:  # network errors are OSError subclasses
+            print(f"  {lbl.name}: attempt {attempt} interrupted: {e}", file=sys.stderr, flush=True)
+            time.sleep(min(60, 5 * attempt))
+    size = part.stat().st_size if part.exists() else 0
+    if size != want:
+        raise RuntimeError(f"{lbl.name}: {size} bytes on disk, label implies {want}; download incomplete")
+    h = hashlib.sha256()
+    with open(part, "rb") as f:
+        while block := f.read(16 << 20):
+            h.update(block)
+    part.replace(path)
+    meta = {"url": lbl.url, "label_url": lbl.label_url, "started_at_utc": started,
+            "retrieved_at_utc": _utc_now(), "http_status_last_request": status,
+            "response_headers_last_request": headers, "bytes": size,
+            "label_implied_bytes": want, "sha256": h.hexdigest(),
+            "method": "streamed in chunks; resumed with HTTP Range if interrupted; size checked against label"}
+    meta_path.write_text(json.dumps(meta, indent=2) + "\n", "utf-8")
+    return path, meta
+
+
 class Grid:
     """In-memory DN array for a fully downloaded product."""
 
@@ -295,10 +364,22 @@ class Window:
 
 
 def read_window(lbl: Label, i0: int, i1: int, j0: int, j1: int) -> list[list[int]]:
-    """Read lines j0..j1 (1-based, inclusive) with ONE contiguous range request,
-    return the sample columns i0..i1. Cached under data/raw/lola/windows/."""
+    """Read a window from a complete local IMG first, otherwise cached/remote range.
+    Bounds are 1-based and inclusive. Never download a complete missing raster.
+    """
     if not (1 <= i0 <= i1 <= lbl.samples and 1 <= j0 <= j1 <= lbl.lines):
         raise ValueError("window outside file")
+    local = RAW_DIR / lbl.name.lower() / f"{lbl.name.lower()}.img"
+    if local.exists():
+        if local.stat().st_size != lbl.expected_bytes:
+            raise RuntimeError(f"Incomplete local raster: {local}")
+        width = i1 - i0 + 1
+        with local.open("rb") as f:
+            rows = []
+            for j in range(j0, j1 + 1):
+                f.seek((j - 1) * lbl.row_bytes + (i0 - 1) * (lbl.sample_bits // 8))
+                rows.append(list(_decode(lbl, f.read(width * (lbl.sample_bits // 8)))))
+        return rows
     start = (j0 - 1) * lbl.row_bytes
     end = j1 * lbl.row_bytes - 1
     cache = RAW_DIR / "windows" / f"{lbl.name.lower()}_{start}_{end}.bin"

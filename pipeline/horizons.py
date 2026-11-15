@@ -7,6 +7,7 @@ Standard library only. Documentation consulted:
 """
 from __future__ import annotations
 
+import sites
 import hashlib
 import json
 import time
@@ -104,6 +105,8 @@ class CachedResponse:
 
 
 def cache_paths(site_id: str, target_key: str, params: dict[str, str]) -> tuple[Path, Path]:
+    sites.valid_id(site_id)
+    sites.valid_id(target_key)
     stem = f"{site_id}__{target_key}__{cache_key(params)}"
     return CACHE_DIR / f"{stem}.response.json", CACHE_DIR / f"{stem}.meta.json"
 
@@ -176,7 +179,20 @@ def fetch(site_id: str, target_key: str, params: dict[str, str], *,
         body = body_path.read_bytes()
         payload = json.loads(body)
         _check_payload(payload)
-        return CachedResponse(json.loads(meta_path.read_text("utf-8")), body, payload, True)
+        meta = json.loads(meta_path.read_text("utf-8"))
+        if (meta.get("site_id") != site_id or meta.get("target_key") != target_key
+                or meta.get("request_params") != params
+                or meta.get("response_sha256") != hashlib.sha256(body).hexdigest()):
+            raise HorizonsError(f"Cache identity, query or sha256 mismatch: {meta_path.name}")
+        geo = header_fields(payload["result"]).get("Center geodetic", "").split("{")[0].strip()
+        try:
+            actual = [float(v) for v in geo.split(",")]
+            expected = [float(v) for v in params["SITE_COORD"].strip("'").split(",")]
+            if len(actual) != 3 or any(abs(a - b) > 1e-9 for a, b in zip(actual, expected)):
+                raise ValueError()
+        except (ValueError, KeyError):
+            raise HorizonsError(f"Cached response observer differs from query: {body_path.name}")
+        return CachedResponse(meta, body, payload, True)
     if offline:
         raise HorizonsError(f"not cached and offline mode is set: {body_path.name}\n"
                             f"Reproduce with: curl -sS \"{build_url(params)}\"")

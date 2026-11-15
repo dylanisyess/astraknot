@@ -1,0 +1,17 @@
+{
+  "site_id": "connecting-ridge-cr1",
+  "request_url": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-89.473789&maxlat=-89.457300&westernlon=221.684292&easternlon=223.451998",
+  "params": {
+    "query": "lolardr",
+    "results": "v",
+    "output": "JSON",
+    "minlat": "-89.473789",
+    "maxlat": "-89.457300",
+    "westernlon": "221.684292",
+    "easternlon": "223.451998"
+  },
+  "http_status": 200,
+  "retrieved_at_utc": "2026-11-14T22:32:47Z",
+  "csv_url": "https://oderest.rsl.wustl.edu/output/20261114t163235106/LolaRDR_-89N-89N_222E223E_20261114T163238036_pts_csv.csv",
+  "label_url": "https://oderest.rsl.wustl.edu/output/20261114t163235106/LolaRDR_-89N-89N_222E223E_20261114T163238036_pts_csv.lbl"
+}

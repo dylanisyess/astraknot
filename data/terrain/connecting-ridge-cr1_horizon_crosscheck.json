@@ -1,0 +1,1320 @@
+{
+ "generated_at_utc": "2026-11-14T22:29:03Z",
+ "site": {
+  "id": "connecting-ridge-cr1",
+  "latitude_deg": -89.468,
+  "longitude_deg_east": 222.6,
+  "horizons_site_altitude_km": 1.9428,
+  "observer_height_above_surface_m": 1
+ },
+ "terrain_report_sha256": "245e4f78da99da915b4e6f28c05537253534619a770389566f05a965f547f1af",
+ "shared_assumptions": [
+  "LOLA LDEM heights (same files)",
+  "LOLA RDR shots are the DEM's own source data (consistency, not independence)",
+  "1737.4 km reference radius",
+  "polar stereographic projection constants",
+  "site coordinates (ME frame assumed)",
+  "observer radius"
+ ],
+ "pixel_sweep": {
+  "method": "pixel centres in 1-degree wedges to 200 km, 3D vectors, numerical local frame, no interpolation; compared per 0.25-degree bin with the max of 0.01-degree ray-march rays",
+  "n_bins": 64,
+  "wedge_centres_deg": [
+   0.0,
+   90.0,
+   180.0,
+   270.0,
+   97.2,
+   131.2,
+   132.3,
+   137.6,
+   139.5,
+   141.5,
+   230.1,
+   251.8,
+   350.0,
+   353.1,
+   52.9,
+   307.5
+  ],
+  "diff_deg_mean_maxabs": [
+   -1.8866324673082304,
+   6.005661369727038
+  ],
+  "diff_deg_maxabs_where_ray_setting_ge_2km": null,
+  "all_sweeps_extent_sufficient": false,
+  "same_direction_ray_minus_pixel_deg_min_max": [
+   -0.05137510506179499,
+   5.998642734749071
+  ],
+  "note": "Where the horizon is set within ~1 km, a 0.25-degree bin is only metres wide and holds few pixel centres, so the sweep can miss the crest (pixel < ray). The same-direction check covers those bins.",
+  "bins": [
+   {
+    "bin_deg": [
+     359.5,
+     359.75
+    ],
+    "ray_march_max_deg": 3.177114228438995,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 1.0336088319715526,
+    "pixel_setting_km": 0.6419272367770836,
+    "pixel_az_deg": 359.5785761379954,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.143505396467442,
+    "ray_at_pixel_az_deg": 3.145672452306437,
+    "ray_at_pixel_az_minus_pixel_deg": 2.1120636203348844,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     359.75,
+     0.0
+    ],
+    "ray_march_max_deg": 3.2057047106012377,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 3.2077567577262864,
+    "pixel_setting_km": 0.07491168527729275,
+    "pixel_az_deg": 359.888766893922,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": 0.002052047125048695,
+    "ray_at_pixel_az_deg": 3.1951818727331447,
+    "ray_at_pixel_az_minus_pixel_deg": -0.012574884993141744,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     0.0,
+     0.25
+    ],
+    "ray_march_max_deg": 3.209859873085877,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 1.421237729211797,
+    "pixel_setting_km": 0.4291375940577859,
+    "pixel_az_deg": 0.07087718262887877,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.7886221438740801,
+    "ray_at_pixel_az_deg": 3.2089096165033926,
+    "ray_at_pixel_az_minus_pixel_deg": 1.7876718872915955,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     0.25,
+     0.5
+    ],
+    "ray_march_max_deg": 3.2034992473673247,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 1.4068536384216295,
+    "pixel_setting_km": 0.5140258789273364,
+    "pixel_az_deg": 0.45567788396814746,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.7966456089456952,
+    "ray_at_pixel_az_deg": 3.197341869134992,
+    "ray_at_pixel_az_minus_pixel_deg": 1.7904882307133627,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     89.5,
+     89.75
+    ],
+    "ray_march_max_deg": 1.7863487617049982,
+    "ray_setting_km": 0.065,
+    "pixel_sweep_max_deg": -1.1970311357537669,
+    "pixel_setting_km": 44.0789977814422,
+    "pixel_az_deg": 89.55723059407606,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.9833798974587653,
+    "ray_at_pixel_az_deg": 1.7803998336336018,
+    "ray_at_pixel_az_minus_pixel_deg": 2.9774309693873686,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     89.75,
+     90.0
+    ],
+    "ray_march_max_deg": 1.7603448253779672,
+    "ray_setting_km": 0.065,
+    "pixel_sweep_max_deg": 1.013911705676106,
+    "pixel_setting_km": 0.0959069461854096,
+    "pixel_az_deg": 89.97895361854643,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.7464331197018612,
+    "ray_at_pixel_az_deg": 1.7364909819951602,
+    "ray_at_pixel_az_minus_pixel_deg": 0.7225792763190542,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     90.0,
+     90.25
+    ],
+    "ray_march_max_deg": 1.7342963760039734,
+    "ray_setting_km": 0.065,
+    "pixel_sweep_max_deg": -1.1906506970454913,
+    "pixel_setting_km": 41.153447138686964,
+    "pixel_az_deg": 90.24296867111188,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.9249470730494647,
+    "ray_at_pixel_az_deg": 1.7131787461939476,
+    "ray_at_pixel_az_minus_pixel_deg": 2.903829443239439,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     90.25,
+     90.5
+    ],
+    "ray_march_max_deg": 1.7126944815364695,
+    "ray_setting_km": 0.07,
+    "pixel_sweep_max_deg": -1.1140587276955705,
+    "pixel_setting_km": 40.9078288012348,
+    "pixel_az_deg": 90.48783971465365,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.8267532092320398,
+    "ray_at_pixel_az_deg": 1.6963583447236275,
+    "ray_at_pixel_az_minus_pixel_deg": 2.810417072419198,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     179.5,
+     179.75
+    ],
+    "ray_march_max_deg": 2.297745707218493,
+    "ray_setting_km": 0.14,
+    "pixel_sweep_max_deg": 0.8194275616949431,
+    "pixel_setting_km": 0.22273709947022335,
+    "pixel_az_deg": 179.60135333531414,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.47831814552355,
+    "ray_at_pixel_az_deg": 2.2926582687813224,
+    "ray_at_pixel_az_minus_pixel_deg": 1.4732307070863793,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     179.75,
+     180.0
+    ],
+    "ray_march_max_deg": 2.285178907938363,
+    "ray_setting_km": 0.14,
+    "pixel_sweep_max_deg": 0.4980023659636556,
+    "pixel_setting_km": 0.25102234906663723,
+    "pixel_az_deg": 179.9169169810601,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.7871765419747072,
+    "ray_at_pixel_az_deg": 2.276754750643573,
+    "ray_at_pixel_az_minus_pixel_deg": 1.7787523846799174,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     180.0,
+     180.25
+    ],
+    "ray_march_max_deg": 2.2725515870793616,
+    "ray_setting_km": 0.14,
+    "pixel_sweep_max_deg": -0.06613964817748796,
+    "pixel_setting_km": 0.27931339947016626,
+    "pixel_az_deg": 180.16856072870374,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.3386912352568494,
+    "ray_at_pixel_az_deg": 2.264003665671441,
+    "ray_at_pixel_az_minus_pixel_deg": 2.3301433138489287,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     180.25,
+     180.5
+    ],
+    "ray_march_max_deg": 2.259863983209277,
+    "ray_setting_km": 0.14,
+    "pixel_sweep_max_deg": -0.5265848522558074,
+    "pixel_setting_km": 0.30760876733092546,
+    "pixel_az_deg": 180.3739123690801,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.7864488354650843,
+    "ray_at_pixel_az_deg": 2.2535531083561473,
+    "ray_at_pixel_az_minus_pixel_deg": 2.7801379606119547,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     269.5,
+     269.75
+    ],
+    "ray_march_max_deg": 0.17331984157254954,
+    "ray_setting_km": 0.085,
+    "pixel_sweep_max_deg": -1.7919724033809776,
+    "pixel_setting_km": 0.20174185593407284,
+    "pixel_az_deg": 269.5285810607475,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.965292244953527,
+    "ray_at_pixel_az_deg": 0.17098729604419893,
+    "ray_at_pixel_az_minus_pixel_deg": 1.9629596994251766,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     269.75,
+     270.0
+    ],
+    "ray_march_max_deg": 0.1529726097656474,
+    "ray_setting_km": 0.085,
+    "pixel_sweep_max_deg": -1.9597067924840503,
+    "pixel_setting_km": 59.52227561912366,
+    "pixel_az_deg": 269.9976946225415,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.1126794022496975,
+    "ray_at_pixel_az_deg": 0.13293730553281646,
+    "ray_at_pixel_az_minus_pixel_deg": 2.0926440980168666,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     270.0,
+     270.25
+    ],
+    "ray_march_max_deg": 0.13275141282063224,
+    "ray_setting_km": 0.085,
+    "pixel_sweep_max_deg": -1.9572954474470898,
+    "pixel_setting_km": 59.37532288899068,
+    "pixel_az_deg": 270.1283291068148,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.090046860267722,
+    "ray_at_pixel_az_deg": 0.12568268253781556,
+    "ray_at_pixel_az_minus_pixel_deg": 2.0829781299849053,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     270.25,
+     270.5
+    ],
+    "ray_march_max_deg": 0.1204426438564221,
+    "ray_setting_km": 0.08,
+    "pixel_sweep_max_deg": -1.9582597131106498,
+    "pixel_setting_km": 59.41274241434913,
+    "pixel_az_deg": 270.2526315381152,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.0787023569670717,
+    "ray_at_pixel_az_deg": 0.12032894981550493,
+    "ray_at_pixel_az_minus_pixel_deg": 2.0785886629261547,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     96.7,
+     96.95
+    ],
+    "ray_march_max_deg": 1.0932497355346598,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": -1.5545757058189387,
+    "pixel_setting_km": 37.064198778255,
+    "pixel_az_deg": 96.70446993077742,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.647825441353598,
+    "ray_at_pixel_az_deg": 1.0927658159576457,
+    "ray_at_pixel_az_minus_pixel_deg": 2.6473415217765845,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     96.95,
+     97.2
+    ],
+    "ray_march_max_deg": 1.0661697122293525,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": -0.8398814526688987,
+    "pixel_setting_km": 0.29502701260191666,
+    "pixel_az_deg": 97.11747798143216,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.9060511648982512,
+    "ray_at_pixel_az_deg": 1.0480118351729175,
+    "ray_at_pixel_az_minus_pixel_deg": 1.8878932878418162,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     97.2,
+     97.45
+    ],
+    "ray_march_max_deg": 1.0390599862362853,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": -1.652034173344262,
+    "pixel_setting_km": 36.790347903885404,
+    "pixel_az_deg": 97.20074232411746,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.6910941595805475,
+    "ray_at_pixel_az_deg": 1.0389794457048844,
+    "ray_at_pixel_az_minus_pixel_deg": 2.6910136190491465,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     97.45,
+     97.7
+    ],
+    "ray_march_max_deg": 1.0119210844807307,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 0.3613254544602513,
+    "pixel_setting_km": 0.110442308839907,
+    "pixel_az_deg": 97.65033063231347,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.6505956300204794,
+    "ray_at_pixel_az_deg": 0.9901533699059821,
+    "ray_at_pixel_az_minus_pixel_deg": 0.6288279154457308,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     130.7,
+     130.95
+    ],
+    "ray_march_max_deg": 0.5764211602213286,
+    "ray_setting_km": 0.165,
+    "pixel_sweep_max_deg": -1.7858113522844146,
+    "pixel_setting_km": 0.2668667022118588,
+    "pixel_az_deg": 130.82080083050025,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.3622325125057433,
+    "ray_at_pixel_az_deg": 0.5758141362994763,
+    "ray_at_pixel_az_minus_pixel_deg": 2.3616254885838908,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     130.95,
+     131.2
+    ],
+    "ray_march_max_deg": 0.5776296528851063,
+    "ray_setting_km": 0.165,
+    "pixel_sweep_max_deg": -2.0763493093625036,
+    "pixel_setting_km": 141.48094003772133,
+    "pixel_az_deg": 131.19609566314747,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.65397896224761,
+    "ray_at_pixel_az_deg": 0.5776580437630077,
+    "ray_at_pixel_az_minus_pixel_deg": 2.654007353125511,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     131.2,
+     131.45
+    ],
+    "ray_march_max_deg": 0.5787529603185897,
+    "ray_setting_km": 0.165,
+    "pixel_sweep_max_deg": -2.054373206105606,
+    "pixel_setting_km": 141.49945455497513,
+    "pixel_az_deg": 131.44919617980656,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.6331261664241956,
+    "ray_at_pixel_az_deg": 0.578792693400257,
+    "ray_at_pixel_az_minus_pixel_deg": 2.6331658995058627,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     131.45,
+     131.7
+    ],
+    "ray_march_max_deg": 0.5797939366879212,
+    "ray_setting_km": 0.165,
+    "pixel_sweep_max_deg": 0.10691698374406489,
+    "pixel_setting_km": 0.10546448998404412,
+    "pixel_az_deg": 131.6562686356421,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.47287695294385634,
+    "ray_at_pixel_az_deg": 0.5796581835995096,
+    "ray_at_pixel_az_minus_pixel_deg": 0.4727411998554447,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     131.8,
+     132.05
+    ],
+    "ray_march_max_deg": 0.5811184358497132,
+    "ray_setting_km": 0.165,
+    "pixel_sweep_max_deg": -1.990515326738451,
+    "pixel_setting_km": 140.68377293925315,
+    "pixel_az_deg": 132.04450430089162,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.5716337625881645,
+    "ray_at_pixel_az_deg": 0.5811345006164773,
+    "ray_at_pixel_az_minus_pixel_deg": 2.5716498273549284,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     132.05,
+     132.3
+    ],
+    "ray_march_max_deg": 0.5819735028012678,
+    "ray_setting_km": 0.165,
+    "pixel_sweep_max_deg": -1.9843257769529439,
+    "pixel_setting_km": 140.50724648473465,
+    "pixel_az_deg": 132.29984353905465,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.5662992797542117,
+    "ray_at_pixel_az_deg": 0.5820056664017927,
+    "ray_at_pixel_az_minus_pixel_deg": 2.566331443354737,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     132.3,
+     132.55
+    ],
+    "ray_march_max_deg": 0.5827559923869251,
+    "ray_setting_km": 0.165,
+    "pixel_sweep_max_deg": -1.9584577526970781,
+    "pixel_setting_km": 140.6399278896883,
+    "pixel_az_deg": 132.54987232997772,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.5412137450840033,
+    "ray_at_pixel_az_deg": 0.5827854429884782,
+    "ray_at_pixel_az_minus_pixel_deg": 2.5412431956855563,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     132.55,
+     132.8
+    ],
+    "ray_march_max_deg": 0.5834687868299173,
+    "ray_setting_km": 0.165,
+    "pixel_sweep_max_deg": -0.1391343463538899,
+    "pixel_setting_km": 0.12540188300838312,
+    "pixel_az_deg": 132.57182677039702,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.7226031331838072,
+    "ray_at_pixel_az_deg": 0.5828505474791619,
+    "ray_at_pixel_az_minus_pixel_deg": 0.7219848938330518,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     137.1,
+     137.35
+    ],
+    "ray_march_max_deg": 0.7787448133936603,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": -1.1844730893786675,
+    "pixel_setting_km": 135.55882272975674,
+    "pixel_az_deg": 137.34620111942098,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.9632179027723278,
+    "ray_at_pixel_az_deg": 0.779206461120743,
+    "ray_at_pixel_az_minus_pixel_deg": 1.9636795504994105,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     137.35,
+     137.6
+    ],
+    "ray_march_max_deg": 0.7973571571002976,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": -1.1284602742968732,
+    "pixel_setting_km": 135.6502994091566,
+    "pixel_az_deg": 137.5999941663841,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.9258174313971708,
+    "ray_at_pixel_az_deg": 0.7981012878866646,
+    "ray_at_pixel_az_minus_pixel_deg": 1.926561562183538,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     137.6,
+     137.85
+    ],
+    "ray_march_max_deg": 0.8159744707130089,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": -1.07308496180825,
+    "pixel_setting_km": 135.60376777494577,
+    "pixel_az_deg": 137.8455006165189,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.8890594325212589,
+    "ray_at_pixel_az_deg": 0.8163841898480462,
+    "ray_at_pixel_az_minus_pixel_deg": 1.8894691516562963,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     137.85,
+     138.1
+    ],
+    "ray_march_max_deg": 0.834601564619805,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": -1.0309125880729857,
+    "pixel_setting_km": 135.0758254483607,
+    "pixel_az_deg": 138.0937170311492,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.8655141526927905,
+    "ray_at_pixel_az_deg": 0.8348786128181506,
+    "ray_at_pixel_az_minus_pixel_deg": 1.8657912008911364,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     139.0,
+     139.25
+    ],
+    "ray_march_max_deg": 0.9205484038489871,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": -0.9336513597274879,
+    "pixel_setting_km": 134.61507435271966,
+    "pixel_az_deg": 139.00019778227602,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.8541997635764749,
+    "ray_at_pixel_az_deg": 0.902577927663388,
+    "ray_at_pixel_az_minus_pixel_deg": 1.8362292873908759,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     139.25,
+     139.5
+    ],
+    "ray_march_max_deg": 0.9393190902968352,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": -0.9306097774683718,
+    "pixel_setting_km": 134.03828187876067,
+    "pixel_az_deg": 139.34125240913224,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.869928867765207,
+    "ray_at_pixel_az_deg": 0.9281460219235362,
+    "ray_at_pixel_az_minus_pixel_deg": 1.8587557993919082,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     139.5,
+     139.75
+    ],
+    "ray_march_max_deg": 0.9581312568316083,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": -0.9244925037238743,
+    "pixel_setting_km": 134.47668612510492,
+    "pixel_az_deg": 139.74487856476463,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.8826237605554825,
+    "ray_at_pixel_az_deg": 0.9584988070664053,
+    "ray_at_pixel_az_minus_pixel_deg": 1.8829913107902796,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     139.75,
+     140.0
+    ],
+    "ray_march_max_deg": 0.9769896931868967,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": -0.9150502504762518,
+    "pixel_setting_km": 134.40154531503921,
+    "pixel_az_deg": 139.97701962354841,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.8920399436631485,
+    "ray_at_pixel_az_deg": 0.9760093194956729,
+    "ray_at_pixel_az_minus_pixel_deg": 1.8910595699719246,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     141.0,
+     141.25
+    ],
+    "ray_march_max_deg": 1.0640147825696542,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": 1.0622583387981959,
+    "pixel_setting_km": 0.1452878693489441,
+    "pixel_az_deg": 141.13611301939693,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.001756443771458338,
+    "ray_at_pixel_az_deg": 1.0592369702710185,
+    "ray_at_pixel_az_minus_pixel_deg": -0.0030213685271773816,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     141.25,
+     141.5
+    ],
+    "ray_march_max_deg": 1.0752990815379777,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": -0.9740528257347459,
+    "pixel_setting_km": 133.83566103186507,
+    "pixel_az_deg": 141.25036245551397,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.0493519072727238,
+    "ray_at_pixel_az_deg": 1.0644831127653034,
+    "ray_at_pixel_az_minus_pixel_deg": 2.038535938500049,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     141.5,
+     141.75
+    ],
+    "ray_march_max_deg": 1.0865564775313867,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": 0.546575689848254,
+    "pixel_setting_km": 0.12531513542240685,
+    "pixel_az_deg": 141.73263222454136,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.5399807876831327,
+    "ray_at_pixel_az_deg": 1.0862250484593075,
+    "ray_at_pixel_az_minus_pixel_deg": 0.5396493586110535,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     141.75,
+     142.0
+    ],
+    "ray_march_max_deg": 1.097791868413742,
+    "ray_setting_km": 0.145,
+    "pixel_sweep_max_deg": -0.9811365019568217,
+    "pixel_setting_km": 134.14489484940987,
+    "pixel_az_deg": 141.99637425261145,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.078928370370564,
+    "ray_at_pixel_az_deg": 1.0980780928249725,
+    "ray_at_pixel_az_minus_pixel_deg": 2.079214594781794,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     229.6,
+     229.85
+    ],
+    "ray_march_max_deg": 1.0184718052305448,
+    "ray_setting_km": 0.11,
+    "pixel_sweep_max_deg": -1.6772587917471469,
+    "pixel_setting_km": 0.37017181375859176,
+    "pixel_az_deg": 229.75282509811188,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.6957305969776915,
+    "ray_at_pixel_az_deg": 1.0149982711444312,
+    "ray_at_pixel_az_minus_pixel_deg": 2.692257062891578,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     229.85,
+     230.1
+    ],
+    "ray_march_max_deg": 1.012790721794302,
+    "ray_setting_km": 0.11,
+    "pixel_sweep_max_deg": -1.3587638203496846,
+    "pixel_setting_km": 0.3301665924212959,
+    "pixel_az_deg": 230.03809962789376,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.3715545421439863,
+    "ray_at_pixel_az_deg": 1.0085191345991904,
+    "ray_at_pixel_az_minus_pixel_deg": 2.367282954948875,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     230.1,
+     230.35
+    ],
+    "ray_march_max_deg": 1.0071136504450047,
+    "ray_setting_km": 0.11,
+    "pixel_sweep_max_deg": -1.1687154589299005,
+    "pixel_setting_km": 0.310167594198216,
+    "pixel_az_deg": 230.20833132554932,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.175829109374905,
+    "ray_at_pixel_az_deg": 1.0046539210334187,
+    "ray_at_pixel_az_minus_pixel_deg": 2.173369379963319,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     230.35,
+     230.6
+    ],
+    "ray_march_max_deg": 1.0014367938220048,
+    "ray_setting_km": 0.11,
+    "pixel_sweep_max_deg": -1.0511718780922115,
+    "pixel_setting_km": 0.29017159416484833,
+    "pixel_az_deg": 230.4020269490701,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.052608671914216,
+    "ray_at_pixel_az_deg": 1.000255071524846,
+    "ray_at_pixel_az_minus_pixel_deg": 2.051426949617057,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     251.3,
+     251.55
+    ],
+    "ray_march_max_deg": 0.6388041609079019,
+    "ray_setting_km": 0.095,
+    "pixel_sweep_max_deg": -0.867421910992063,
+    "pixel_setting_km": 0.1855880910421332,
+    "pixel_az_deg": 251.32461409533215,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.506226071899965,
+    "ray_at_pixel_az_deg": 0.6381079393366454,
+    "ray_at_pixel_az_minus_pixel_deg": 1.5055298503287085,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     251.55,
+     251.8
+    ],
+    "ray_march_max_deg": 0.6317711548786357,
+    "ray_setting_km": 0.095,
+    "pixel_sweep_max_deg": -2.369565635452679,
+    "pixel_setting_km": 38.271390769833715,
+    "pixel_az_deg": 251.55667417892303,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -3.001336790331315,
+    "ray_at_pixel_az_deg": 0.631584568424535,
+    "ray_at_pixel_az_minus_pixel_deg": 3.001150203877214,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     251.8,
+     252.05
+    ],
+    "ray_march_max_deg": 0.6248240593850731,
+    "ray_setting_km": 0.095,
+    "pixel_sweep_max_deg": -1.694910495700835,
+    "pixel_setting_km": 0.23031960115504596,
+    "pixel_az_deg": 251.83770147674443,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.3197345550859083,
+    "ray_at_pixel_az_deg": 0.6237839294346662,
+    "ray_at_pixel_az_minus_pixel_deg": 2.3186944251355013,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     252.05,
+     252.3
+    ],
+    "ray_march_max_deg": 0.6179641288746118,
+    "ray_setting_km": 0.095,
+    "pixel_sweep_max_deg": -2.4204259387487763,
+    "pixel_setting_km": 37.10388326334274,
+    "pixel_az_deg": 252.0613891560909,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -3.0383900676233884,
+    "ray_at_pixel_az_deg": 0.6176537096791399,
+    "ray_at_pixel_az_minus_pixel_deg": 3.0380796484279164,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     349.5,
+     349.75
+    ],
+    "ray_march_max_deg": 1.4310901147483768,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 0.8782098093429175,
+    "pixel_setting_km": 0.6573094396639788,
+    "pixel_az_deg": 349.6685148638894,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.5528803054054593,
+    "ray_at_pixel_az_deg": 1.4200747055099867,
+    "ray_at_pixel_az_minus_pixel_deg": 0.5418648961670692,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     349.75,
+     350.0
+    ],
+    "ray_march_max_deg": 1.469772843324914,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 0.9461267760123081,
+    "pixel_setting_km": 0.72948064716555,
+    "pixel_az_deg": 349.80918138186155,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.5236460673126059,
+    "ray_at_pixel_az_deg": 1.4417698015180465,
+    "ray_at_pixel_az_minus_pixel_deg": 0.49564302550573835,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     350.0,
+     350.25
+    ],
+    "ray_march_max_deg": 1.5087040158163505,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 0.8000592131748215,
+    "pixel_setting_km": 0.6849568946300292,
+    "pixel_az_deg": 350.19050854304044,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.708644802641529,
+    "ray_at_pixel_az_deg": 1.5009772090479043,
+    "ray_at_pixel_az_minus_pixel_deg": 0.7009179958730828,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     350.25,
+     350.5
+    ],
+    "ray_march_max_deg": 1.5478844957012865,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 0.9965250268509841,
+    "pixel_setting_km": 0.4960938132642313,
+    "pixel_az_deg": 350.4894303871032,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.5513594688503024,
+    "ray_at_pixel_az_deg": 1.5477949407554006,
+    "ray_at_pixel_az_minus_pixel_deg": 0.5512699139044165,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     352.6,
+     352.85
+    ],
+    "ray_march_max_deg": 1.9285052485399385,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 0.9571846521651303,
+    "pixel_setting_km": 0.7796034472796514,
+    "pixel_az_deg": 352.7486900304335,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.9713205963748083,
+    "ray_at_pixel_az_deg": 1.9132966022265148,
+    "ray_at_pixel_az_minus_pixel_deg": 0.9561119500613845,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     352.85,
+     353.1
+    ],
+    "ray_march_max_deg": 1.9703202090714376,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 0.9231822663319346,
+    "pixel_setting_km": 0.8075320710038739,
+    "pixel_az_deg": 353.0855095526015,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.0471379427395031,
+    "ray_at_pixel_az_deg": 1.9695668774161712,
+    "ray_at_pixel_az_minus_pixel_deg": 1.0463846110842367,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     353.1,
+     353.35
+    ],
+    "ray_march_max_deg": 2.012391569110259,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 1.0551645145336739,
+    "pixel_setting_km": 0.7353898587825409,
+    "pixel_az_deg": 353.28135418349024,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -0.9572270545765851,
+    "ray_at_pixel_az_deg": 2.0024992927694463,
+    "ray_at_pixel_az_minus_pixel_deg": 0.9473347782357724,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     353.35,
+     353.6
+    ],
+    "ray_march_max_deg": 2.0547197051515345,
+    "ray_setting_km": 0.075,
+    "pixel_sweep_max_deg": 0.8913932443525822,
+    "pixel_setting_km": 0.8354867327799563,
+    "pixel_az_deg": 353.3997999271595,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.1633264607989524,
+    "ray_at_pixel_az_deg": 2.022493069170402,
+    "ray_at_pixel_az_minus_pixel_deg": 1.1310998248178201,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     52.4,
+     52.65
+    ],
+    "ray_march_max_deg": 4.098624542245196,
+    "ray_setting_km": 0.05,
+    "pixel_sweep_max_deg": 0.4589705349528421,
+    "pixel_setting_km": 0.2719775724719391,
+    "pixel_az_deg": 52.641709362788596,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -3.6396540072923544,
+    "ray_at_pixel_az_deg": 4.098728941776146,
+    "ray_at_pixel_az_minus_pixel_deg": 3.6397584068233044,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     52.65,
+     52.9
+    ],
+    "ray_march_max_deg": 4.113810180728967,
+    "ray_setting_km": 0.05,
+    "pixel_sweep_max_deg": 4.16261609713036,
+    "pixel_setting_km": 0.05082832207518601,
+    "pixel_az_deg": 52.84750860024903,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": 0.04880591640139276,
+    "ray_at_pixel_az_deg": 4.111240992068565,
+    "ray_at_pixel_az_minus_pixel_deg": -0.05137510506179499,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     52.9,
+     53.15
+    ],
+    "ray_march_max_deg": 4.11622427553264,
+    "ray_setting_km": 0.05,
+    "pixel_sweep_max_deg": 0.7232425382064965,
+    "pixel_setting_km": 0.2520461350840887,
+    "pixel_az_deg": 53.05752420324707,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -3.3929817373261435,
+    "ray_at_pixel_az_deg": 4.111825438743513,
+    "ray_at_pixel_az_minus_pixel_deg": 3.3885829005370165,
+    "sweep_extent_sufficient": true
+   },
+   {
+    "bin_deg": [
+     53.15,
+     53.4
+    ],
+    "ray_march_max_deg": 4.1084896164364855,
+    "ray_setting_km": 0.05,
+    "pixel_sweep_max_deg": -1.8971717532905532,
+    "pixel_setting_km": 0.43334083352169184,
+    "pixel_az_deg": 53.3431211533276,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -6.005661369727038,
+    "ray_at_pixel_az_deg": 4.101470981458517,
+    "ray_at_pixel_az_minus_pixel_deg": 5.998642734749071,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     307.0,
+     307.25
+    ],
+    "ray_march_max_deg": -0.8326464247198699,
+    "ray_setting_km": 0.055,
+    "pixel_sweep_max_deg": -2.5208613602550174,
+    "pixel_setting_km": 0.27989352703114156,
+    "pixel_az_deg": 307.21129512095666,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.6882149355351475,
+    "ray_at_pixel_az_deg": -0.8329401715279441,
+    "ray_at_pixel_az_minus_pixel_deg": 1.6879211887270733,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     307.25,
+     307.5
+    ],
+    "ray_march_max_deg": -0.8329919360142417,
+    "ray_setting_km": 0.055,
+    "pixel_sweep_max_deg": -3.468604871937213,
+    "pixel_setting_km": 0.4016716665393267,
+    "pixel_az_deg": 307.4315416299909,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -2.635612935922971,
+    "ray_at_pixel_az_deg": -0.833226455023969,
+    "ray_at_pixel_az_minus_pixel_deg": 2.635378416913244,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     307.5,
+     307.75
+    ],
+    "ray_march_max_deg": -0.8273936005024936,
+    "ray_setting_km": 0.055,
+    "pixel_sweep_max_deg": -0.8187092847369236,
+    "pixel_setting_km": 0.05604582408639578,
+    "pixel_az_deg": 307.67509776659057,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": 0.008684315765569939,
+    "ray_at_pixel_az_deg": -0.8289909111312382,
+    "ray_at_pixel_az_minus_pixel_deg": -0.010281626394314625,
+    "sweep_extent_sufficient": false
+   },
+   {
+    "bin_deg": [
+     307.75,
+     308.0
+    ],
+    "ray_march_max_deg": -0.8212379720197033,
+    "ray_setting_km": 0.055,
+    "pixel_sweep_max_deg": -2.546588323169917,
+    "pixel_setting_km": 0.2996203335823849,
+    "pixel_az_deg": 307.88857855954643,
+    "pixel_product": "LDEM_80S_20M",
+    "diff_pixel_minus_ray_deg": -1.7253503511502135,
+    "ray_at_pixel_az_deg": -0.8237357685655065,
+    "ray_at_pixel_az_minus_pixel_deg": 1.7228525546044104,
+    "sweep_extent_sufficient": false
+   }
+  ],
+  "n_bins_ray_setting_ge_2km": 0,
+  "max_pixel_minus_ray_deg": 0.04880591640139276
+ },
+ "near_field_bilinear": {
+  "method": "bilinear LDEM surface within 1 km at the ray march's 5 m distances, every profile azimuth; destination points by spherical trigonometry, documented projection formula, own bilinear code, az/el from 3D vectors in the numerical local frame",
+  "shared_with_main_method": "same DEM file and reader, same sample distances, same observer point",
+  "n_azimuths_set_within_near_km": 3600,
+  "diff_deg_maxabs_where_set_within_near_km": 2.1926656046389326e-09,
+  "at": {
+   "azimuth_deg": 92.4,
+   "near_check_distance_m": 70.0,
+   "ray_setting_distance_m": 70.0
+  },
+  "n_same_setting_distance": 3600,
+  "max_near_minus_ray_where_set_beyond_deg": null,
+  "max_azimuth_error_deg": 1.8744754015642684e-07
+ },
+ "lola_rdr_shots": {
+  "method": "LOLA RDR shots (ODE GDS, flag 0) within +/-250 m of the horizon-setting point; az/el from each shot's own lat/lon/radius",
+  "interpretation": "Consistency check against the DEM's source data (LDEM gridded from RDR shots through 2017-02-02), not independent validation; windows with few shots give only lower bounds.",
+  "dem_data_cutoff_utc_date": "2017-02-02",
+  "pct_shots_on_or_before_dem_cutoff_min_max": [
+   100.0,
+   100.0
+  ],
+  "rows": [
+   {
+    "azimuth_deg": 0.0,
+    "setting_point": {
+     "distance_m": 75.0,
+     "lat_deg": -89.46552665853379,
+     "lon_deg": 222.59999999999997,
+     "height_m": 1947.0083356144592,
+     "shot_count_nearest": 1
+    },
+    "query": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-89.473771&maxlat=-89.457282&westernlon=221.716176&easternlon=223.483824",
+    "valid_shots_in_box": 884,
+    "pct_shots_on_or_before_dem_cutoff": 100.0,
+    "shots_within_az_window": 0,
+    "az_window_deg": 0.1,
+    "dem_horizon_max_in_window_deg": 3.209859873085877,
+    "max_shot_elevation_deg": null,
+    "max_shot_distance_km": null,
+    "shot_minus_dem_deg": null,
+    "dem_minus_shot_height_m": {
+     "n": 884,
+     "mean": -0.34059154399730845,
+     "sd": 0.736297398218894,
+     "max_abs": 4.281144927883361
+    }
+   },
+   {
+    "azimuth_deg": 90.0,
+    "setting_point": {
+     "distance_m": 65.0,
+     "lat_deg": -89.4679956816635,
+     "lon_deg": 222.83086126035488,
+     "height_m": 1944.7715182000084,
+     "shot_count_nearest": 0
+    },
+    "query": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-89.476240&maxlat=-89.459751&westernlon=221.942936&easternlon=223.718787",
+    "valid_shots_in_box": 881,
+    "pct_shots_on_or_before_dem_cutoff": 100.0,
+    "shots_within_az_window": 0,
+    "az_window_deg": 0.1,
+    "dem_horizon_max_in_window_deg": 1.744721065080613,
+    "max_shot_elevation_deg": null,
+    "max_shot_distance_km": null,
+    "shot_minus_dem_deg": null,
+    "dem_minus_shot_height_m": {
+     "n": 881,
+     "mean": -0.3206222099563248,
+     "sd": 0.7745064415467334,
+     "max_abs": 3.6359105084318344
+    }
+   },
+   {
+    "azimuth_deg": 180.0,
+    "setting_point": {
+     "distance_m": 140.0,
+     "lat_deg": -89.47261690407076,
+     "lon_deg": 222.59999999999997,
+     "height_m": 1948.3676821873232,
+     "shot_count_nearest": 3
+    },
+    "query": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-89.480861&maxlat=-89.464372&westernlon=221.704294&easternlon=223.495706",
+    "valid_shots_in_box": 836,
+    "pct_shots_on_or_before_dem_cutoff": 100.0,
+    "shots_within_az_window": 2,
+    "az_window_deg": 0.1,
+    "dem_horizon_max_in_window_deg": 2.2776097627243868,
+    "max_shot_elevation_deg": 0.2171346815981125,
+    "max_shot_distance_km": 0.2740079513136064,
+    "shot_minus_dem_deg": -2.0604750811262744,
+    "dem_minus_shot_height_m": {
+     "n": 836,
+     "mean": -0.364696955456674,
+     "sd": 0.9487648292338393,
+     "max_abs": 5.416913038483017
+    }
+   },
+   {
+    "azimuth_deg": 270.0,
+    "setting_point": {
+     "distance_m": 85.0,
+     "lat_deg": -89.4679926154108,
+     "lon_deg": 222.29810566565482,
+     "height_m": 1942.9992428660494,
+     "shot_count_nearest": 1
+    },
+    "query": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-89.476237&maxlat=-89.459748&westernlon=221.410185&easternlon=223.186026",
+    "valid_shots_in_box": 931,
+    "pct_shots_on_or_before_dem_cutoff": 100.0,
+    "shots_within_az_window": 0,
+    "az_window_deg": 0.1,
+    "dem_horizon_max_in_window_deg": 0.14082473345293675,
+    "max_shot_elevation_deg": null,
+    "max_shot_distance_km": null,
+    "shot_minus_dem_deg": null,
+    "dem_minus_shot_height_m": {
+     "n": 931,
+     "mean": -0.3281575742164568,
+     "sd": 0.809882634003189,
+     "max_abs": 4.978011082322155
+    }
+   },
+   {
+    "azimuth_deg": 353.1,
+    "setting_point": {
+     "distance_m": 75.0,
+     "lat_deg": -89.4655444895032,
+     "lon_deg": 222.56814499538427,
+     "height_m": 1945.386871392675,
+     "shot_count_nearest": 1
+    },
+    "query": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-89.473789&maxlat=-89.457300&westernlon=221.684292&easternlon=223.451998",
+    "valid_shots_in_box": 900,
+    "pct_shots_on_or_before_dem_cutoff": 100.0,
+    "shots_within_az_window": 1,
+    "az_window_deg": 0.1,
+    "dem_horizon_max_in_window_deg": 1.988799995918991,
+    "max_shot_elevation_deg": 0.09701751196617146,
+    "max_shot_distance_km": 0.2861127234293917,
+    "shot_minus_dem_deg": -1.8917824839528197,
+    "dem_minus_shot_height_m": {
+     "n": 900,
+     "mean": -0.34178740692219967,
+     "sd": 0.7476417033732772,
+     "max_abs": 4.281144927883361
+    }
+   },
+   {
+    "azimuth_deg": 230.1,
+    "setting_point": {
+     "distance_m": 110.0,
+     "lat_deg": -89.47031959118637,
+     "lon_deg": 222.29896203213156,
+     "height_m": 1944.7393691587522,
+     "shot_count_nearest": 2
+    },
+    "query": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-89.478564&maxlat=-89.462075&westernlon=221.407141&easternlon=223.190783",
+    "valid_shots_in_box": 868,
+    "pct_shots_on_or_before_dem_cutoff": 100.0,
+    "shots_within_az_window": 0,
+    "az_window_deg": 0.1,
+    "dem_horizon_max_in_window_deg": 1.00938424055061,
+    "max_shot_elevation_deg": null,
+    "max_shot_distance_km": null,
+    "shot_minus_dem_deg": null,
+    "dem_minus_shot_height_m": {
+     "n": 868,
+     "mean": -0.3475518960000584,
+     "sd": 0.902333751232236,
+     "max_abs": 5.416913038483017
+    }
+   },
+   {
+    "azimuth_deg": 131.2,
+    "setting_point": {
+     "distance_m": 165.0,
+     "lat_deg": -89.47156830068964,
+     "lon_deg": 223.04392379422066,
+     "height_m": 1944.4733500848233,
+     "shot_count_nearest": 0
+    },
+    "query": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-89.479813&maxlat=-89.463324&westernlon=222.149995&easternlon=223.937852",
+    "valid_shots_in_box": 856,
+    "pct_shots_on_or_before_dem_cutoff": 100.0,
+    "shots_within_az_window": 1,
+    "az_window_deg": 0.1,
+    "dem_horizon_max_in_window_deg": 0.5781342343701733,
+    "max_shot_elevation_deg": -3.507991480515931,
+    "max_shot_distance_km": 0.43227707358397516,
+    "shot_minus_dem_deg": -4.086125714886104,
+    "dem_minus_shot_height_m": {
+     "n": 856,
+     "mean": -0.32421013839053364,
+     "sd": 1.003986676717141,
+     "max_abs": 5.416913038483017
+    }
+   },
+   {
+    "azimuth_deg": 141.5,
+    "setting_point": {
+     "distance_m": 145.0,
+     "lat_deg": -89.47173388393898,
+     "lon_deg": 222.92286332334726,
+     "height_m": 1945.5318560121304,
+     "shot_count_nearest": 2
+    },
+    "query": "https://oderest.rsl.wustl.edu/livegds/?query=lolardr&results=v&output=JSON&minlat=-89.479978&maxlat=-89.463489&westernlon=222.028655&easternlon=223.817072",
+    "valid_shots_in_box": 860,
+    "pct_shots_on_or_before_dem_cutoff": 100.0,
+    "shots_within_az_window": 2,
+    "az_window_deg": 0.1,
+    "dem_horizon_max_in_window_deg": 1.0802553604483325,
+    "max_shot_elevation_deg": 0.9804481980864233,
+    "max_shot_distance_km": 0.17867667917701968,
+    "shot_minus_dem_deg": -0.09980716236190923,
+    "dem_minus_shot_height_m": {
+     "n": 860,
+     "mean": -0.3509811727242936,
+     "sd": 0.9860374138379387,
+     "max_abs": 5.416913038483017
+    }
+   }
+  ]
+ },
+ "azimuth_convention": {
+  "method": "ME +X axis (mean Earth direction) seen from the site in the local frame vs mean Horizons Earth az/el",
+  "predicted_az_el_deg": [
+   137.39876938352444,
+   -0.39160107223663754
+  ],
+  "horizons_mean_az_el_deg": [
+   137.80668174622207,
+   -1.341426036329823
+  ],
+  "diff_az_deg": 0.40791236269762976,
+  "diff_el_deg": -0.9498249640931854,
+  "mirrored_convention_would_predict_az_deg": 222.60123061647556,
+  "note": "Sanity check only. Libration moves Earth by several degrees, so the 60-day mean need not equal the +X direction; one direction is tested; the elevation difference (parallax, residual libration) is not analysed. Agreement within ~2 deg rules out a mirrored (counter-clockwise, ~85 deg off here) or grossly rotated azimuth, not sub-degree offsets."
+ }
+}

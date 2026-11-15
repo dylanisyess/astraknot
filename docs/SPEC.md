@@ -26,7 +26,12 @@ landing, power, thermal, or communications analysis tool.
 
 Site A: IM-2 Athena landing point, 84.7906° S, 29.1957° E (LROC).
 Supported interval (milestone 2): 2026-12-01T00:00Z to 2027-01-30T00:00Z.
-Site B is still to be selected.
+Site B (selected in milestone 4B; preparation only): Connecting Ridge CR1,
+89.468 S, 222.6 E, NASA ACD-50044 Rev A section 7.3.3. This is a hypothetical
+landing point in a notional study, not an actual landing site. Frame assumed
+ME; source frame/coordinate accuracy unresolved. See [SECOND_SITE.md](SECOND_SITE.md).
+Positions and terrain horizon generated in milestone 4C (pipeline data only, not
+yet in the app); its terrain result is highly sensitive to near-field DEM relief.
 Choose points with suitable terrain coverage and document sources.
 
 ## Required user experience
