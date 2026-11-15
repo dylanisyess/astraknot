@@ -4,7 +4,7 @@ A NASA Space Apps prototype that shows when the Sun and Earth are above the
 horizon from lunar south-polar sites. It is an educational planning tool, not
 flight-qualified analysis.
 
-**Explore (default view, milestones 5A–5B):** a 3D view of the real LOLA terrain
+**Explore (default view, milestones 5A–5C):** a 3D view of the real LOLA terrain
 around a fixed modeled observer at either site. It frames the challenge directly:
 direct sunlight (solar-power potential) and Earth visibility (direct-to-Earth
 communication windows) at the viewing time, a four-state mission timeline
@@ -15,6 +15,17 @@ hides the Sun or Earth. The Sun and Earth disks use nominal display angular
 diameters (0.53° and 1.9°), and terrain shading is illustrative, not modeled
 sunlight. Every visibility label comes from the same status function as the
 dashboard. The two-site dashboard described below is the **Analysis** view.
+
+**Terrain hazard screening (milestone 5C):**
+- Explore's Conditions panel reports how much of the terrain within 500 m of the modeled
+  observer is steeper than an illustrative threshold (default 15°), and highlights
+  those cells on the terrain.
+- A full slope map is one click away.
+- Slope is computed from the 20 m LOLA DEM over about 40 m
+  (`pipeline/slope.py`). It screens steepness only: not boulders, small craters, bearing
+  strength or landing safety.
+- Analysis compares both sites with the same method, radius and threshold, next to
+  their Sun and Earth availability, without a combined score.
 
 **Two-site comparison (Analysis view, milestone 4):** the app compares
 the IM-2 Athena landing point (84.7906° S, 29.1957° E) with Connecting Ridge CR1,
@@ -39,6 +50,7 @@ and [docs/STATUS.md](docs/STATUS.md).
 app/                 React + TypeScript + Vite frontend
   public/data/       exported data the app loads (manifest.json, <site>.json)
   public/render/     3D rendering meshes (<site>.terrain.json/.bin; not scientific data)
+  public/screening/  terrain screening slope grids (<site>.slope.json; lazy-loaded)
   src/               UI code and tests; src/explore/ is the 3D Explore view
 pipeline/            Python data preparation (standard library only)
   config.json        site, altitude, interval, chunking, terrain products
@@ -55,10 +67,12 @@ pipeline/            Python data preparation (standard library only)
   terrain_horizon.py terrain horizon ray march (+ terrain_sensitivity.py)
   horizon_crosscheck.py  pixel-sweep check (independent implementation), LOLA-shot consistency, azimuth sanity check
   render_assets.py   rendering meshes for Explore from the cached LDEM_80S_20M + mesh-vs-profile check
+  slope.py           DEM-derived slope within 500 m of each observer (terrain hazard screening)
   tests/             unit tests (synthetic fixtures)
 data/horizons/       raw Horizons responses (byte-for-byte) + request metadata
 data/terrain/        LOLA PDS labels, coverage report, terrain horizon + cross-check reports (committed)
 data/render/         per-azimuth mesh silhouette vs exported profile (rendering evidence)
+data/screening/      slope method, coverage, statistics and checks per site (screening evidence)
 data/raw/            large downloads (git-ignored)
 docs/                SPEC.md, DATA_CONTRACT.md, STATUS.md
 ```
@@ -141,7 +155,10 @@ Coordinate source date/product belong in each site config as
 The scenario is kept in the URL, for example
 `http://localhost:5173/?arrival=2026-12-05T00:00Z&days=14&delay=3&t=2026-12-14T12:00:00Z&horizon=terrain`
 (`arrival` = baseline arrival in UTC, `days` = mission duration, `delay` = 0, 1, 3 or 7,
-`t` = cursor time, `horizon` = `terrain` or `smooth`).
+`t` = cursor time, `horizon` = `terrain` or `smooth`). Explore also uses `view`
+(`explore` or `analysis`), `mission`, `cam` (`overview` or `horizon`), `layer` (terrain
+overlay: `exceed` for steep areas, the default; `slope` for the full slope map; `hide`)
+and `thr` (screening threshold in degrees).
 
 ## Re-fetching from JPL Horizons
 - The coverage is split into 10-day chunks (`horizons_chunk_days`). Requests go
@@ -180,6 +197,8 @@ quantity 4 (airless apparent azimuth/elevation of the target center),
   [Horizons manual](https://ssd.jpl.nasa.gov/horizons/manual.html)
 - 3D rendering meshes: derived from LDEM_80S_20M (same product and registration
   as the terrain horizon) by `python pipeline/render_assets.py --site <id>`.
+- Terrain screening slopes: derived from the same LDEM_80S_20M by
+  `python pipeline/slope.py` (needs the cached 1.85 GB raster; about 1 s per site).
 
 ## Third-party software
 - [React](https://react.dev/) and React DOM (MIT License).

@@ -5,17 +5,41 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
-## Start here (handoff for a new session, updated 2026-11-14 after milestone 5C)
-**Milestone 5C (terrain hazard screening, uncommitted on
-`milestone-5c-terrain-screening` from merged `main` = `caab643`):** see "Milestone 5C"
-below, including its acceptance pass (automatic screening in Conditions, one highlight
-toggle). 5A–5B are committed (`840137b`) and merged in PR #4. The snapshot that follows
-is the 5A–5B closeout record, kept for history.
+## Start here (handoff for a new session, updated 2026-11-14 after the 5C merge)
+
+**Git snapshot (2026-11-14, after the 5C merge; verified):**
+- `main` = `origin/main` = `245adc6` ("Merge branch 'milestone-5c-terrain-screening'").
+- **Milestone 5C (terrain hazard screening)** was committed by the user as `4dec25c`
+  ("feat: terrain screening"; 25 files) on `milestone-5c-terrain-screening`, which is
+  pushed (`origin/milestone-5c-terrain-screening` = `4dec25c`).
+  - Merged into `main` with a local `--no-ff` merge commit (`245adc6`), then pushed.
+  - **No GitHub pull request** was opened, because the GitHub CLI is not installed on
+    this machine. Earlier milestones used PRs #2–#4. The merged tree is identical to
+    the branch.
+  - Before the merge, the committed tree passed `npm test` (275), `npm run build` and
+    `python -m unittest discover -s pipeline/tests` (91 OK).
+- 5A–5B: committed `840137b`, merged in PR #4 (`caab643`).
+- Nothing is deployed.
+- Next: see "Next steps" below. Verify live Git state before continuing.
+
+**Current app:**
+- **Explore**, the default 3D view, now has automatic terrain hazard screening:
+  - a "Terrain screening" row in the Conditions panel;
+  - steep-area highlights by default;
+  - a one-click full slope map that frames the 500 m area;
+  - Terrain details holding the overlay choice, illustrative threshold, legend,
+    statistics and method.
+- **Analysis** has a matched two-site terrain table.
+- See "Milestone 5C" below, with four subsections: the first pass, the acceptance
+  pass, the UX correction and the "one place" follow-up. The "one place" follow-up
+  describes the current interface; the method and results are in the first pass.
+
+The 5A–5B closeout snapshot further down is kept for history.
 
 Read this section first, then `docs/SPEC.md`, `docs/DATA_CONTRACT.md` and
 `docs/SCIENCE_REVIEW.md`. The rest of this file is the detailed record behind it.
 
-**Git snapshot (2026-11-14, 5A–5B closeout):**
+**Git snapshot (2026-11-14, 5A–5B closeout; historical, superseded by the snapshot above):**
 - `main` = `origin/main` = `c5e8432` ("Merge pull request #3 from
   dylanisyess/science-review-followup"). The science-review follow-up is
   committed (`ca385fc`), pushed and merged. Verified at the start of 5A.
@@ -127,12 +151,26 @@ resolution-dependent; see "Milestone 4C" below. The manifest lists both sites
   - A projected south-polar locator, and per-site sources and limitations.
   - Carried over: one shared cursor, boundary flags, unknown handling.
   - URL state: `arrival, days, delay, t, horizon, sites, site`. Older Athena links still work.
-  - **Selected-time status (science-review follow-up, uncommitted):** one function
+  - **Selected-time status (science-review follow-up, merged in PR #3):** one function
     (`app/src/status.ts`, `selectedTimeStatus`) gives each body's step state
     (exported intervals, unchanged) and its instantaneous center clearance. It
     feeds the cards, readouts and panorama labels, and is meant for 3D Explore.
     When the two disagree, every place shows the same "Near estimated
     crossing" explanation.
+- **3D Explore (5A–5B, merged in PR #4):**
+  - real LOLA terrain around the fixed modeled observer;
+  - Site overview and Horizon view, where the profile alone hides the Sun/Earth;
+  - power/comms framing, the four-state timeline and guided crossings;
+  - shared URL state with Analysis.
+- **Terrain hazard screening (5C, merged in `245adc6`):**
+  - `pipeline/slope.py`: Horn 3 × 3 on true 3D pixel-centre positions of
+    LDEM_80S_20M, within 500 m of each observer;
+  - assets in `app/public/screening/`, evidence in `data/screening/`;
+  - automatic warning, overlays and inspection in Explore; matched comparison in
+    Analysis.
+  - Results at 15°:
+    - Athena: median 2.88°, p95 5.90°, none above 15°;
+    - CR1: median 5.57°, p95 15.15°, 5.3 % above 15°.
 - **Second site data (milestone 4C):** CR1 60 days of real Horizons Sun/Earth
   positions (8 641 samples, same coverage/step/conventions as Athena), smooth and
   terrain horizons, intervals, sources and checks in
@@ -344,31 +382,20 @@ Environment notes (Windows):
 
 ### Next steps
 
-0. 5A–5B closeout: one checkpoint commit and a PR to `main` (see the
-   snapshot above). Next branch: `milestone-5c-terrain-screening`.
-   **Bounded 5C follow-up checks (recorded, not yet performed; not verified
-   bugs):**
-   - Overview celestial projection during orbit, pan and zoom. Markers are
-     placed at the direction's vanishing point and tested under camera
-     translation; panning, zooming and orbit extremes, and the behind-camera
-     edge-chip position, have not been checked systematically.
-   - Explore/Analysis handling of time outside the mission windows. Explore
-     views any covered time; Analysis shows the same stored time clamped to
-     its windows. Review whether that interplay is clear to users.
-   - Explanation for disabled delay options at the coverage boundary. Delays
-     whose window would end after the data are disabled, with a tooltip and
-     (when the chosen delay no longer fits) a note; check that Explore
-     explains this clearly enough.
-   - Before any deployment: the minified bundle drops three.js's MIT license
-     comment; ship the notice (README "Third-party software").
+0. (Done) 5A–5B closeout (PR #4). (Done) The bounded 5C follow-up checks, all handled
+   in 5C Part 1: overview projection under orbit/pan/zoom, Explore/Analysis time
+   outside the windows, disabled-delay explanation. (Done) 5C merged (`245adc6`).
+   Still open before any deployment: the minified bundle drops three.js's MIT license
+   comment; ship the notice (README "Third-party software").
 1. Human pass over the 4D browser review checklist and a person's pass over
    Explore (headed browser, real mouse/touch, Firefox/Safari). Deployment from
    a fresh browser session is still untested.
-2. Recommended next bounded milestone: user acceptance of Explore, then a
-   static deployment and fresh-session check; measure load on a non-local
-   network (the Athena mesh is 6.5 MB). Optional later feature: DEM-derived
-   slope visualization (no hazard or landing-safety claims). No scientific
-   change.
+2. Recommended next bounded milestone: user acceptance of Explore, including the
+   terrain screening, then a static deployment and fresh-session check. Measure load
+   on a non-local network (the Athena mesh is 6.5 MB; slope assets about 37 KB each).
+   The DEM-derived slope visualization is done (5C). No scientific change.
+   Optional: open a retrospective PR record for 5C if a PR trail is wanted (`gh` is
+   not installed here).
 3. Still open: how to present CR1's provisional terrain result (for example
    smooth and terrain side by side, or a range across DEMs, eye heights and
    position scenarios). If CR1 terrain is later adopted from the 5 m product,
@@ -384,7 +411,10 @@ To regenerate CR1 from the caches (order matters; all inputs cached, no network)
 
 ## Milestone 5C: terrain hazard screening and site comparison (2026-11-14)
 
-Branch `milestone-5c-terrain-screening`, **uncommitted, for review**.
+Branch `milestone-5c-terrain-screening`. Written uncommitted for review across four
+passes (this one, the acceptance pass, the UX correction and the "one place"
+follow-up). All of it was later committed by the user as `4dec25c` and merged into
+`main` as `245adc6`.
 
 **Git state verified at the start of 5C (personally):** 5A–5B were committed as
 `840137b` and merged into `main` through PR #4 (`caab643`). `main` = `origin/main` =
@@ -635,7 +665,7 @@ screening in Conditions, unlit overlay colors and shader-drawn rings.)
 
 ### 5C acceptance pass: automatic screening, simpler controls, reliable colors (2026-11-14)
 
-Same branch, still **uncommitted**. Git re-verified at the start: `main` = `origin/main` =
+Same branch, still **uncommitted** at the time. Git re-verified at the start: `main` = `origin/main` =
 `caab643`; the 5C work above is uncommitted on `milestone-5c-terrain-screening`.
 Frontend only:
 - no change to `pipeline/slope.py` or its outputs (no bug found);
@@ -754,7 +784,7 @@ layer control and the separate summary panel.
 ### 5C: terrain screening in one place (2026-11-14, after the UX correction below)
 
 User request: no separate bottom-left terrain control; everything terrain-related goes
-in the right-hand "Terrain screening" section. Frontend only, still **uncommitted**:
+in the right-hand "Terrain screening" section. Frontend only, still **uncommitted** at the time:
 HEAD = `main` = `origin/main` = `caab643`. sha256 of the 78 protected and slope files
 unchanged.
 
@@ -811,7 +841,7 @@ unchanged.
 ### 5C UX correction: highlights by default, one overlay control (2026-11-14)
 (Its bottom-left `OverlayControl` was removed by the follow-up above; the rest stands.)
 
-Same branch, still **uncommitted**. Git re-verified at the start: HEAD = `main` =
+Same branch, still **uncommitted** at the time. Git re-verified at the start: HEAD = `main` =
 `origin/main` = `caab643`, 23 uncommitted 5C paths. Frontend only: slope method, slope
 assets and every scientific output unchanged (sha256 of the same 78 files identical
 before and after; `git diff` on the tracked protected paths empty).
@@ -928,9 +958,9 @@ selector in Details).
 
 ## Milestone 5B: power/comms framing and guided horizon exploration (2026-11-14)
 
-Builds on the uncommitted 5A work on `milestone-5a-explore`. At the start of 5B
+Builds on the 5A work on `milestone-5a-explore` (written uncommitted; 5A–5B were later committed as `840137b` and merged in PR #4). At the start of 5B
 the 5A report was re-verified: `c5e8432`, 5A files present, protected outputs
-unchanged. **Uncommitted, for review.** Frontend only:
+unchanged. **Uncommitted, for review** at the time. Frontend only:
 - no Python, export, interval, horizon or render-asset change;
 - no Horizons fetch;
 - Analysis code unchanged.
@@ -1108,7 +1138,7 @@ unchanged. **Uncommitted, for review.** Frontend only:
 
 ### 5B completion: Sun/Earth in both views, scene-first layout, navigation fixes (2026-11-14)
 
-Same branch, on top of the 5B work above; **uncommitted**. Frontend only: no
+Same branch, on top of the 5B work above; **uncommitted** at the time. Frontend only: no
 Python, export, interval, horizon or render-asset change.
 
 **What changed**
@@ -1266,7 +1296,7 @@ Python, export, interval, horizon or render-asset change.
 
 Branch `milestone-5a-explore` from `c5e8432` (verified: clean tree,
 `main` = `origin/main` = `c5e8432`, science-review follow-up merged in PR #3).
-**Uncommitted, for review.** No Horizons fetch, no terrain download, no
+Written uncommitted for review (later committed as `840137b`, merged in PR #4). No Horizons fetch, no terrain download, no
 terrain-product change, no horizon or sensitivity recomputation, no change to
 site exports or intervals.
 
@@ -1464,7 +1494,7 @@ reads the cached 1.85 GB LDEM_80S_20M; `--no-rehash` skips re-hashing it).
 ## Science-review follow-up (2026-11-14)
 
 Branch `science-review-followup` from `978f22a` (verified `main` =
-`origin/main`, clean tree). **Uncommitted for review**; no push or merge.
+`origin/main`, clean tree). **Uncommitted for review** at the time; no push or merge (later merged in PR #3).
 Bounded scope:
 - No 3D, no terrain-model change, no Horizons fetch, no terrain recomputation.
 - Exported site files, terrain reports, intervals and mission metrics are
@@ -2718,9 +2748,17 @@ date | check | inputs | expected behavior | observed result | pass/fail
 2026-11-14 | Two-site interface: production build (4D) | `npm run build` | no errors | JS 293 kB (91 kB gzip) | pass
 2026-11-14 | Two-site interface: headless Chrome (4D) | production build, 1280/390 px, light/dark | 42 scripted checks + screenshots inspected | 42/42; 5 layout/wording bugs found and fixed first | pass (human review pending)
 2026-11-14 | Regression after 5 m code (5 m assessment) | tests, validate, exports | unchanged | 58 OK; 136/136; Athena 74/74 sha256; both exports byte-identical | pass
+2026-11-14 | Render meshes vs exported profile (5A) | 3 600 azimuths per site | proposed 0.05° rendering target | max \|Δ\| 0.108° CR1 / 0.112° Athena; target not met (documented; Horizon view later clipped to the profile) | reported
+2026-11-14 | 3D Explore tests and browser (5A–5B) | vitest, build, headed Chrome 157 | Explore, occlusion, crossings, URL state, failures | 217 passed; build OK; scripted checks in "Milestone 5A/5B" | pass
+2026-11-14 | Slope method, synthetic (5C) | 15 Python tests | flat ≈ 0°, planes 0.5–30° in 5 orientations, units, projection scale, nodata, thresholds | slope ±1e-6°, aspect ±1e-4°; all pass | pass
+2026-11-14 | Slope vs independent planar Horn (5C) | raw LDEM_80S_20M, both footprints | agree up to the terrain-radius factor | ≤ 0.036° (≤ 0.011° after h/R) | pass
+2026-11-14 | Slope assets vs app (5C) | assets, evidence, render meshes | stats, mapping and identity match | medians/p95/exceedance equal at 6 thresholds; every footprint pixel centre of render levels 0–1 maps to its cell | pass
+2026-11-14 | Protected outputs (5C) | 74 scientific + 4 slope files | unchanged by UI passes | sha256 78/78 identical | pass
+2026-11-14 | 5C tests and build (final) | vitest, build, pipeline | pass | 275 passed; build OK; 91 OK | pass
+2026-11-14 | 5C browser (final passes) | headed Chrome 157, 1440×900, 1366×768, 1280×720, 390×844 | automatic warning, highlights, slope map, Hide, threshold, site switch, Horizon view, reloads, collisions | all as recorded in "Milestone 5C"; 72-sample collision sweep without overlaps | pass
 
-Not yet checked: screen readers, Firefox/Safari, real touch hardware,
-keyboard-only use of the timeline (the slider is keyboard-accessible; the
+Not yet checked: screen readers, Firefox/Safari, real touch hardware, reduced
+motion in a browser, non-local network loading, keyboard-only use of the timeline (the slider is keyboard-accessible; the
 timeline itself is pointer-only).
 
 ## Unresolved issues and assumptions
@@ -2777,11 +2815,9 @@ timeline itself is pointer-only).
 - Keyboard interaction for the timeline itself.
 
 ## Next milestone
-**3D Explore** as the primary user experience, with the current dashboard kept
-as Analysis (shared site/time/scenario state). Requirements: `docs/SPEC.md`,
-"3D Explore: requirements for the next milestone". Before that: review and
-commit the science-review follow-up. Milestones 4A–4D are merged; both sites
-are in the app, and CR1 terrain is provisional.
+User acceptance of Explore (including terrain screening) by a person, then a static
+deployment with a fresh-session check and the three.js license notice. Milestones
+4A–5C are merged; both sites are in the app, and CR1 terrain is provisional.
 
 ## Milestone checklist
 - [x] Shared data contract accepted (v1.0 + clarifications).
@@ -2794,8 +2830,10 @@ are in the app, and CR1 terrain is provisional.
 - [x] Milestone 4C: CR1 positions fetched and validated; terrain horizon computed, implementation-checked, sensitivity reported (not robust).
 - [x] CR1 terrain-product assessment (5 m PGDA Site01): recommendation, retain CR1 terrain as provisional.
 - [x] Second site integrated in the frontend (4D, merged in PR #2; human browser review checklist still pending).
-- [x] Science review (2026-11-14, no blocking issue) and follow-up: review checks in the repo, two-site direction test, shared selected-time status, wording (uncommitted on `science-review-followup`).
-- [ ] 3D Explore (next milestone; requirements in SPEC.md).
+- [x] Science review (2026-11-14, no blocking issue) and follow-up: review checks in the repo, two-site direction test, shared selected-time status, wording (merged in PR #3).
+- [x] 3D Explore (5A–5B, merged in PR #4; the mesh misses the proposed 0.05° rendering target, documented).
+- [x] Terrain hazard screening and matched site comparison (5C, merged in `245adc6`).
+- [ ] Human acceptance pass over Explore and the 4D browser checklist.
 - [x] Date-slip comparison verified (smooth horizon).
 - [ ] Sources and limitations complete: per-site sources and limitations shown in the app (4D); awaiting human review.
 - [ ] Deployment tested.
@@ -2865,7 +2903,7 @@ Record tool/model, task, affected files, and human verification.
   `styles.css`, `app.test.tsx`; `pipeline/direction_check.py`,
   `pipeline/review/`, `pipeline/tests/test_conventions.py`, CR1 wall test;
   `config.json` dataset ID + full re-export (site files unchanged); docs |
-  Human verification: **pending** (uncommitted on `science-review-followup`).
+  Human verification: **pending** (written uncommitted on `science-review-followup`; merged in PR #3).
 
 - 2026-11-14 | OpenAI Codex | Bounded completion of the interrupted
   science-review follow-up: status interval-gap/final-endpoint guards and six
@@ -2873,7 +2911,28 @@ Record tool/model, task, affected files, and human verification.
   stale milestone 3 commit wording; lightweight checks and base-data comparison
   | `app/src/status.ts`, `status.test.ts`, `pipeline/direction_check.py`,
   `docs/SCIENCE_REVIEW.md`, `docs/STATUS.md` | Human verification: **pending**;
-  all work remains uncommitted.
+  written uncommitted, later merged in PR #3.
+
+- 2026-11-14 | Claude Code (Claude Opus 5.5) | Milestones 5A–5B, 3D Explore:
+  `pipeline/render_assets.py` (+ tests), `app/public/render/`, `data/render/`,
+  `app/src/explore/` (Explore, TerrainScene, geometry, availability, terrainAsset,
+  tests), `scenario.ts`, `urlState.ts`, `App.tsx`; docs | Human verification:
+  **pending** (committed `840137b`, merged in PR #4).
+
+- 2026-11-14 | Claude Code (Claude Opus 5.5) | Milestone 5C, terrain hazard
+  screening, in four passes (first implementation, acceptance pass, UX correction,
+  "one place" follow-up requested by the user):
+  - `pipeline/slope.py`, `pipeline/tests/test_slope.py`, `app/public/screening/`,
+    `data/screening/`;
+  - `app/src/explore/{slope,useSlope,TerrainScreening}.ts(x)` and tests;
+  - `TerrainScene.tsx`, `Explore.tsx`, `explore.css`, `App.tsx`, `scenario.ts`,
+    `urlState.ts`, `mission.ts`, `styles.css`;
+  - SPEC, DATA_CONTRACT, STATUS.
+
+  Human verification: the user reviewed the UI and requested changes in each pass;
+  a full acceptance pass is **pending**. Committed by the user as `4dec25c`. Claude
+  Code then pushed the branch and merged it into `main` (`245adc6`, local `--no-ff`
+  merge, no PR).
 
 ## Handoff template
 - Completed:
