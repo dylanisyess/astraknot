@@ -35,7 +35,7 @@ function Harness({ search, ...rest }: { search: string } & Omit<ExploreProps, "s
   return <Explore sc={sc} {...rest} />;
 }
 const explore = (search: string, rest: Omit<ExploreProps, "sc"> = {}) => renderToStaticMarkup(<Harness search={search} {...rest} />);
-const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ");
+const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&amp;/g, "&").replace(/\s+/g, " ");
 /** The status panel's markup (from its opening tag to the end of its section). */
 function statusPanel(html: string): string {
   const i = html.indexOf('data-testid="status-panel"');
@@ -350,5 +350,243 @@ describe("viewing time independent of the mission windows (5B acceptance)", () =
     expect(t).toContain("Site overview");
     expect(t).toContain("Horizon view");
     expect(t).not.toContain("Observer view");
+  });
+});
+
+// ---------------------------------------------------------------- 5C: terrain hazard screening and 5B fixes
+import { ScreeningRow } from "./TerrainScreening";
+import { type SlopeAsset, clearSlopeCache, overlayMode, primeSlopeAsset, screeningView } from "./slope";
+import { slopeAssetOf } from "./slope.test";
+
+describe("5C automatic terrain screening (overlays off), overlays and inspection", () => {
+  const prime = () => {
+    for (const id of ["im2-athena", "connecting-ridge-cr1"]) primeSlopeAsset("/", slopeAssetOf(id));
+  };
+  prime();
+  const base = `${DEMO}&site=connecting-ridge-cr1&t=2026-12-08T00:00:00Z`;
+  const metrics = (h: string) => { const i = h.indexOf('data-field="metrics"'); return h.slice(i, h.indexOf("</div>", h.indexOf("ms-window", i))); };
+  /** The Sun/Earth groups of the Conditions panel (without the terrain row). */
+  const sunEarth = (h: string) => { const i = h.indexOf("status-group group-power"); return h.slice(i, h.indexOf('data-testid="screening-row"', i)); };
+  const warning = (h: string) => ["screening", "screening-text", "screening-observer"].map((f) => { const m = h.match(new RegExp(`data-field="${f}"[^>]*>([^<]*)<`)); return m ? m[1] : ""; }).join(" | ") + " | " + (h.match(/class="muted small ts-qual">([^<]*)</)?.[1] ?? "");
+  const row = (h: string) => { const i = h.indexOf('data-testid="screening-row"'); return text(h.slice(i, h.indexOf("</div></div>", i))); };
+
+  it("screening appears automatically, also with the overlay hidden, from computed values", () => {
+    const cr1 = explore(base + "&layer=hide");
+    const t = text(cr1);
+    expect(t).toContain("Terrain screening");
+    expect(t).toContain("Steep terrain nearby");
+    expect(t).toContain("5.3 % of analyzed area exceeds 15° within 500 m.");
+    expect(t).toContain("The modeled observer’s own cell: 0.9°, not above 15°.");
+    expect(t).toContain("20 m DEM; slope measured over approximately 40 m.");
+    expect(t).toContain("Full slope map");
+    expect(t).not.toContain("Frame assessed area");
+    const ath = text(explore(`${DEMO}&site=im2-athena`));
+    expect(ath).toContain("No slopes above 15° detected within 500 m at this DEM scale.");
+    expect(ath.toLowerCase()).not.toMatch(/\bsafe\b/);
+    expect(explore(`${DEMO}&site=im2-athena`)).toContain('data-kind="none"');
+  });
+  it("threshold updates the warning; the observer cell is reported separately when it exceeds too", () => {
+    expect(row(explore(`${base}&thr=10`))).toContain("17.1 % of analyzed area exceeds 10° within 500 m.");
+    expect(row(explore(`${base}&thr=25`))).toContain("No slopes above 25° detected within 500 m at this DEM scale.");
+    const low = row(explore(`${DEMO}&site=im2-athena&thr=2`)); // Athena's observer cell is 2.26°
+    expect(low).toContain("The modeled observer’s own cell also exceeds 2° (2.3°).");
+    expect(row(explore(`${DEMO}&site=im2-athena&thr=0.5`))).toContain("exceeds 1° within 500 m"); // clamped to 1°
+  });
+  it("is independent of date, horizon model and overlays", () => {
+    const r = warning(explore(base));
+    expect(r).toContain("Steep terrain nearby | 5.3 % of analyzed area exceeds 15° within 500 m.");
+    for (const q of ["&t=2027-01-20T00:00:00Z", "&horizon=smooth", "&layer=exceed", "&layer=slope", "&layer=hide", "&cam=horizon"]) expect(warning(explore(base + q))).toBe(r);
+  });
+  it("overlays never change Sun/Earth conditions or mission metrics", () => {
+    const off = explore(base);
+    for (const layer of ["slope", "exceed"]) {
+      const h = explore(`${base}&layer=${layer}`);
+      expect(sunEarth(h)).toBe(sunEarth(off)); // Sun/Earth conditions
+      expect(warning(h)).toBe(warning(off)); // the screening warning (only the overlay key and action differ)
+      expect(metrics(h)).toBe(metrics(off));
+    }
+  });
+  it("never shows another site's result or 'no exceedances' before this site's data", () => {
+    clearSlopeCache();
+    primeSlopeAsset("/", slopeAssetOf("im2-athena"));
+    const h = explore(base); // CR1 active, only Athena's asset available
+    expect(row(h)).toContain("Loading terrain screening…");
+    expect(row(h)).not.toMatch(/No slopes|Steep terrain|exceeds/);
+    prime();
+    const ath = slopeAssetOf("im2-athena");
+    expect(screeningView({ state: "ready", asset: ath }, "connecting-ridge-cr1", 15).kind).toBe("loading");
+    expect(screeningView(undefined, "im2-athena", 15).kind).toBe("loading");
+    expect(screeningView({ state: "idle" }, "im2-athena", 15).kind).toBe("loading");
+    expect(screeningView({ state: "error", message: "HTTP 404" }, "im2-athena", 15)).toEqual({ kind: "error", message: "HTTP 404" });
+    expect(screeningView({ state: "ready", asset: ath }, "im2-athena", 15).kind).toBe("none");
+  });
+  it("loading, error and no-exceedance render distinctly (Retry only on error)", () => {
+    const props = { siteShort: "CR1", detailsOpen: false, layer: "exceed" as const, thresholdDeg: 15, onDetails: () => {}, onSlopeMap: () => {}, onSteep: () => {}, onRetry: () => {} };
+    const loading = text(renderToStaticMarkup(<ScreeningRow view={{ kind: "loading" }} {...props} />));
+    const err = text(renderToStaticMarkup(<ScreeningRow view={{ kind: "error", message: "Failed to fetch" }} {...props} />));
+    expect(loading).toContain("Loading terrain screening…");
+    expect(loading).not.toMatch(/Retry|No slopes|Full slope map/);
+    expect(err).toContain("Terrain screening unavailable (Failed to fetch).");
+    expect(err).toContain("Retry");
+    expect(err).not.toMatch(/No slopes|Full slope map/);
+  });
+  it("incomplete coverage is stated prominently", () => {
+    const a = JSON.parse(JSON.stringify(slopeAssetOf("im2-athena"))) as SlopeAsset;
+    const k = a.grid.state.indexOf(1);
+    a.grid.state[k] = 2;
+    a.grid.slope_centideg[k] = null;
+    const v = screeningView({ state: "ready", asset: a }, "im2-athena", 15);
+    expect(v.kind).toBe("none");
+    if (v.kind === "none") expect(v.coverage).toMatch(/^Incomplete coverage: 99\.9 %/);
+  });
+  /** The Conditions panel's terrain row (all terrain screening lives here). */
+  const rowHtml = (h: string) => { const i = h.indexOf('data-testid="screening-row"'); return h.slice(h.lastIndexOf("<div", i), h.indexOf('<div class="both-row', i)); };
+  const details = (h: string) => { const i = h.indexOf('data-testid="terrain-details"'); return i < 0 ? "" : h.slice(h.lastIndexOf("<div", i), h.indexOf('<div class="both-row', i)); };
+  it("one place: no terrain control on the stage; everything is in the Conditions panel", () => {
+    for (const q of ["", "&layer=slope", "&layer=hide", "&cam=horizon"]) {
+      const h = explore(base + q);
+      expect(h).not.toContain('data-testid="terrain-layers"');
+      expect(h).not.toContain("overlay-ctl");
+      expect(statusPanel(h)).toContain('data-testid="screening-row"');
+    }
+  });
+  it("fresh load (no overlay preference): steep areas highlighted by default, Details closed", () => {
+    const h = explore(base); // DEMO has no layer parameter
+    const r = rowHtml(h);
+    expect(r).toContain('data-layer="exceed"');
+    expect(text(r)).toContain("Slope >15° highlighted · ring = 500 m assessed area; outside not assessed"); // the key, from the actual threshold
+    expect(text(r)).toContain("Full slope map");
+    expect(text(r)).toContain("Terrain details");
+    expect(r).not.toContain("Frame assessed area");
+    expect(h).not.toContain('data-testid="terrain-details"');
+    expect(text(rowHtml(explore(base + "&thr=12.5")))).toContain("Slope >12.5° highlighted");
+    const ath = explore(`${DEMO}&site=im2-athena`);
+    expect(row(ath)).toContain("No slopes above 15° detected within 500 m at this DEM scale.");
+  });
+  it("Terrain details holds the overlay choice, the illustrative threshold and the legend, then the statistics", () => {
+    const d = details(explore(base, { initialTerrainDetails: true }));
+    for (const id of ["exceed", "slope", "surface"]) expect(d).toContain(`data-overlay-btn="${id}"`);
+    expect(d).toMatch(/aria-checked="true"[^>]*data-overlay-btn="exceed"/);
+    expect(d).toMatch(/class="oc-hide"[^>]*data-overlay-btn="surface"/); // a quieter Hide, not a third mode button
+    expect(text(d)).toContain("Steep areas >15°");
+    expect(text(d)).toContain("Illustrative screening threshold");
+    expect(d).toContain('data-testid="threshold"');
+    expect(text(d)).toContain("not a validated lander capability or universal safety limit");
+    expect(text(d)).toContain("Slope >15°");
+    expect(text(d)).toContain("Outside: not assessed");
+    expect(text(d)).toContain("Median");
+    expect(text(d)).toContain("Source, method and limits");
+    // the overlay choice comes before the secondary information
+    expect(d.indexOf("data-overlay-btn")).toBeLessThan(d.indexOf('data-field="median"'));
+    expect(d.indexOf('data-testid="threshold"')).toBeLessThan(d.indexOf('data-field="median"'));
+  });
+  it("full slope map: the row offers one-click return to steep areas and shows the fixed scale", () => {
+    const h = explore(base + "&layer=slope");
+    expect(h).not.toContain('data-testid="terrain-details"');
+    const r = rowHtml(h);
+    expect(r).toContain('data-testid="steep-btn"');
+    expect(r).not.toContain('data-testid="slope-map-btn"');
+    expect(text(r)).toMatch(/0° to 30°\+ · same scale at both sites/);
+    const d = details(explore(base + "&layer=slope", { initialTerrainDetails: true }));
+    expect(d).toMatch(/aria-checked="true"[^>]*data-overlay-btn="slope"/);
+    expect(text(d)).toMatch(/0° 10° 20° 30°\+/);
+  });
+  it("an explicit Hide stays hidden across reloads, thresholds, time and sites", () => {
+    for (const q of ["", "&thr=10", "&t=2027-01-20T00:00:00Z", "&site=im2-athena", "&horizon=smooth"]) {
+      const h = explore(`${base}&layer=hide${q}`);
+      expect(rowHtml(h)).toContain('data-layer="surface"');
+      expect(text(rowHtml(h))).toContain("Overlay hidden · screening stays on");
+      expect(details(explore(`${base}&layer=hide${q}`, { initialTerrainDetails: true }))).toMatch(/aria-checked="true"[^>]*data-overlay-btn="surface"/);
+    }
+    expect(parseUrlState("?layer=hide").layer).toBe("surface");
+    expect(parseUrlState("?layer=surface").layer).toBe("surface"); // older 5C links
+    expect(parseUrlState("?layer=off").layer).toBe("surface");
+    expect(parseUrlState("").layer).toBeNull(); // no preference -> default steep areas
+  });
+  it("overlay choice changes no camera mode, time, Sun/Earth status, warning or mission metrics", () => {
+    const ref = explore(base);
+    for (const layer of ["slope", "hide"]) {
+      const h = explore(`${base}&layer=${layer}`);
+      expect(sunEarth(h)).toBe(sunEarth(ref));
+      expect(warning(h)).toBe(warning(ref));
+      expect(metrics(h)).toBe(metrics(ref));
+      expect(h.match(/data-field="selected-time">[^<]*/)?.[0]).toBe(ref.match(/data-field="selected-time">[^<]*/)?.[0]);
+      expect(h.match(/data-camera="[a-z]+"/)?.[0]).toBe(ref.match(/data-camera="[a-z]+"/)?.[0]);
+    }
+  });
+  it("draws only the active site's asset, only in the overview; returning restores the choice", () => {
+    expect(overlayMode("exceed", "overview", "connecting-ridge-cr1", "connecting-ridge-cr1")).toBe(2);
+    expect(overlayMode("slope", "overview", "connecting-ridge-cr1", "connecting-ridge-cr1")).toBe(1);
+    expect(overlayMode("exceed", "overview", "connecting-ridge-cr1", "im2-athena")).toBe(0); // mid-switch: the old site's asset
+    expect(overlayMode("exceed", "overview", null, "im2-athena")).toBe(0);
+    expect(overlayMode("slope", "eye", "im2-athena", "im2-athena")).toBe(0); // the horizon view stays authoritative
+    expect(overlayMode("surface", "overview", "im2-athena", "im2-athena")).toBe(0);
+    const eye = details(explore(`${base}&layer=slope&cam=horizon`, { initialTerrainDetails: true }));
+    expect(eye).toMatch(/aria-checked="true"[^>]*data-overlay-btn="slope"/);
+    expect(text(eye)).toContain("Overlays are drawn in the Site overview");
+    const u = writeUrlState(new URL("http://x/"), { arrival: Date.parse("2026-12-05T00:00:00Z"), days: 14, delay: 3, t: "2026-12-08T00:00:00Z", horizon: "terrain", sites: ["im2-athena"], site: "im2-athena", cam: "horizon", layer: "slope", thr: 15 });
+    expect(u.searchParams.get("layer")).toBe("slope"); // kept while in Horizon view
+  });
+  it("an inspection point uses the detail area and never becomes the observer", () => {
+    const a = slopeAssetOf("connecting-ridge-cr1");
+    const p = a.grid.check_points[4].local_xyz;
+    const h = explore(`${base}&layer=slope`, { initialInspection: [p[0] + 120, p[1], p[2] + 40] });
+    const plain = explore(`${base}&layer=slope`);
+    expect(sunEarth(h)).toBe(sunEarth(plain));
+    expect(metrics(h)).toBe(metrics(plain));
+    const t = text(h);
+    expect(t).toContain("Terrain inspection point");
+    expect(t).toMatch(/Slope \d+\.\d° · (above|not above) the 15° threshold/);
+    expect(t).toMatch(/\d+ m from the modeled observer/);
+    expect(t).toContain("Clear inspection");
+    const out = text(explore(`${base}&layer=exceed`, { initialInspection: [2000, -20, -1500] }));
+    expect(out).toContain("No slope data at this point");
+    expect(out).toContain("outside the analysis area (not assessed)");
+  });
+  it("Horizon view keeps its presentation; screening stays in Conditions", () => {
+    const h = explore(`${base}&layer=exceed&cam=horizon`);
+    expect(h).not.toContain('data-testid="terrain-layers"');
+    expect(text(h)).toContain("Full slope map"); // one click back to the overview, framed
+    expect(text(h)).toContain("Steep terrain nearby");
+  });
+  it("URL: old layer links map to the new controls; threshold shared and clamped", () => {
+    expect(rowHtml(explore(`${base}&layer=exceed`))).toContain('data-layer="exceed"'); // old Above-threshold link
+    expect(rowHtml(explore(`${base}&layer=slope`))).toContain('data-layer="slope"'); // old Slope link
+    expect(parseUrlState("?layer=bogus").layer).toBeNull();
+    const s = parseUrlState("?layer=exceed&thr=12.5");
+    expect([s.layer, s.thr]).toEqual(["exceed", 12.5]);
+    const u = writeUrlState(new URL("http://x/"), { arrival: Date.parse("2026-12-05T00:00:00Z"), days: 14, delay: 3, t: "2026-12-08T00:00:00Z", horizon: "terrain", sites: ["im2-athena"], site: "im2-athena", layer: "surface", thr: 15 });
+    expect(u.searchParams.get("layer")).toBe("hide"); // written explicitly so Hide survives a reload
+    expect(u.searchParams.get("thr")).toBe("15");
+    expect(row(explore(`${base}&thr=99`))).toContain("No slopes above 45°");
+  });
+  it("Analysis: matched comparison for both sites with the shared threshold, next to availability", () => {
+    const t = text(shell(`${DEMO}&view=analysis&thr=10`));
+    expect(t).toContain("Terrain hazard screening: matched 500 m footprint");
+    expect(t).toMatch(/Median slope 2\.9° 5\.6°/);
+    expect(t).toMatch(/95th-percentile slope 5\.9° 15\.2°/);
+    expect(t).toMatch(/Area above 10° 0\.2 % 17\.1 %/);
+    expect(t).toMatch(/Valid coverage 100\.0 % \(1,969 cells\) 100\.0 % \(1,964 cells\)/);
+    expect(t).toMatch(/Sun center visible · Delay \+3 d/);
+    expect(t).toContain("Provisional site terrain");
+    expect(t).not.toMatch(/best (landing )?site/i);
+  });
+});
+
+describe("5B corrections: shared viewing time and disabled delays", () => {
+  it("Analysis states when it shows a clamped time; Explore keeps the viewing time", () => {
+    const outside = "?arrival=2026-12-05T00:00Z&days=14&delay=3&horizon=terrain&t=2027-01-10T00:00:00Z";
+    const a = text(shell(outside + "&view=analysis")).replace(/ ([,.])/g, "$1");
+    expect(a).toContain("Explore’s viewing time, 2027-01-10 00:00 UTC, is outside these mission windows.");
+    expect(a).toContain("Analysis shows the nearest window edge, 2026-12-22 00:00 UTC.");
+    expect(text(shell(outside))).toContain("2027-01-10 00:00 UTC");
+    expect(shell(DEMO + "&t=2026-12-10T00:00:00Z&view=analysis")).not.toContain('data-testid="clamped-time"');
+  });
+  it("explains unavailable delay choices in Explore and Analysis", () => {
+    const late = "?arrival=2027-01-14T00:00Z&days=14&delay=0&horizon=terrain";
+    const e = text(shell(late));
+    expect(e).toContain("+3 d, +7 d unavailable: this mission plus the selected delay exceeds cached coverage");
+    expect(shell(late)).toContain('title="This mission plus the selected delay exceeds cached coverage."');
+    expect(text(shell(late + "&view=analysis"))).toContain("This mission plus the selected delay exceeds cached coverage");
   });
 });

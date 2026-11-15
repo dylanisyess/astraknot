@@ -31,12 +31,17 @@ import {
 } from "./availability";
 import { diskRelation } from "./geometry";
 import type { TerrainAssetMeta } from "./terrainAsset";
+import type { Vec3 } from "./geometry";
+import { ScreeningRow, TerrainDetails } from "./TerrainScreening";
+import { inspect, screeningView } from "./slope";
+import { useSlopeAssets } from "./useSlope";
 
 const TerrainScene = lazy(() => import("./TerrainScene"));
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 /** Composed default overview distance per site (m): CR1's skyline is within 480 m, Athena's to 30 km. */
-const OVERVIEW_DIST: Record<string, number> = { "connecting-ridge-cr1": 4200, "im2-athena": 6500 };
+// (5C: a little closer than 5B so the 500 m assessed area is discoverable; the horizon stays in frame.)
+const OVERVIEW_DIST: Record<string, number> = { "connecting-ridge-cr1": 3000, "im2-athena": 4800 };
 export const SPEEDS = [
   { id: "10m", label: "10 min/s", stepsPerSec: 1 },
   { id: "1h", label: "1 h/s", stepsPerSec: 6 },
@@ -88,6 +93,10 @@ class SceneBoundary extends Component<{ onError: (m: string) => void; children: 
 
 export interface ExploreProps {
   sc: Scenario;
+  /** For tests: start with a terrain inspection point (renderer frame). */
+  initialInspection?: Vec3;
+  /** For tests: start with the terrain detail area open. */
+  initialTerrainDetails?: boolean;
   /** For tests: start in the renderer-failure state (as after a WebGL failure). */
   initialFatal?: string;
 }
@@ -115,7 +124,7 @@ export function timelineSpan(domain: TimeWindow, selT: number): TimeWindow {
   return domain;
 }
 
-export default function Explore({ sc, initialFatal }: ExploreProps) {
+export default function Explore({ sc, initialFatal, initialInspection, initialTerrainDetails }: ExploreProps) {
   const camera: CameraMode = sc.cam === "horizon" ? "eye" : "overview";
   const setCamera = (c: CameraMode) => sc.setCam(c === "eye" ? "horizon" : "overview");
   const [command, setCommand] = useState<CameraCommand | null>(null);
@@ -137,6 +146,18 @@ export default function Explore({ sc, initialFatal }: ExploreProps) {
   const reducedMotion = useReducedMotion();
   const v = sc.activeView;
   const siteId = v.entry.id;
+  // 5C terrain screening: an inspection point belongs to one site and never moves the observer.
+  const [inspRaw, setInsp] = useState<{ siteId: string; p: Vec3 } | null>(initialInspection ? { siteId, p: initialInspection } : null);
+  const insp = inspRaw && inspRaw.siteId === siteId ? inspRaw.p : null;
+  const terrainActive = sc.layer !== "surface" || insp !== null;
+  // Screening loads automatically for the active site, whatever the overlay, date or model.
+  const slopeLoad = useSlopeAssets([v.data], true);
+  const slopeState = slopeLoad.states[siteId] ?? { state: "idle" as const };
+  const slopeAsset = slopeState.state === "ready" && slopeState.asset.site.id === siteId ? slopeState.asset : null;
+  const screening = screeningView(slopeState, siteId, sc.slopeThr);
+  const inspection = insp && slopeAsset ? inspect(slopeAsset, insp, sc.slopeThr) : null;
+  const [tdOpen, setTdOpen] = useState(initialInspection !== undefined || !!initialTerrainDetails); // an inspection opens the detail area
+  // Overlay changes never move the camera; only "Frame assessed area" and Reset do.
   const win = activeWindow(sc, sc.mission);
   const st = v.statusSel;
 
@@ -162,6 +183,14 @@ export default function Explore({ sc, initialFatal }: ExploreProps) {
     setCamera("eye");
     cmd(b, fov);
   };
+  /** Full slope map, in the Site overview, framed on the 500 m assessed area (time and mission unchanged; reduced motion: instant). */
+  const slopeMapFramed = () => {
+    sc.setLayer("slope");
+    setCamera("overview");
+    cmd("frame");
+  };
+
+
   // The asset state is only meaningful for the site it was reported for.
   const assetHere = asset && asset.siteId === siteId ? asset : { state: "loading" as const, siteId };
   const meta: TerrainAssetMeta | null = assetHere.state === "ready" ? assetHere.meta : null;
@@ -223,6 +252,17 @@ export default function Explore({ sc, initialFatal }: ExploreProps) {
                 onAssetState={setAsset}
                 onFatal={setFatal}
                 onLook={(b) => look(b)}
+                layer={sc.layer}
+                slope={slopeAsset}
+                thresholdDeg={sc.slopeThr}
+                inspection={insp}
+                inspectEnabled={sc.layer !== "surface"}
+                onInspect={(p) => {
+                  setInsp({ siteId, p });
+                  setTdOpen(true); // inspection results use the terrain detail area
+                }}
+                showRings={terrainActive}
+                layoutKey={`${sc.layer}|${sc.slopeThr}|${tdOpen}|${slopeState.state}|${condOpen}|${setupOpen}`}
               />
             </Suspense>
           </SceneBoundary>
@@ -254,7 +294,48 @@ export default function Explore({ sc, initialFatal }: ExploreProps) {
       </div>
 
       <MissionPanel sc={sc} focus={win.key} open={setupOpen} onToggle={() => setSetupOpen((o) => !o)} />
-      <ConditionsPanel v={v} st={st} mode={sc.mode} open={condOpen} onToggle={() => setCondOpen((o) => !o)} onDetails={() => setDetails(true)} />
+      <div className="right-col">
+        <ConditionsPanel
+          v={v}
+          st={st}
+          mode={sc.mode}
+          open={condOpen}
+          onToggle={() => setCondOpen((o) => !o)}
+          onDetails={() => setDetails(true)}
+          compact={tdOpen}
+          terrain={
+            <>
+              <ScreeningRow
+                view={screening}
+                siteShort={v.profile.short}
+                layer={sc.layer}
+                thresholdDeg={sc.slopeThr}
+                detailsOpen={tdOpen}
+                onDetails={() => setTdOpen((o) => !o)}
+                onSlopeMap={slopeMapFramed}
+                onSteep={() => sc.setLayer("exceed")}
+                onRetry={slopeLoad.retry}
+              />
+              {tdOpen && (
+                <TerrainDetails
+                  state={slopeAsset ? slopeState : { state: "loading" }}
+                  siteShort={v.profile.short}
+                  provisional={v.profile.provisionalTerrain}
+                  layer={sc.layer}
+                  setLayer={sc.setLayer}
+                  camera={camera}
+                  thresholdDeg={sc.slopeThr}
+                  setThreshold={sc.setSlopeThr}
+                  inspection={inspection}
+                  hasInspection={insp !== null}
+                  onClearInspection={() => setInsp(null)}
+                  onClose={() => setTdOpen(false)}
+                />
+              )}
+            </>
+          }
+        />
+      </div>
       <TimeBar
         sc={sc}
         win={win}
@@ -317,7 +398,30 @@ function shortRange(w: { start: number; end: number }) {
   return `${a.slice(0, 10)} ${a.slice(11, 16)} → ${b.slice(0, 4) === a.slice(0, 4) ? b.slice(5, 10) : b.slice(0, 10)} ${b.slice(11, 16)} UTC`;
 }
 
+const ABOUT_KEY = "lvn.siteAboutOpen";
+function useSessionFlag(key: string): [boolean, (v: boolean) => void] {
+  const [v, setV] = useState(() => {
+    try {
+      return typeof sessionStorage !== "undefined" && sessionStorage.getItem(key) === "1";
+    } catch {
+      return false;
+    }
+  });
+  return [
+    v,
+    (x: boolean) => {
+      setV(x);
+      try {
+        sessionStorage.setItem(key, x ? "1" : "0");
+      } catch {
+        /* storage unavailable: keep the in-memory state */
+      }
+    },
+  ];
+}
+
 function MissionPanel({ sc, focus, open, onToggle }: { sc: Scenario; focus: MissionKey; open: boolean; onToggle: () => void }) {
+  const [aboutOpen, setAboutOpen] = useSessionFlag(ABOUT_KEY);
   const v = sc.activeView;
   const meta = v.data.site;
   const arrivalDate = utcDateString(sc.arrival);
@@ -349,8 +453,9 @@ function MissionPanel({ sc, focus, open, onToggle }: { sc: Scenario; focus: Miss
       </div>
       {open && (
         <div className="panel-body">
-          <details className="site-about">
-            <summary data-field="site-name">{v.profile.label}</summary>
+          <details className="site-about" open={aboutOpen} onToggle={(e) => setAboutOpen((e.currentTarget as HTMLDetailsElement).open)}>
+            <summary data-field="site-name" title={v.profile.label}>About {v.profile.short}</summary>
+            <p className="small"><strong>{v.profile.label}</strong></p>
             <p className="small">{v.profile.kind}.</p>
             <p className="small num">{fmtLat(meta.latitude_deg)}, {fmtLonEast(meta.longitude_deg_east)}</p>
           </details>
@@ -433,6 +538,7 @@ function MissionPanel({ sc, focus, open, onToggle }: { sc: Scenario; focus: Miss
                     aria-checked={sc.effDelay === o.days}
                     className={sc.effDelay === o.days ? "seg-b on" : "seg-b"}
                     disabled={!o.enabled}
+                    aria-describedby={o.enabled ? undefined : "delay-why"}
                     title={o.reason ?? `${fmtUtc(o.window.start)} → ${fmtUtc(o.window.end)}`}
                     onClick={() => {
                       sc.setDelay(o.days);
@@ -445,6 +551,11 @@ function MissionPanel({ sc, focus, open, onToggle }: { sc: Scenario; focus: Miss
                 ))}
               </div>
             </div>
+          {sc.options.some((o) => !o.enabled) && (
+            <p className="muted small delay-why" id="delay-why" data-testid="delay-unavailable">
+              {sc.options.filter((o) => !o.enabled).map((o) => `+${o.days} d`).join(", ")} unavailable: this mission plus the selected delay exceeds cached coverage (data end {fmtUtc(sc.cov.end)}).
+            </p>
+          )}
           {!sc.chosen.enabled && <p className="note small" role="status">+{sc.delay} d no longer fits the data with this arrival; showing the baseline only.</p>}
           <MissionSummary sc={sc} focus={focus} setFocus={sc.setMission} />
         </div>
@@ -579,10 +690,10 @@ function GeometryRow({ s, name, mode }: { s: BodyStatus; name: "Sun" | "Earth"; 
   );
 }
 
-export function ConditionsPanel({ v, st, mode, open, onToggle, onDetails }: { v: SiteView; st: SiteView["statusSel"]; mode: HorizonMode; open: boolean; onToggle: () => void; onDetails: () => void }) {
+export function ConditionsPanel({ v, st, mode, open, onToggle, onDetails, terrain, compact = false }: { v: SiteView; st: SiteView["statusSel"]; mode: HorizonMode; open: boolean; onToggle: () => void; onDetails: () => void; terrain?: ReactNode; /** Terrain details open: secondary lines are hidden so states and controls stay in view. */ compact?: boolean }) {
   const both = st.both.visible === null ? "Unknown" : st.both.visible ? "Yes" : "No";
   return (
-    <section className={open ? "panel status-panel" : "panel status-panel collapsed"} aria-label="Current conditions" data-site={v.entry.id} data-testid="status-panel">
+    <section className={`panel status-panel${open ? "" : " collapsed"}${compact ? " td-open" : ""}`} aria-label="Current conditions" data-site={v.entry.id} data-testid="status-panel">
       <div className="panel-head">
         <h2 className="panel-title">Conditions <span className="muted">· {v.profile.short}</span></h2>
         <button type="button" className="icon-btn labelled" onClick={onDetails} aria-haspopup="dialog">{Icon.info}<span>Details</span></button>
@@ -593,6 +704,7 @@ export function ConditionsPanel({ v, st, mode, open, onToggle, onDetails }: { v:
       </p>
       <StatusGroup s={st.sun} kind="power" v={v} mode={mode} />
       <StatusGroup s={st.earth} kind="comms" v={v} mode={mode} />
+      {terrain}
       {open && (
         <>
           <div className="both-row small" data-body="both" data-near={st.both.nearCrossing ? "true" : undefined}>

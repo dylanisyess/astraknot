@@ -851,3 +851,157 @@
 .tb-info { margin: 0; flex: 1; min-width: 0; color: var(--x-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 2px 8px; border-left: 2px solid var(--x-text); background: var(--x-raise); border-radius: 0 3px 3px 0; }
 .tb-hover { position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; background: rgba(255, 255, 255, 0.55); pointer-events: none; z-index: 2; }
 @media (max-width: 760px) { .tb-info { white-space: normal; } }
+
+/* ================================================================ 5C: terrain hazard screening */
+.mission-panel { max-height: calc(100% - var(--timebar-h) - 24px - 50px); }
+.delay-why { margin-top: -4px; line-height: 1.35; }
+/* right column: current conditions first, terrain summary below; neither overlaps the other */
+.right-col {
+  position: absolute;
+  z-index: 10;
+  top: 12px;
+  right: 12px;
+  width: 320px;
+  max-height: calc(100% - var(--timebar-h) - 24px - 52px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.right-col > .panel { position: relative; top: auto; right: auto; width: auto; max-height: none; min-height: 0; flex: 0 1 auto; overflow: auto; pointer-events: auto; }
+.right-col > .status-panel { flex-shrink: 0; max-height: 60%; }
+.tool-btn.compact-text { height: 26px; padding: 0 9px; font-size: 12px; }
+
+.terrain-layers {
+  position: absolute;
+  z-index: 11;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 10px;
+  background: var(--x-panel);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--x-border);
+  border-radius: 8px;
+}
+.terrain-layers .ctl-label { margin: 0; white-space: nowrap; }
+.terrain-layers .seg-dark .seg-b { height: 27px; padding: 0 10px; font-size: 12px; white-space: nowrap; }
+.terrain-layers:has(> .tool-btn) { padding: 4px; }
+
+.terrain-summary .ts-body { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+.ts-purpose { margin: 0; color: var(--x-text-2); }
+.ts-thr { display: grid; grid-template-columns: auto 92px; align-items: center; gap: 2px 10px; }
+.ts-thr .ctl-label { margin: 0; color: var(--x-text-2); font-size: 12px; }
+.ts-thr-note { grid-column: 1 / -1; margin: 0; font-size: 11px; line-height: 1.35; }
+.thr-input input { height: 28px; }
+.thr-input .unit { height: 28px; }
+.ts-alert { margin: 0; padding: 6px 9px; border-radius: 4px; background: var(--x-raise); border-left: 3px solid var(--x-border-2); color: var(--x-text); line-height: 1.4; }
+.ts-alert.ts-exceed { border-left-color: #ff3d8b; }
+.ts-alert.ts-nodata { border-left-color: var(--x-caution); }
+.ts-cov { margin: 0; font-weight: 600; }
+.ts-stats { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
+.ts-stats > .wide { grid-column: 1 / -1; }
+.ts-stats > div { display: flex; gap: 6px; align-items: baseline; }
+.ts-stats > .wide dd { flex: 1; }
+.ts-stats dt { color: var(--x-muted); }
+.ts-stats dd { margin: 0; color: var(--x-text); }
+.slope-legend { display: flex; flex-direction: column; gap: 4px; }
+.sl-bar { position: relative; height: 10px; border-radius: 2px; border: 1px solid var(--x-border-2); }
+.sl-thr { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px #000; }
+.sl-ticks { position: relative; height: 14px; color: var(--x-text-2); font-size: 10.5px; }
+.sl-ticks span { position: absolute; translate: -50% 0; }
+.sl-ticks span:first-child { translate: 0 0; }
+.sl-ticks span:last-child { translate: -100% 0; }
+.sl-keys { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--x-text-2); }
+.sl-keys span { display: inline-flex; align-items: center; gap: 5px; }
+.sl-sw { width: 12px; height: 10px; border-radius: 2px; display: inline-block; }
+.sl-nodata { background: repeating-linear-gradient(45deg, #080808 0 3px, #2a2a2a 3px 6px); border: 1px solid var(--x-border-2); }
+.sl-ring { width: 16px; border-top: 2px solid var(--x-text); }
+.sl-ring.dashed { border-top: 1.5px dashed var(--x-text-2); }
+.ts-insp { border-top: 1px solid var(--x-border); padding-top: 8px; display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.ts-insp p { margin: 0; }
+.ts-insp-h { font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.ts-insp-main { color: var(--x-text); font-weight: 600; }
+.ts-insp-main.ts-exceed { color: #ff7fb0; }
+.ts-insp-main.ts-nodata { color: var(--x-caution); }
+.ts-method summary { cursor: pointer; color: var(--x-text-2); }
+.ts-method p { margin: 4px 0 0; color: var(--x-text-2); line-height: 1.4; }
+.ts-surface { align-self: flex-start; }
+
+/* scene labels: terrain inspection point (diamond, distinct from the observer pin) and ring labels */
+.insp-mark { display: inline-block; width: 10px; height: 10px; rotate: 45deg; border: 2px solid #fff; background: rgba(0, 0, 0, 0.5); box-shadow: 0 0 0 1px #000; }
+.lbl-inspect { translate: -7px -50%; display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; background: transparent; border: 0; padding: 0; }
+.lbl-inspect .lbl-name { background: rgba(8, 8, 8, 0.75); border: 1px dashed rgba(255, 255, 255, 0.6); border-radius: 4px; padding: 1px 6px; }
+.lbl-ring { translate: -50% 4px; font-size: 10.5px; color: var(--x-text-2); background: rgba(8, 8, 8, 0.6); padding: 0 5px; border-radius: 3px; }
+
+@media (max-width: 1180px) { .terrain-layers .ctl-label { display: none; } }
+@media (max-width: 1000px) { .right-col { width: 270px; } }
+@media (max-width: 760px) {
+  .right-col { position: relative; inset: auto; width: auto; max-height: none; margin: 10px 12px 0; order: 4; pointer-events: auto; }
+  .right-col > .panel { margin: 0; overflow: visible; }
+  .right-col > .status-panel { max-height: none; }
+  .terrain-layers { left: 8px; bottom: 44px; }
+}
+@media (max-width: 760px) { .right-col > .terrain-summary { order: 5; } .right-col > .status-panel { order: 4; } }
+
+/* ================================================================ 5C acceptance: automatic screening, one detail area */
+.right-col > .status-panel { max-height: 100%; flex: 0 1 auto; }
+.group-terrain .group-title .ic { color: var(--x-text-2); }
+.group-terrain .group-main { flex-wrap: wrap; }
+/* neutral for "no exceedances" (never green / "safe"); caution amber for exceedances */
+.avail-neutral { color: var(--x-text); font-size: 13px; font-weight: 500; line-height: 1.35; }
+.avail-neutral::before { background: transparent; border-color: var(--x-text-2); }
+.avail-caution { color: var(--x-caution); }
+.avail-caution::before { background: #ff3d8b; border-color: #ff3d8b; border-radius: 2px; }
+.ts-line { margin: 3px 0 0; color: var(--x-text); line-height: 1.35; }
+.ts-obs-above { color: var(--x-caution); font-weight: 600; }
+.ts-qual { margin: 3px 0 0; font-size: 11px; }
+.ts-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.tool-btn.ghost.compact-text { height: 26px; border-color: var(--x-border-2); }
+.terrain-details { margin: 0 14px 6px; padding: 9px 0 4px; border-top: 1px dashed var(--x-border-2); display: flex; flex-direction: column; gap: 8px; }
+.terrain-details > p { margin: 0; }
+.td-head { display: flex; align-items: center; justify-content: space-between; }
+.td-title { margin: 0; font-weight: 600; color: var(--x-text); }
+.terrain-details .seg-small .seg-b { flex: 1; }
+.sl-out { background: rgba(0, 0, 0, 0.55); border: 1px solid var(--x-border-2); }
+.sl-note { margin: 0; font-size: 10.5px; }
+/* primary stage toggle */
+.tt-toggle { gap: 7px; }
+.tt-toggle.on { background: var(--x-text); color: #111; border-color: var(--x-text); }
+.tt-sw { width: 11px; height: 11px; border-radius: 2px; background: #ff3d8b; display: inline-block; }
+.tt-sw.tt-ramp { background: linear-gradient(90deg, #f2f0f7, #9e9ac8, #54278f); }
+.tt-state { font-size: 11px; color: var(--x-muted); font-family: var(--mono); }
+.tt-toggle.on .tt-state { color: #333; }
+.terrain-layers { padding: 4px; }
+/* edge chips are buttons (own name and action per body) */
+.lbl-off { pointer-events: auto; cursor: pointer; font: inherit; font-size: 11.5px; color: var(--x-text); background: rgba(8, 8, 8, 0.78); border: 1px solid var(--x-border-2); }
+.lbl-off:hover { border-color: var(--x-text-2); }
+.lbl-off:focus-visible { outline: 2px solid var(--x-focus); outline-offset: 1px; }
+@media (max-width: 760px) { .terrain-layers { left: 8px; bottom: 40px; } }
+
+/* ================================================================ 5C: terrain screening lives in the Conditions panel only */
+/* Hide is a quieter action than the two visualizations */
+.td-overlay { display: flex; align-items: center; gap: 8px; }
+.td-overlay .seg-small .seg-b { flex: none; }
+.oc-hide { appearance: none; background: none; border: 0; padding: 2px 4px; font: inherit; font-size: 12px; color: var(--x-text-2); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--x-border-2); }
+.oc-hide:hover { color: var(--x-text); }
+.oc-hide.on { color: var(--x-text); text-decoration: none; font-weight: 600; }
+.oc-hide:focus-visible { outline: 2px solid var(--x-focus); outline-offset: 1px; }
+.ts-key { margin: 5px 0 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; color: var(--x-text-2); line-height: 1.35; }
+.ts-key .sl-sw { flex: none; }
+.ts-mini-bar { width: 90px; height: 8px; border-radius: 2px; border: 1px solid var(--x-border-2); display: inline-block; }
+.ts-actions .tool-btn .tt-sw { margin-right: 2px; }
+.sl-ticks span { white-space: nowrap; }
+/* terrain details: a bounded drawer, so current conditions stay in view */
+.terrain-details { max-height: min(230px, 30vh); overflow: auto; }
+@media (max-width: 760px) { .terrain-details { max-height: none; } }
+/* Terrain details open: the row's qualification and key repeat inside details; on short screens the
+   next-change lines also yield, so Sun/Earth states, the warning and the overlay/threshold controls stay in view */
+.status-panel.td-open .ts-qual, .status-panel.td-open [data-testid="row-key"] { display: none; }
+@media (max-height: 820px) and (min-width: 761px) { .status-panel.td-open .body-next { display: none; } }
+@media (max-height: 760px) and (min-width: 761px) { .status-panel.td-open .model-chip { display: none; } .status-panel.td-open .ts-thr-note { font-size: 10.5px; } }
+p.ts-key { display: block; }
+p.ts-key .sl-sw { display: inline-block; vertical-align: -1px; margin-right: 4px; }

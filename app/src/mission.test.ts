@@ -58,7 +58,7 @@ describe("delays are offsets from the baseline and preserve duration", () => {
     expect(delayOptions(earliest, D, cov).map((o) => o.enabled)).toEqual([true, true, true, true]);
     const atLatest = delayOptions(latest, D, cov);
     expect(atLatest.map((o) => o.enabled)).toEqual([false, false, false, false].map((_, i) => i === 0));
-    expect(atLatest[1].reason).toMatch(/after the available data/);
+    expect(atLatest[1].reason).toBe("This mission plus the selected delay exceeds cached coverage.");
   });
 
   it("a window ending exactly at coverage end is allowed (end is exclusive)", () => {

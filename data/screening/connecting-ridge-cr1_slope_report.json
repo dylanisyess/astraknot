@@ -1,0 +1,125 @@
+{
+ "site": {
+  "id": "connecting-ridge-cr1",
+  "latitude_deg": -89.468,
+  "longitude_deg_east": 222.6,
+  "horizons_site_altitude_km": 1.9428,
+  "observer_height_above_surface_m": 1
+ },
+ "asset": "app/public/screening/connecting-ridge-cr1.slope.json",
+ "asset_sha256": "f5418f8e6ac06b39230c11a2cb7a407c860ccc038494ab89149d7c568c85b4b5",
+ "asset_bytes": 37552,
+ "site_export_sha256": "3b146adcc33258452fd896a90e79418351229a0ffcbfe51fbf4fda3359afda81",
+ "render_asset_anchor_checked": true,
+ "method": {
+  "name": "Horn (1981) 3x3 weighted finite difference on true 3D pixel-centre positions",
+  "neighbourhood": "3 x 3 DEM pixels (weights 1-2-1); centre pixel height not used",
+  "baseline_m": 39.999,
+  "neighbourhood_extent_m": 59.999,
+  "cell_ground_m": 19.9996,
+  "horizontal": "true ground distances: pixel centres placed at (1737.4 km + h) x exact inverse stereographic unit vector, so the projection scale k = 2/(1+sin|lat|) and the terrain radius are included",
+  "vertical_reference": "local lunar horizontal at each pixel = plane normal to that pixel's radial unit vector (sphere); symmetric differences cancel curvature, so curvature is not counted as slope",
+  "heights": "DN x 0.5 m at pixel centres (no interpolation, no render mesh, no shading normals)",
+  "invalid": "a cell is invalid if any 3x3 neighbour is outside the raster or nodata (LOLA LDEMs have no nodata value)",
+  "stored_resolution_deg": 0.01,
+  "percentiles": "nearest rank on stored values: value at rank ceil(p/100 * n) of the sorted valid cells",
+  "exceedance": "stored slope strictly greater than the threshold (equal is not an exceedance), threshold at 0.01 deg",
+  "area_weighting": "equal-area: planimetric pixel area (s/k)^2 varies by a factor 1.0000053 within the footprint; weighted and unweighted exceedance differ by at most 9.81e-08",
+  "scale_note": "Each value is the slope of a 20 m DEM cell measured across about 40 m. It is not a slope at a smaller scale: boulders, small craters, the lander footprint and local roughness are not resolved, and the DEM is interpolated where no laser shot fell."
+ },
+ "footprint": {
+  "radius_m": 500.0,
+  "centre": "the site coordinate (vertical of the modeled observer)",
+  "distance": "great-circle ground distance on the 1737.4 km sphere between pixel centres and the site unit vector",
+  "membership": "pixel centre within the radius",
+  "cells_in_footprint": 1964,
+  "cells_valid": 1964,
+  "cells_invalid": 0,
+  "valid_fraction": 1.0,
+  "valid_area_m2": 785566.1,
+  "footprint_area_m2": 785566.1,
+  "halo": "the 3x3 stencil reads one pixel beyond the footprint; every footprint stencil lies inside the raster"
+ },
+ "stats": {
+  "cells_in_footprint": 1964,
+  "cells_valid": 1964,
+  "cells_invalid": 0,
+  "valid_fraction": 1.0,
+  "valid_area_m2": 785566.1,
+  "footprint_area_m2": 785566.1,
+  "median_deg": 5.57,
+  "p95_deg": 15.15,
+  "max_deg": 21.22,
+  "min_deg": 0.0,
+  "mean_deg_weighted": 6.5203,
+  "exceedance": [
+   {
+    "threshold_deg": 5.0,
+    "cells_above": 1110,
+    "fraction_equal_weight": 0.5651731160896131,
+    "fraction_area_weighted": 0.5651732141417568,
+    "abs_difference": 9.805214373770355e-08
+   },
+   {
+    "threshold_deg": 10.0,
+    "cells_above": 335,
+    "fraction_equal_weight": 0.1705702647657841,
+    "fraction_area_weighted": 0.17057028862563983,
+    "abs_difference": 2.3859855730057333e-08
+   },
+   {
+    "threshold_deg": 15.0,
+    "cells_above": 104,
+    "fraction_equal_weight": 0.05295315682281059,
+    "fraction_area_weighted": 0.052953148293744125,
+    "abs_difference": 8.52906646697793e-09
+   },
+   {
+    "threshold_deg": 20.0,
+    "cells_above": 5,
+    "fraction_equal_weight": 0.0025458248472505093,
+    "fraction_area_weighted": 0.0025458230594844248,
+    "abs_difference": 1.7877660844767274e-09
+   },
+   {
+    "threshold_deg": 25.0,
+    "cells_above": 0,
+    "fraction_equal_weight": 0.0,
+    "fraction_area_weighted": 0.0,
+    "abs_difference": 0.0
+   },
+   {
+    "threshold_deg": 30.0,
+    "cells_above": 0,
+    "fraction_equal_weight": 0.0,
+    "fraction_area_weighted": 0.0,
+    "abs_difference": 0.0
+   }
+  ],
+  "area_weight_max_over_min": 1.0000053050803916
+ },
+ "observer_cell": {
+  "cell": [
+   27,
+   27
+  ],
+  "slope_deg": 0.91,
+  "note": "slope of the DEM cell containing the site coordinate (20 m cell, about 40 m baseline)"
+ },
+ "shot_quality": {
+  "cells_with_lola_shot": 1576,
+  "fraction_cells_with_lola_shot": 0.8024439918533605,
+  "cells_with_no_shot_in_3x3": 0,
+  "note": "LDEC_80S_20M counts; a quality indicator for the interpolated DEM, not an accuracy guarantee"
+ },
+ "mapping": {
+  "max_residual_cells": 0.0016961695091842453,
+  "note": "affine fit of renderer-frame (x, z) of every grid pixel centre to its cell indices"
+ },
+ "aspect_summary_deg": {
+  "circular_mean_downslope_az": 200.43,
+  "resultant_length": 0.2281
+ },
+ "runtime_s": 1.09,
+ "reproduce": "python pipeline/slope.py --site connecting-ridge-cr1"
+}

@@ -194,6 +194,17 @@ communication windows (STATUS.md, "Milestone 5B").
     Explore. No 5 m data is shown, and the coordinate/frame limitations stay
     with the site.
 
+## Terrain hazard screening (milestone 5C)
+DEM-derived slope from LDEM_80S_20M within a 500 m radius of each modeled observer
+(`pipeline/slope.py`; method, scale and results in STATUS.md, "Milestone 5C").
+- Terrain layers (Surface / Slope / Above threshold) in the Site overview only.
+- An illustrative, editable screening threshold (default 15°).
+- A terrain inspection point that never becomes a modeled site.
+- A matched two-site table in Analysis next to Sun/Earth availability.
+- It screens steepness at the DEM's ~40 m measurement scale only: no boulders, small
+  craters, bearing strength or landing safety, and no combined "best site" score.
+  Changing a layer or the threshold never changes visibility.
+
 ## Completion criteria
 - Both sites work over the supported dates.
 - Delay comparisons preserve mission duration.

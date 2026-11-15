@@ -9,6 +9,8 @@ export type View = "explore" | "analysis";
 /** Explore: active mission window and camera mode (shareable view state). */
 export type MissionKey = "baseline" | "delayed";
 export type CamMode = "overview" | "horizon";
+/** Explore (5C): terrain layer drawn in the Site overview. */
+export type LayerKey = "surface" | "slope" | "exceed";
 export const DEFAULT_VIEW: View = "explore";
 
 export interface UrlState {
@@ -25,6 +27,10 @@ export interface UrlState {
   mission?: MissionKey | null;
   /** Explore: camera mode. */
   cam?: CamMode | null;
+  /** Explore (5C): terrain overlay. Absent = the default (steep areas); "hide" = hidden. */
+  layer?: LayerKey | null;
+  /** 5C: illustrative slope screening threshold (deg), shared by Explore and Analysis. */
+  thr?: number | null;
 }
 
 export function parseUrlState(search: string): UrlState {
@@ -45,6 +51,7 @@ export function parseUrlState(search: string): UrlState {
   const view = q.get("view");
   const mission = q.get("mission");
   const cam = q.get("cam");
+  const layer = q.get("layer");
   return {
     arrival: time("arrival"),
     days: num("days"),
@@ -56,6 +63,9 @@ export function parseUrlState(search: string): UrlState {
     view: view === "explore" || view === "analysis" ? view : null,
     mission: mission === "baseline" || mission === "delayed" ? mission : null,
     cam: cam === "overview" || cam === "horizon" ? cam : null,
+    // "hide" (written since the 5C UX correction) and the older "surface"/"off" all mean hidden
+    layer: layer === "hide" || layer === "surface" || layer === "off" ? "surface" : layer === "slope" || layer === "exceed" ? layer : null,
+    thr: num("thr"),
   };
 }
 
@@ -83,6 +93,8 @@ export interface WritableState {
   view?: View;
   mission?: MissionKey;
   cam?: CamMode;
+  layer?: LayerKey;
+  thr?: number;
 }
 
 export function writeUrlState(url: URL, s: WritableState): URL {
@@ -97,5 +109,8 @@ export function writeUrlState(url: URL, s: WritableState): URL {
   if (s.view) out.searchParams.set("view", s.view);
   if (s.mission) out.searchParams.set("mission", s.mission);
   if (s.cam) out.searchParams.set("cam", s.cam);
+  // written explicitly so a user's Hide survives a reload (absent = the default, steep areas)
+  if (s.layer) out.searchParams.set("layer", s.layer === "surface" ? "hide" : s.layer);
+  if (s.thr !== undefined) out.searchParams.set("thr", String(s.thr));
   return out;
 }
