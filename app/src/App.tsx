@@ -4,7 +4,7 @@ import { ElevationChart } from "./ElevationChart";
 import { Panorama } from "./Panorama";
 import { Timeline, type TimelineGroup, type TimelineTrack } from "./Timeline";
 import { timeScale, useWidth } from "./axis";
-import { azimuth, compass, elevation, fmtDeg, fmtLat, fmtLonEast, fmtUtc, loadDataset, nearestIndex } from "./data";
+import { compass, fmtDeg, fmtLat, fmtLonEast, fmtUtc, loadDataset, nearestIndex } from "./data";
 import {
   type Availability,
   type Comparison,
@@ -25,7 +25,6 @@ import {
   fmtHours,
   fmtSigned,
   fromUtcDateHour,
-  intervalAt,
   nextChange,
   parseIntervals,
   scenarioWindow,
@@ -44,6 +43,17 @@ import {
   terrainFacts,
   terrainModelLabel,
 } from "./sites";
+import {
+  type BodyStatus,
+  type SelectedStatus,
+  NEAR_CROSSING,
+  horizonName,
+  nearCrossingExplanation,
+  selectedTimeStatus,
+  signedClearance,
+  stateLabel,
+  unknownText,
+} from "./status";
 import type { Dataset, HorizonMode, SiteData, SiteEntry, TerrainHorizonBlock } from "./types";
 import { parseUrlState, resolveActive, resolveSites, writeUrlState } from "./urlState";
 
@@ -82,6 +92,8 @@ interface SiteView {
   base: WindowMetrics;
   act: WindowMetrics;
   cmp: Comparison;
+  /** Status at the shared selected time (status.ts): the single source for cards, readouts and panorama. */
+  status: SelectedStatus;
 }
 
 // ------------------------------------------------------------------ workspace
@@ -145,7 +157,11 @@ export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
     const intervals = intervalsBySite.get(entry.id)!;
     const base = computeMetrics(intervals, baseW);
     const act = computeMetrics(intervals, actW);
-    return { entry, data: entry.data, profile: profileFor(entry.data), intervals, base, act, cmp: compare(base, act) };
+    const status = selectedTimeStatus(
+      { samples: entry.data.samples, times, horizon: strictHorizon(entry.data, mode), intervals, mode },
+      cursorT,
+    );
+    return { entry, data: entry.data, profile: profileFor(entry.data), intervals, base, act, cmp: compare(base, act), status };
   });
   const activeView = views.find((v) => v.entry.id === active)!;
   const activeSite = activeView.data;
@@ -199,15 +215,16 @@ export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
       {mode === "terrain" ? (
         <div className="banner banner-terrain" role="note" data-mode="terrain">
           <strong>Terrain horizon for every site shown.</strong> “Visible” means the body’s center is above the skyline
-          computed from LOLA terrain for an observer 1 m above the modeled surface. These are terrain-model results for
+          computed from LOLA terrain for an observer 1 m above the modeled surface. This applies to both the Sun and Earth:
+          part of either disk can still be above the skyline when its center is hidden. These are terrain-model results for
           published coordinates, not the conditions of an actual lander. Earth visible is a geometric opportunity, not a
           guaranteed radio link. Sun visible is not electrical power output.
         </div>
       ) : (
         <div className="banner" role="note" data-mode="smooth">
           <strong>⚠ Smooth horizon for every site shown: terrain ignored (comparison mode).</strong> “Visible” means the
-          body’s center is above the local horizontal plane (0°). Real terrain can hide the Sun or Earth when this view
-          says visible. Earth visible is a geometric opportunity, not a guaranteed radio link. Sun visible is not
+          body’s center is above the local horizontal plane (0°), for both the Sun and Earth; part of either disk can still
+          be above 0° when its center is not. Real terrain can hide the Sun or Earth when this view says visible. Earth visible is a geometric opportunity, not a guaranteed radio link. Sun visible is not
           electrical power output.
         </div>
       )}
@@ -366,7 +383,7 @@ export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
         <p className="muted small compare-foot">
           Shares of elapsed window time; darkness means the Sun’s center is below the horizon of the model shown. These cards
           compare modeled visibility for the same windows only; they do not rank the sites, and neither point is presented as a
-          better landing site overall. Boundaries are estimates at the modeled 10-minute resolution.
+          better landing site overall. Percentages use body centers. Boundaries are estimates on the 10-minute reporting grid, not event times of guaranteed accuracy.
         </p>
       </section>
 
@@ -401,7 +418,7 @@ export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
           </div>
         </fieldset>
 
-        <Readouts view={activeView} times={times} index={cursor} mode={mode} horizonAtBody={horizonAtBody} />
+        <Readouts view={activeView} mode={mode} />
 
         <div className="chart-head sub">
           <h3 id="pano-h">Horizon panorama at the selected time: {activeView.profile.label}</h3>
@@ -425,7 +442,7 @@ export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
             samples={activeSite.samples}
             i0={i0}
             i1={i1}
-            selected={cursor}
+            status={activeView.status}
             selectedTime={cursorT}
             centerAz={activeView.profile.panoramaCenterAz}
           />
@@ -489,7 +506,8 @@ export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
         <h3>Method (all sites)</h3>
         <ul>
           <li>Sun and Earth positions: JPL Horizons airless apparent azimuth/elevation of each body’s center, every 10 minutes, for each site’s own observer point (altitude above the 1737.4 km lunar reference sphere, listed per site below).</li>
-          <li>Each 10-minute interval is classified at its midpoint: visible when the center’s elevation is strictly above the horizon at the center’s azimuth ({mode === "terrain" ? "terrain skyline" : "0° in smooth mode"}). Event times are estimates at that resolution.</li>
+          <li>Each 10-minute step is classified at its midpoint: visible when the center’s elevation is strictly above the horizon at the center’s azimuth ({mode === "terrain" ? "terrain skyline" : "0° in smooth mode"}). This uses the center of both the Sun and Earth, not their disks.</li>
+          <li>10 minutes is the sampling and reporting resolution, not a guaranteed accuracy of event times. Rises, sets and darkness boundaries are placed on the 10-minute grid as estimates, and a crossing can fall anywhere within its step. At a selected time near a crossing, the body center can already be on the other side of the horizon while its step is still classified the other way; the app then says “Near estimated crossing” rather than changing either value.</li>
           <li>Terrain horizon: for every 0.1° of azimuth, the highest apparent elevation of LOLA terrain along a great-circle ray from the observer, with exact sphere geometry (lunar curvature counted once); rays continue until even the highest lunar terrain could not rise above the skyline found so far. Directions the data cannot reach would be shown as unknown, never as clear.</li>
           <li>Both sites always use the same horizon model, the same mission windows and the same UTC time. Delays shift the windows by +1, +3 or +7 days from the baseline arrival; the duration is unchanged.</li>
           <li>Unknown data is never counted as darkness or as visible; a metric is shown as unavailable instead.</li>
@@ -501,7 +519,7 @@ export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
         </div>
         <h3 className="common-limits">Limitations common to all sites</h3>
         <ul>
-          <li>Body centers only: no partial-disk Sun, no refraction (the Moon has no atmosphere).</li>
+          <li>Visibility uses the center of both the Sun and Earth. Part of either disk may remain visible when its center is hidden, and part may already be hidden when its center is visible. The Sun appears about 0.5° across and Earth about 1.9° (nominal sizes; the dataset holds no angular diameters), so this matters most for Earth. No refraction (the Moon has no atmosphere).</li>
           <li>Earth visible is a geometric opportunity, not a guaranteed communications link. Sun visible is not electrical power output.</li>
           <li>Results outside {fmtUtc(cov.start)} – {fmtUtc(cov.end)} are not available; events beyond that range are reported as “not found in available data”, never as “never”.</li>
           <li>No overall ranking: this tool compares modeled visibility and does not judge which site is a better landing site.</li>
@@ -527,7 +545,7 @@ function SiteCard({ v, mode, delayedLabel, effDelay, cursorT, isActive, onShow }
   v: SiteView; mode: HorizonMode; delayedLabel: string | null; effDelay: number; cursorT: number; isActive: boolean; onShow: () => void;
 }) {
   const meta = v.data.site;
-  const iv = intervalAt(v.intervals, cursorT);
+  const st = v.status;
   const changeHead = delayedLabel ? `Change: +${effDelay} d vs baseline` : null;
   return (
     <article className={isActive ? "card site-compare active-site" : "card site-compare"} data-site={v.entry.id} aria-labelledby={`card-${v.entry.id}`}>
@@ -568,13 +586,23 @@ function SiteCard({ v, mode, delayedLabel, effDelay, cursorT, isActive, onShow }
       <DarkNotes label="Baseline" m={v.base.longestDark} />
       {delayedLabel && <DarkNotes label={delayedLabel} m={v.act.longestDark} />}
       <p className="small at-time" data-field="at-time">
-        At {fmtUtc(cursorT)}: Sun <strong>{stateText(iv ? iv.sun : null)}</strong>, Earth <strong>{stateText(iv ? iv.earth : null)}</strong>
+        At {fmtUtc(cursorT)}: Sun <AtState s={st.sun} />, Earth <AtState s={st.earth} />
       </p>
       <button type="button" className="show-btn" aria-pressed={isActive} onClick={onShow} disabled={isActive}>
         {isActive ? "Shown in panorama" : "Show in panorama"}
       </button>
       {v.profile.assessment === "cr1-5m" && <AssessmentPanel />}
     </article>
+  );
+}
+
+/** State word for the card's "At <time>" line, with the shared near-crossing qualifier. */
+function AtState({ s }: { s: BodyStatus }) {
+  return (
+    <>
+      <strong>{stateLabel(s.visible)}</strong>
+      {s.nearCrossing && <span className="near-flag" title="The center is on the other side of the horizon at this exact time; see the readouts"> ({NEAR_CROSSING.toLowerCase()})</span>}
+    </>
   );
 }
 
@@ -947,55 +975,61 @@ function stateText(s: Tri) {
 function changeText(body: string, c: NextChange, mode: HorizonMode) {
   if (!c.found) return `Next change: not found in available data (searched through ${fmtUtc(c.searchedUntil)})`;
   const hz = mode === "terrain" ? "terrain horizon" : "smooth horizon";
-  const verb = c.to === null ? "becomes unknown" : c.to ? `rises above the ${hz}` : `drops below the ${hz}`;
-  return `${body} ${verb} ≈ ${fmtUtc(c.at)} (estimate at 10-minute resolution)`;
+  const what = c.to === null ? `${body} state becomes unknown` : `${body} center ${c.to ? `rises above the ${hz}` : `drops below the ${hz}`}`;
+  return `${what} ≈ ${fmtUtc(c.at)} (estimate on the 10-minute reporting grid)`;
 }
 
-function Readouts({ view, times, index, mode, horizonAtBody }: {
-  view: SiteView; times: number[]; index: number; mode: HorizonMode; horizonAtBody: Record<"sun" | "earth", (number | null)[]> | null;
-}) {
-  const s = view.data.samples[index];
-  const t = times[index];
-  const iv = intervalAt(view.intervals, t);
-  const sun = iv ? iv.sun : null;
-  const earth = iv ? iv.earth : null;
-  const tiles: { key: "sun" | "earth"; label: string; state: Tri }[] = [
-    { key: "sun", label: "Sun", state: sun },
-    { key: "earth", label: "Earth", state: earth },
+const stateClass = (s: Tri) => `state state-${s === null ? "unknown" : s ? "on" : "off"}`;
+
+function Readouts({ view, mode }: { view: SiteView; mode: HorizonMode }) {
+  const st = view.status;
+  const t = st.t;
+  const tiles: { key: "sun" | "earth"; label: string; s: BodyStatus }[] = [
+    { key: "sun", label: "Sun", s: st.sun },
+    { key: "earth", label: "Earth", s: st.earth },
   ];
   return (
     <div className="readouts-wrap" data-site={view.entry.id}>
       <p className="selected-time num" aria-live="polite">{fmtUtc(t)} <span className="muted small">at {view.profile.label}</span></p>
       <div className="readouts">
-        {tiles.map(({ key, label, state }) => {
-          const el = elevation(s, key);
-          const az = azimuth(s, key);
+        {tiles.map(({ key, label, s }) => {
+          const g = s.geometry;
+          const why = nearCrossingExplanation(s, label, mode);
           return (
-            <div className="readout" key={key} data-body={key}>
+            <div className="readout" key={key} data-body={key} data-near={s.nearCrossing ? "true" : undefined}>
               <p className="readout-title">
                 <span className={`swatch swatch-${key}`} aria-hidden="true" />
                 {label}
-                <span className={`state state-${state === null ? "unknown" : state ? "on" : "off"}`} data-field="state">{stateText(state)}</span>
+                {s.nearCrossing && <span className="state state-near" data-field="near">{NEAR_CROSSING}</span>}
+                <span className={stateClass(s.visible)} data-field="state">{stateLabel(s.visible)}</span>
               </p>
               <dl>
                 <dt>Elevation</dt>
-                <dd className="num" data-field="elevation">{fmtDeg(el)}</dd>
+                <dd className="num" data-field="elevation">{fmtDeg(g.elevationDeg)}</dd>
                 <dt>Azimuth</dt>
-                <dd className="num" data-field="azimuth">{fmtDeg(az)} <span className="muted">{compass(az)}</span></dd>
+                <dd className="num" data-field="azimuth">{fmtDeg(g.azimuthDeg)} <span className="muted">{compass(g.azimuthDeg)}</span></dd>
                 <dt>{mode === "terrain" ? "Skyline there" : "Horizon"}</dt>
-                <dd className="num" data-field="horizon">{mode === "terrain" ? fmtDeg(horizonAtBody ? horizonAtBody[key][index] : null) : fmtDeg(0, 3)}</dd>
+                <dd className="num" data-field="horizon">{fmtDeg(g.horizonDeg)}</dd>
+                <dt>Center vs {horizonName(mode)}</dt>
+                <dd className="num" data-field="clearance">{signedClearance(g)}</dd>
               </dl>
+              {why && <p className="readout-note near-note" data-field="near-note">{why}</p>}
+              {s.visible === null && s.unknownReason && <p className="readout-note" data-field="unknown">Unknown: {unknownText(s.unknownReason)}.</p>}
               <p className="readout-note" data-field="next">{changeText(label, nextChange(view.intervals, t, key), mode)}</p>
             </div>
           );
         })}
-        <div className="readout" data-body="both">
+        <div className="readout" data-body="both" data-near={st.both.nearCrossing ? "true" : undefined}>
           <p className="readout-title">
             <span className="chip chip-both" aria-hidden="true" />
             Both
-            <span className={`state state-${bothState(sun, earth) === null ? "unknown" : bothState(sun, earth) ? "on" : "off"}`} data-field="state">{stateText(bothState(sun, earth))}</span>
+            {st.both.nearCrossing && <span className="state state-near" data-field="near">{NEAR_CROSSING}</span>}
+            <span className={stateClass(st.both.visible)} data-field="state">{stateLabel(st.both.visible)}</span>
           </p>
-          <p className="readout-note">State of the 10-minute interval starting at this time ({mode === "terrain" ? "terrain" : "smooth"} horizon).</p>
+          <p className="readout-note">
+            Modeled state of the 10-minute step starting at this time, classified at its midpoint ({mode === "terrain" ? "terrain" : "smooth"} horizon).
+            Elevation, azimuth and clearance are the body centers at this exact time.
+          </p>
         </div>
       </div>
     </div>
@@ -1012,7 +1046,7 @@ function IntervalTables({ label, intervals, baseW, actW, delayedLabel }: {
       {groups.map((g) => (
         <div key={g.key} className="table-scroll">
           <table>
-            <caption>{label}, {g.label}: {fmtUtc(g.window.start)} → {fmtUtc(g.window.end)} (boundaries are estimates at 10-minute resolution)</caption>
+            <caption>{label}, {g.label}: {fmtUtc(g.window.start)} → {fmtUtc(g.window.end)} (body centers; boundaries are estimates on the 10-minute reporting grid)</caption>
             <thead>
               <tr>
                 <th scope="col">Start (UTC)</th>

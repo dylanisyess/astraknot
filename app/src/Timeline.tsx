@@ -120,7 +120,7 @@ export function Timeline({ scale, tracks, cursor, onSelect }: Props) {
                           return (
                             <rect key={iv.start} className={stateClass(row.key, s)} x={x0} y={ry} width={w} height={ROW_H}>
                               <title>
-                                {`${tr.label}, ${row.label}: ${s === null ? "unknown" : s ? "visible" : "not visible"}, ${fmtUtc(iv.start)} – ${fmtUtc(iv.end)} (boundaries are estimates at 10-minute resolution)`}
+                                {`${tr.label}, ${row.label}: ${s === null ? "unknown" : s ? "visible" : "not visible"}, ${fmtUtc(iv.start)} – ${fmtUtc(iv.end)} (body centers; boundaries are estimates on the 10-minute reporting grid)`}
                               </title>
                             </rect>
                           );

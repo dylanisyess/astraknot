@@ -170,6 +170,33 @@ class Obstruction(unittest.TestCase):
             # a parallel of latitude bends toward the pole, so E/W sit a little off 90/270
             self.assertLessEqual(abs(off), 3.0, f"{name}: max at {best}, expected {expect}")
 
+    def test_cardinal_orientation_near_pole_cr1(self):
+        """CR1 is 0.53 deg from the pole, where local north points along map bearing
+        222.6 deg and a latitude/longitude grid bends sharply. Walls are placed 2 km
+        away with the spherical-trigonometry destination formula (independent of the
+        march's vector code); the skyline maximum must appear at that azimuth."""
+        lat0, lon0 = -89.468, 222.6
+        d0 = 2000.0
+
+        def dest(az):
+            p, a, t = math.radians(lat0), math.radians(az), d0 / R
+            p2 = math.asin(math.sin(p) * math.cos(t) + math.cos(p) * math.sin(t) * math.cos(a))
+            l2 = math.radians(lon0) + math.atan2(math.sin(a) * math.sin(t) * math.cos(p),
+                                                 math.cos(t) - math.sin(p) * math.sin(p2))
+            return math.degrees(p2), math.degrees(l2) % 360.0
+
+        dists = th.schedule()
+        for expect in (0.0, 90.0, 180.0, 270.0, 137.4):
+            ra = make_raster("SYN20", 30400, 20.0, 950, walls=[(*dest(expect), 100.0, 60.0)], center=(lat0, lon0))
+            prof = [(az, th.march(obs_at(1.0, lat0, lon0), az, [ra], dists, h_max=60.0)["elevation_deg"])
+                    for az in range(0, 360, 2)]
+            self.assertTrue(all(e is not None for _, e in prof), expect)
+            best = max(prof, key=lambda p: p[1])[0]
+            self.assertLessEqual(abs((best - expect + 180) % 360 - 180), 2.0, f"max at {best}, expected {expect}")
+        # north really is away from the pole there
+        self.assertGreater(dest(0.0)[0], lat0)
+        self.assertLess(dest(180.0)[0], lat0)
+
     def test_seam_359_to_0(self):
         wlat, wlon = north_of(SITE_LAT, SITE_LON, 2000.0)
         ra = make_raster("SYN20", 30400, 20.0, 950, walls=[(wlat, wlon, 100.0, 60.0)])

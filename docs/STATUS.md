@@ -5,12 +5,56 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
-## Start here (handoff for a new session, updated 2026-11-14 after the two-site interface)
-Read this section first, then `docs/SPEC.md` and `docs/DATA_CONTRACT.md`.
-The rest of this file is the detailed record behind it.
+## Start here (handoff for a new session, updated 2026-11-14 after the science-review follow-up)
+Read this section first, then `docs/SPEC.md`, `docs/DATA_CONTRACT.md` and
+`docs/SCIENCE_REVIEW.md`. The rest of this file is the detailed record behind it.
 
-**Latest (uncommitted for review):** the **two-site comparison interface** on
-`milestone-4-site-comparison`, on top of `ca0c996`. It loads Athena and CR1
+**Git snapshot before closeout (2026-11-14):**
+- `main` = `origin/main` = `978f22a` ("Merge pull request #2 from
+  dylanisyess/milestone-4-site-comparison"). Milestones 4A–4D and the CR1 5 m
+  assessment are committed, pushed and merged.
+- The **science-review follow-up** is on branch `science-review-followup`
+  (from `978f22a`) and is **uncommitted, for review**. Nothing is pushed or
+  merged.
+- Older local branches (`milestone-2-mission-window`, `milestone-3-terrain`,
+  `handoff-milestone-2`, `milestone-4-site-comparison`) are historical.
+
+The snapshot above records the reviewed starting state, not the eventual
+commit/merge result. Closeout is authorized: publish the reviewed follow-up
+through a PR using the established merge-commit workflow, then prepare
+`milestone-5a-explore` from merged `main`. Verify live Git/PR state before
+continuing; this closeout authorizes branch preparation only, no 3D work.
+
+**Next primary user experience: 3D Explore.** A 3D terrain view around a fixed
+modeled observer becomes the primary view; the existing dashboard stays as
+**Analysis**, with shared site/time/scenario state. The requirements are in
+`docs/SPEC.md`, "3D Explore: requirements for the next milestone". Mesh format
+and design are work for that milestone; nothing 3D is implemented yet.
+
+**Latest (review complete, `science-review-followup`):** post-review cleanup,
+details in "Science-review follow-up" below. No terrain model change, no
+Horizons fetch, no terrain recomputation.
+- Review evidence is in the repo (`pipeline/review/`,
+  `pipeline/direction_check.py`, `docs/SCIENCE_REVIEW.md`).
+- Two-site Sun-direction test (0.001°) and cardinal-direction tests.
+- A shared selected-time status API (`app/src/status.ts`) now feeds the cards,
+  readouts and panorama. "Near estimated crossing" appears where the step
+  state and the instantaneous center disagree (17 cases over both sites and
+  models).
+- Center-based and 10-minute wording.
+- Dataset renamed `lvn-2026-12-01-60d`.
+- Checks:
+  - Python: 68 tests; validation 136/136.
+  - Frontend: 140 vitest tests and the production build (completion review).
+  - Browser: 29/29 headless-Chrome checks in the original follow-up;
+    not rerun during completion review.
+  - Separate ChatGPT development-app browser smoke check: passed, as
+    reported by the user; see the closeout record below. Not run by Codex.
+  - Site files and terrain evidence match `978f22a` byte for byte under Git's
+    checkout filters; mission metrics are unchanged. See the completion
+    review below for the CRLF/LF distinction.
+
+**Two-site comparison interface (4D; merged in PR #2):** on top of `ca0c996`. It loads Athena and CR1
 from the manifest with strict identity checks and uses one shared scenario:
 arrival, duration, delay, horizon model and UTC time. It shows per-site cards
 with baseline-to-delay changes, both timelines on one UTC axis, an active-site
@@ -18,13 +62,14 @@ selector for the panorama/readouts/chart, a projected locator, and per-site
 sources and limitations. CR1 is labelled "Connecting Ridge CR1 — NASA notional
 study point" and marked "Provisional: sensitive to terrain model" next to its
 metrics in Terrain mode, with the 5 m assessment as a read-only summary. Checks:
-90 vitest tests, production build, and **42/42 headless-Chrome checks**. See "Milestone 4D: two-site
-comparison interface" below, including the **browser review checklist** for the
-human review that is still pending.
+90 vitest tests, production build, and **42/42 headless-Chrome checks** at the time. See "Milestone 4D: two-site
+comparison interface" below, including the **browser review checklist** (a
+person has not yet ticked it).
 
-**Earlier:** 4C committed locally as `627a4cc` ("feat: add provisional CR1
-dataset and sensitivity evidence"; not pushed). The follow-up **CR1 terrain-
-product assessment** (5 m PGDA Site01 vs 20 m LDEM) is committed locally as "feat: add CR1 5 m terrain-product assessment" (recommendation accepted).
+**Earlier:** 4C is `627a4cc` ("feat: add provisional CR1 dataset and
+sensitivity evidence"). The follow-up **CR1 terrain-product assessment**
+(5 m PGDA Site01 vs 20 m LDEM) is `ca0c996` (recommendation accepted). Both are
+now pushed and merged via PR #2.
 See "CR1 terrain-product assessment" below. **Recommendation: retain CR1
 terrain as provisional.** The 5 m product is documented, numerically converged,
 and best-fits the 20 m map at zero shift among the tested shifts.
@@ -32,7 +77,7 @@ But it shifts results by about as much as its own documented error, and 100 m
 position changes are ten times larger. No exported data changed; no Horizons
 re-fetch was needed, because no new surface elevation was adopted.
 
-**Milestone 4C checkpoint:** complete on `milestone-4-site-comparison`,
+**Milestone 4C checkpoint:** completed on `milestone-4-site-comparison` (now merged),
 starting from verified `94cf13f` with a clean tree. `connecting-ridge-cr1` (NASA notional study point, 89.468 S,
 222.6 E; [SECOND_SITE.md](SECOND_SITE.md)) now has real 60-day Horizons
 positions (12 sequential live requests at 1.9428 km, raw responses cached), a
@@ -51,17 +96,18 @@ resolution-dependent; see "Milestone 4C" below. The manifest lists both sites
 ### What works (verified)
 - **Data:** 60 days of real JPL Horizons Sun/Earth airless apparent az/el of
   body centers at 10 min (2026-12-01T00:00Z to 2027-01-30T00:00Z, 8 641
-  samples incl. final endpoint), for the IM-2 Athena site 84.7906° S,
-  29.1957° E. Observer: 5.3229 km above the 1737.4 km sphere (LOLA surface
-  5 321.9 m + 1 m). Raw responses with query, headers and sha256 are in
-  `data/horizons/`.
+  samples incl. final endpoint), for **both sites**: the IM-2 Athena site
+  84.7906° S, 29.1957° E (observer 5.3229 km above the 1737.4 km sphere =
+  LOLA surface 5 321.9 m + 1 m) and CR1 (1.9428 km; see below). Raw responses
+  with query, headers and sha256 are in `data/horizons/`. Dataset ID
+  `lvn-2026-12-01-60d` (site-neutral since the science-review follow-up).
 - **Terrain horizon (milestone 3):** 0.1° profile from LOLA LDEM_80S_20M
   (+ LDEM_75S_60M beyond its edge), exact sphere geometry, per-ray stopping
   rule, no unknown sectors. Synthetic geometry tests and sensitivity runs pass;
   an independently implemented pixel sweep on the same DEM agrees; the DEM's
   own source laser shots are consistent with the skyline (see "Milestone 3"
   below). Exported next to the unchanged smooth horizon.
-- **App** (`app/`, React 19 + TS 7 + Vite 8), **two-site comparison (4D, uncommitted):**
+- **App** (`app/`, React 19 + TS 7 + Vite 8), **two-site comparison (4D, merged in PR #2):**
   - One shared scenario: Smooth / Terrain for all sites (default Terrain),
     baseline arrival + duration, and +1/+3/+7 d slips relative to the baseline.
   - A comparison card per site with baseline / delay / "Change: +N d vs baseline".
@@ -71,6 +117,12 @@ resolution-dependent; see "Milestone 4C" below. The manifest lists both sites
   - A projected south-polar locator, and per-site sources and limitations.
   - Carried over: one shared cursor, boundary flags, unknown handling.
   - URL state: `arrival, days, delay, t, horizon, sites, site`. Older Athena links still work.
+  - **Selected-time status (science-review follow-up, uncommitted):** one function
+    (`app/src/status.ts`, `selectedTimeStatus`) gives each body's step state
+    (exported intervals, unchanged) and its instantaneous center clearance. It
+    feeds the cards, readouts and panorama labels, and is meant for 3D Explore.
+    When the two disagree, every place shows the same "Near estimated
+    crossing" explanation.
 - **Second site data (milestone 4C):** CR1 60 days of real Horizons Sun/Earth
   positions (8 641 samples, same coverage/step/conventions as Athena), smooth and
   terrain horizons, intervals, sources and checks in
@@ -106,7 +158,7 @@ Pipeline (`pipeline/`, Python standard library only; run from the repo root):
   vs Horizons → `data/terrain/im2-athena_horizon_crosscheck.json`.
 - `terrain_check.py`, `site_elevation.py`: coverage planning and surface elevation;
   both accept `--offline`; elevation accepts `--dem-only` to omit unavailable RDR checks.
-- Tests: `tests/test_pipeline.py`, `tests/test_lola.py`, `tests/test_terrain_horizon.py`, `tests/test_sites.py`, `tests/test_offline_terrain.py`.
+- Tests: `tests/test_pipeline.py`, `tests/test_lola.py`, `tests/test_terrain_horizon.py`, `tests/test_sites.py`, `tests/test_offline_terrain.py`, `tests/test_pgda.py`, `tests/test_conventions.py`.
 
 App (`app/src/`):
 - `mission.ts` (window, delay, metric logic), `horizon.ts` (profile lookup,
@@ -114,9 +166,15 @@ App (`app/src/`):
   `checkSites` identity checks), `sites.ts` (per-site profiles, strict
   one-model-for-all rules, data-derived facts, locator projection),
   `assessment.ts` (CR1 5 m summary), `urlState.ts`, `Panorama.tsx` (`centerAz`),
-  `Timeline.tsx` (multi-site tracks), `ElevationChart.tsx`, `App.tsx`, `axis.ts`.
+  `Timeline.tsx` (multi-site tracks), `ElevationChart.tsx`, `App.tsx`, `axis.ts`,
+  `status.ts` (shared selected-time status; the only source of "visible at time t").
 - Tests: `mission.test.ts`, `data.test.ts`, `horizon.test.ts`, `sites.test.ts`,
-  `assessment.test.ts`, `urlState.test.ts`, `app.test.tsx` (server-rendered `Workspace`).
+  `assessment.test.ts`, `urlState.test.ts`, `status.test.ts`, `app.test.tsx` (server-rendered `Workspace`).
+
+Review evidence (science-review follow-up): `pipeline/direction_check.py`
+(two-site Sun-direction check), `pipeline/tests/test_conventions.py`, and
+`pipeline/review/{spot_checks,design_numbers,_dem}.py` (independent spot
+checks; need the 1.85 GB LDEM_80S_20M raster). See `docs/SCIENCE_REVIEW.md`.
 
 ### Verified conventions (do not change without re-running the checks)
 - **Horizons:** `CENTER='coord@301'`, `COORD_TYPE='GEODETIC'`,
@@ -213,15 +271,21 @@ App (`app/src/`):
   rounding (0.979 m vs 1 m) moves the skyline by ≤ 0.024° and flips 13 Sun /
   3 Earth steps (≤ 0.25 pp, ≤ 0.83 h). No independent terrain data or published
   skyline for CR1 was used.
-- `manifest.dataset_id` is still `m2-athena-2026-12-01-60d` although the
-  manifest now lists two sites. Renaming requires a full re-export of both
-  sites; left for the frontend milestone.
+- (Resolved in the science-review follow-up) `manifest.dataset_id` was the
+  Athena-named `m2-athena-2026-12-01-60d`; it is now `lvn-2026-12-01-60d`
+  after a full two-site re-export with byte-identical site files.
+- Visibility is center-based for both bodies. With nominal radii in terrain
+  mode, Earth's center is hidden while part of its disk clears the skyline in
+  about 15 % of steps at Athena; for the Sun at CR1 this is about 6 %. Stated in
+  the app's limitations since the follow-up.
 - Horizons API signature 1.2 vs doc page 1.3; future leap seconds unknown.
 - Not tested: screen readers, Firefox/Safari, touch devices, keyboard use of
   the timeline itself, keyboard hover on the panorama.
 
 ### Validation commands (expected results on 2026-11-14)
 ```sh
+python pipeline/direction_check.py                                   # Sun max 0.000068 deg (<= 0.001); controls 26.8 deg; PASS
+python pipeline/review/spot_checks.py                                # needs the LDEM_80S_20M raster; see docs/SCIENCE_REVIEW.md
 python pipeline/validate.py --site im2-athena                        # 68/68 checks passed
 python pipeline/validate.py --site connecting-ridge-cr1              # 68/68 checks passed
 python pipeline/validate.py                                          # 136/136 (both sites)
@@ -229,14 +293,14 @@ python pipeline/fetch.py --site connecting-ridge-cr1                 # "0 live r
 python pipeline/crosscheck_metrics.py --site connecting-ridge-cr1 --terrain  # 12-05 +0 d: sun 72.123..., earth 25.446..., dark 62.833 h (touches end)
 python pipeline/crosscheck_metrics.py --site connecting-ridge-cr1    # 12-05 +0 d: sun 100.0, earth 28.373..., dark 0.0 h
 python pipeline/observer_rounding_check.py --site connecting-ridge-cr1  # max 0.0235 deg; sun 13, earth 3 steps
-python -m unittest discover -s pipeline/tests      # Ran 58 tests ... OK
+python -m unittest discover -s pipeline/tests      # Ran 68 tests ... OK (58 before the science-review follow-up)
 python pipeline/pgda.py fetch Site01 surf ldec toterr   # 3 x ~41 MB into data/raw/pgda/site01 (~60 KB/s observed)
 python pipeline/terrain_5m.py --site connecting-ridge-cr1   # ~12 min; F5_fixed vs L20: max 0.97 deg, 321 Sun steps
 python pipeline/fetch.py --site im2-athena                           # "0 live request(s) made" (all cached)
 python pipeline/crosscheck_metrics.py --site im2-athena              # 12-05 +0 d: sun 43.353..., dark 190.333 h
 python pipeline/crosscheck_metrics.py --site im2-athena --terrain    # 12-05 +0 d: sun 27.232..., earth 67.262..., dark 244.5 h
 python pipeline/compare_altitude.py --site im2-athena                # earth mean 8.041e-04 deg, sun 2.067e-06 deg
-cd app && npm test                                 # 90 passed (7 files)
+cd app && npm test                                 # 140 passed (8 files; 134 before completion review)
 cd app && npm run build                            # builds without errors
 # terrain (needs the 3.47 GB LOLA files; fresh clone: fetch first, ~1-2 min at ~50 MB/s):
 python pipeline/fetch_terrain.py --site im2-athena                   # 4 files, sizes = labels, sha256 recorded
@@ -267,28 +331,226 @@ Environment notes (Windows):
 
 ### Next steps
 
-0. Review the two-site interface (uncommitted) with the browser checklist in
-   "Milestone 4D", then commit it. Deployment from a fresh browser session is
-   still untested.
-
-1. (Done) The 5 m assessment is committed; the recommendation to keep CR1 terrain provisional was accepted and terrain research stopped for this milestone.
-2. Decide how to present CR1's provisional terrain result: for example,
-   smooth and terrain side by side with a prominent caveat, or a range across
-   DEMs, observer eye heights and position scenarios. This is a
-   product/communication decision. If CR1 terrain is later adopted from the 5 m
-   product, its surface (1942.159 m) changes the observer: re-fetch Horizons at
-   1.9432 km (nominal convention) before publishing, as recorded in the assessment.
-3. Then the two-site frontend (milestone 5): load both manifest entries;
-   comparison cards; shared timeline. Rename `dataset_id` with a full re-export.
+0. Science-review follow-up: completion review is done. Closeout is authorized
+   through a separate commit and PR; confirm the PR is merged before preparing
+   `milestone-5a-explore` from updated `main`. Branch preparation only is
+   authorized in this closeout; do not start 3D implementation.
+1. Human pass over the 4D browser review checklist below (still unticked).
+   Deployment from a fresh browser session is still untested.
+2. **3D Explore milestone (next primary UX).** Start by specifying the per-site
+   terrain patch as a data-contract addition: same DEM and registration, site
+   identity and sha256, extent and sampling. Include the mesh-versus-profile
+   comparison. Then build the renderer against `selectedTimeStatus`. All
+   requirements, including the tested axis mapping, the fixed observer and
+   distant-horizon handling, are in `docs/SPEC.md`. Keep the dashboard as
+   Analysis with shared URL state.
+3. Still open: how to present CR1's provisional terrain result (for example
+   smooth and terrain side by side, or a range across DEMs, eye heights and
+   position scenarios). If CR1 terrain is later adopted from the 5 m product,
+   its surface (1942.159 m) changes the observer: re-fetch Horizons at
+   1.9432 km before publishing, as recorded in the assessment.
+4. (Done) 5 m assessment committed; CR1 stays provisional. (Done) Two-site
+   frontend merged; `dataset_id` renamed.
 
 To regenerate CR1 from the caches (order matters; all inputs cached, no network):
 `export.py` → `validate.py` → `terrain_horizon.py` (~5 min) →
 `horizon_crosscheck.py` (~5 min; RDR boxes cached) → `export.py` →
 `validate.py` → `observer_rounding_check.py`, all with `--site connecting-ridge-cr1`.
 
+## Science-review follow-up (2026-11-14)
+
+Branch `science-review-followup` from `978f22a` (verified `main` =
+`origin/main`, clean tree). **Uncommitted for review**; no push or merge.
+Bounded scope:
+- No 3D, no terrain-model change, no Horizons fetch, no terrain recomputation.
+- Exported site files, terrain reports, intervals and mission metrics are
+  unchanged.
+
+The review itself and the rerun numbers are in `docs/SCIENCE_REVIEW.md`.
+
+### What changed
+- **Review evidence preserved.**
+  - The reviewer's `spot.py` and `design_numbers.py`, found in its temporary
+    scratch directory and read before reuse, are now
+    `pipeline/review/spot_checks.py` and `pipeline/review/design_numbers.py`,
+    with a shared `_dem.py`. They need the git-ignored LDEM_80S_20M raster.
+    Changes: label-checked constants, a raster presence and size check, and
+    unknown-horizon guards. `design_numbers.py` also lists every
+    instant-vs-interval disagreement for both models.
+  - The originals and the repo versions were run on the same inputs. The
+    outputs are identical, apart from that listing and the word "nominal".
+  - The reviewer's inline two-site direction check was recovered from its
+    session log and reimplemented as `pipeline/direction_check.py`.
+- **Convention checks** (`pipeline/tests/test_conventions.py`, 9 tests):
+  - Sun direction from the two sites agrees within **0.001°** (max 0.000068°,
+    i.e. parallax). Controls fail: a mirrored azimuth or west-positive
+    longitude gives 26.8°, a one-sample shift > 0.05°, swapped site metadata
+    > 1°.
+  - The Earth parallax gives an approximate distance scale of
+    356 527–406 760 km over all samples. The original 377 000–396 000 km
+    summary used only three dates with the same formula; see SCIENCE_REVIEW.md.
+    This is a coarse plausibility check, not validation of ephemeris accuracy.
+  - The Sun's azimuth falls every 10-minute step (−0.08 to −0.09°), so the Sun
+    moves right to left when facing north.
+  - Earth stays in the azimuth bands 322–339° (Athena) and 129–146° (CR1).
+  - The local frame is right-handed, and map bearing = east longitude +
+    azimuth at both sites.
+  - The existing single-direction gross check in `horizon_crosscheck.py` is
+    kept: it detects some gross errors common to both sites. Cross-site
+    checks cannot detect all shared errors; gross checks do not close that gap.
+  - `test_terrain_horizon.py` adds a CR1 near-pole synthetic wall test.
+- **Shared selected-time status** (`app/src/status.ts`):
+  - `selectedTimeStatus` returns, per body:
+    - `visible` (the exported step state; classification semantics
+      unchanged);
+    - `geometry` (instantaneous az/el, horizon there, signed clearance; exact
+      at samples, linear between, no extrapolation);
+    - `nearCrossing`;
+    - a reason for every unknown: outside coverage, end of data (final
+      sample), position unavailable, horizon unknown, state unknown.
+  - The cards, readouts and panorama labels now all use it. The panorama
+    marker stays at the true position, gets a dashed ring, and its label says
+    "near estimated crossing". The readouts gain a "Center vs skyline/0°
+    horizon" row.
+  - Tests (`status.test.ts`, render tests in `app.test.tsx`):
+    - all 17 disagreement cases (terrain: Athena Earth 5, CR1 Sun 5, CR1
+      Earth 2; smooth: Athena 3, CR1 2);
+    - every sample and every step midpoint for both sites and both models;
+    - coverage edges and synthetic unknowns;
+    - the same explanation in readouts, panorama and card;
+    - the panorama's cardinal tick order.
+  - Fixed on the way: the old readouts showed "Unknown" at the final sample
+    while the panorama showed "visible". Both now say "Unknown (final
+    sample)". `intervalAt(NaN)` matches an interval; the status code guards it.
+- **Wording:**
+  - Banners, method and limitations now state that visibility uses the
+    center of both the Sun and Earth, and that part of either disk may remain
+    visible when its center is hidden (nominal sizes 0.5° and 1.9°).
+  - 10 minutes is described as sampling and reporting resolution, not
+    guaranteed event accuracy: method, card footnote, next-change text,
+    table captions, timeline tooltips.
+  - CR1's provisional label and the coordinate/frame limitations are
+    unchanged.
+- **Dataset ID** `m2-athena-2026-12-01-60d` → `lvn-2026-12-01-60d`.
+  - Consumers checked first: only `export.py` writes it, `sites.load_site_data`
+    requires manifest = config, and the app footer shows it.
+  - A full two-site `export.py` from the caches left both site files
+    byte-identical (sha256 unchanged).
+  - CR1's `preparation_status` in config no longer says "frontend still
+    single-site". It is not exported.
+- **Docs:**
+  - STATUS handoff and stale branch/uncommitted/single-site statements.
+  - SPEC: scope, Explore/Analysis, definitions, 3D requirements.
+  - SECOND_SITE, DATA_CONTRACT changelog; new SCIENCE_REVIEW.md.
+
+### Checks observed during the original follow-up
+- `python -m unittest discover -s pipeline/tests`: **68 OK** (58 + 10).
+- `python pipeline/validate.py`: **136/136**. Its full output is byte-identical
+  to before the change.
+- `crosscheck_metrics.py` for both sites, smooth and terrain: output
+  byte-identical to before.
+- sha256 of `app/public/data/{im2-athena,connecting-ridge-cr1}.json` and every
+  `data/terrain/*.json`: unchanged. The manifest changed only in `dataset_id`
+  and `generated_at_utc`.
+- `npm test`: **134 passed, 8 files** (was 90 / 7). `npm run build`: passed.
+- Headless Chrome against the production build (`vite preview`): **29/29**.
+  - Athena Earth at 2026-12-09 14:00 (terrain): the readout, panorama and
+    card show "Visible" + "Near estimated crossing" with one identical
+    sentence; the clearance is −0.00012°; the ring is centred on the true
+    marker position.
+  - ArrowRight to 14:10 clears the qualifier (clearance +0.0051°); ArrowLeft
+    restores it.
+  - The site switch keeps Athena's card qualifier; the CR1 Sun case
+    (2026-12-24 00:00) and the smooth case (2026-12-11 05:00) also show it.
+  - At the final sample everything reads "Unknown" with the reason.
+  - The new wording and dataset ID are present.
+  - No horizontal overflow at 390 px (dark) or 1280 px. No console errors.
+  - Screenshots inspected by eye in light and dark.
+
+### Bounded completion review (2026-11-14, OpenAI Codex)
+- Continued the existing work on `science-review-followup`; no restart,
+  requests, terrain calculations, scientific-model changes or 3D work.
+- Confirmed the diff matches the reported scope: shared selected-time status,
+  presentation wording, review helpers/tests, documentation, and manifest/config
+  metadata. README was not modified; its mention above was corrected.
+- Corrected the milestone 3 assistance log's stale "not committed" statement.
+  It now preserves the original timing and records commit `9e2b1b4`, already
+  included in the branch base. Accurate historical descriptions and the current
+  follow-up's uncommitted status remain.
+- Fixed two status edge cases: an interior interval gap was incorrectly called
+  "end of data" and discarded its sample step; it now reports "state unknown"
+  and retains that step. The final sample now refuses interval state even if
+  an interval incorrectly extends beyond coverage. No exported states change.
+- Added six regressions: north wrap in both directions and strict equality at
+  the horizon, unknown state with known instantaneous geometry, unexplained
+  explicit unknown state, an interior interval gap, an overlong final interval,
+  and half-open interior step boundaries. Existing all-sample, all-midpoint and
+  17-disagreement tests still pass without changing their expected values.
+- Recovered the original Earth-distance command: it sampled only indices
+  0/4320/8640. The same formula reproduces its rounded 377 000–396 000 km
+  summary; all samples give 356 527–406 760 km. SCIENCE_REVIEW.md explains
+  the method and limitations. This approximate parallax diagnostic does not
+  validate ephemeris accuracy. Gross checks detect only some shared errors.
+- Checks rerun: **68 Python tests**, **136/136 cached validation checks**,
+  `direction_check.py` PASS, **140 frontend tests in 8 files**, production
+  build PASS, and `git diff --check` PASS. No browser run in this completion
+  review; the original browser results above remain historical evidence.
+- Compared both site exports and all tracked `data/terrain/` evidence:
+  **102 files match the base byte for byte after Git's checkout filters**.
+  Eleven text files (the two exports and nine JSON reports) use CRLF locally
+  versus LF blobs; removing only CRLF/LF differences gives exact bytes and
+  equal parsed JSON. Protected terrain-horizon reports and raw evidence match
+  the blobs directly. No untracked scientific exports or terrain evidence.
+  The manifest retains only its existing dataset ID and generation-time edits.
+- Independent sample-based metric comparisons against base data match for
+  **16 cases** (two sites × two models × baseline/+1/+3/+7-day windows).
+  Metric and classification implementations are unchanged.
+- Git after review: HEAD/base/main/origin-main all
+  `978f22a2b48d53586843444759c77882cf698f56`; branch `science-review-followup`,
+  no upstream, **12 modified tracked files and 8 untracked files**, nothing
+  staged. No commit, push or merge. The pending human review and scientific
+  limitations below remain.
+
+### Remaining limits
+- The status explains disagreements only at the selected time. Timeline
+  boundaries remain the 10-minute estimates, as before.
+- Cross-site checks cannot detect all shared errors (see SCIENCE_REVIEW.md).
+  Gross checks detect only some shared errors; absolute accuracy remains
+  unverified.
+- The review scripts need the 1.85 GB raster and were not added to the unit
+  test suite.
+- Unchanged from the review:
+  - coordinate frames and accuracy are assumed;
+  - absolute terrain accuracy is unverified;
+  - CR1 terrain is provisional;
+  - Athena's rounding sentence has no committed report;
+  - screen readers, Firefox/Safari and touch devices are untested.
+
+### Closeout review and separate ChatGPT browser evidence (2026-11-14)
+- Codex re-inspected the tracked and staged diffs and all eight untracked
+  follow-up files. The starting state matched the completion record:
+  `science-review-followup` at `978f22a`, no upstream, 12 modified tracked
+  files, eight untracked files, nothing staged. All 20 files belong to this
+  follow-up; generated builds, dependencies, bytecode and raw DEMs are excluded.
+- Existing verification evidence is retained: 140 frontend tests, production
+  build, 68 Python tests, 136/136 cached validation checks, direction check,
+  102 base-data comparisons and 16 metric comparisons. No code changes or
+  material discrepancies required another test run. No new scientific audit,
+  Horizons fetch or terrain calculation was performed for closeout.
+- The user separately reported a subsequent **ChatGPT browser smoke check**
+  against the **development app at localhost:5174**. It passed Athena/CR1
+  near-crossing cases, forward/back stepping, site switching, Smooth/Terrain
+  state preservation, URL reload, final-sample unknown status and disabled
+  out-of-range controls, with no captured console warnings or errors.
+  This is separate from the original production-preview check and was
+  **not personally run by Codex**. It does not tick the human 4D review checklist.
+- The reviewed scope remains status presentation, convention/review evidence,
+  wording, metadata and documentation. Scientific exports, models, metrics
+  and terrain reports remain unchanged; all scientific limitations above apply.
+
 ## Milestone 4D: two-site comparison interface (2026-11-14)
 
-On `milestone-4-site-comparison` after `ca0c996`; **uncommitted for review**.
+On `milestone-4-site-comparison` after `ca0c996`; written uncommitted for review, later committed as `0826ccb` and merged to `main` in PR #2 (`978f22a`).
 Frontend only: no exported data, pipeline code or Athena output changed (the
 manifest and both site files are byte-identical to `ca0c996`). No 3D, no new
 sites, no custom coordinates, no further terrain experiments.
@@ -396,7 +658,7 @@ sites, no custom coordinates, no further terrain experiments.
 - Athena's rounding-effect sentence (0.0034°, 2026-12-30 step) is static
   profile text from the milestone 3 measurement; no committed report holds those
   numbers, so it is not machine-checked. CR1's is tested against its report.
-- `manifest.dataset_id` is still `m2-athena-…` and is shown in the footer.
+- (Resolved in the science-review follow-up) `manifest.dataset_id` was `m2-athena-…`; now `lvn-2026-12-01-60d`.
 - Not tested: screen readers, Firefox/Safari, real touch devices, keyboard
   use of the timeline SVG itself (the slider is the keyboard control), and a
   deployed build from a fresh browser session.
@@ -596,7 +858,7 @@ Do not adopt either DEM's CR1 terrain as a final result.
 ## Milestone 4C: CR1 positions, terrain horizon and validation (2026-11-14)
 
 Started from verified branch `milestone-4-site-comparison`, commit `94cf13f`,
-clean tree. Left **uncommitted** for review; no push or merge. No frontend,
+clean tree. Left uncommitted for review at the time (since committed as `627a4cc` and merged in PR #2). No frontend,
 site-list, custom-coordinate or 3D change.
 
 Commands run (in order, all `--site connecting-ridge-cr1` unless noted):
@@ -878,7 +1140,7 @@ Checks observed:
 Limits/next task: config's terrain product selection and the planning/elevation
 checks still target the existing south-polar LOLA product family. Site IDs do
 not establish that a future point has adequate coverage; verify that first.
-The frontend remains single-site, and no second site was selected/fetched.
+(At 4A) the frontend was single-site and no second site had been selected/fetched; both changed in 4B–4D.
 **Next at the 4A checkpoint (completed in 4B above):** choose/cite a second
 documented point and verify terrain coverage and surface elevation.
 
@@ -1382,7 +1644,7 @@ timeline itself is pointer-only).
   kept for consistency with the established convention.
 - CR1 RDR skyline comparison is uninformative (0–2 shots per window); no
   independent terrain data for CR1 was used.
-- `manifest.dataset_id` still names Athena only (`m2-athena-…`).
+- (Resolved) `manifest.dataset_id` named Athena only; renamed to `lvn-2026-12-01-60d` in the science-review follow-up.
 - Horizons API signature 1.2 vs doc page 1.3 (output format verified by hand).
 - Future UTC: Horizons applies the last known leap second (EOP predictions to
   2027-02-08 cover the dataset).
@@ -1411,9 +1673,11 @@ timeline itself is pointer-only).
 - Keyboard interaction for the timeline itself.
 
 ## Next milestone
-Review/commit 4C, decide how CR1's non-robust terrain result is presented, then
-the two-site frontend comparison. Milestones 4A–4C are complete; CR1 data is
-exported but not shown in the app.
+**3D Explore** as the primary user experience, with the current dashboard kept
+as Analysis (shared site/time/scenario state). Requirements: `docs/SPEC.md`,
+"3D Explore: requirements for the next milestone". Before that: review and
+commit the science-review follow-up. Milestones 4A–4D are merged; both sites
+are in the app, and CR1 terrain is provisional.
 
 ## Milestone checklist
 - [x] Shared data contract accepted (v1.0 + clarifications).
@@ -1425,7 +1689,9 @@ exported but not shown in the app.
 - [x] Milestone 4B: second point cited, cached coverage planned, surface/observer altitude documented.
 - [x] Milestone 4C: CR1 positions fetched and validated; terrain horizon computed, implementation-checked, sensitivity reported (not robust).
 - [x] CR1 terrain-product assessment (5 m PGDA Site01): recommendation, retain CR1 terrain as provisional.
-- [x] Second site integrated in the frontend (4D, uncommitted; human browser review pending).
+- [x] Second site integrated in the frontend (4D, merged in PR #2; human browser review checklist still pending).
+- [x] Science review (2026-11-14, no blocking issue) and follow-up: review checks in the repo, two-site direction test, shared selected-time status, wording (uncommitted on `science-review-followup`).
+- [ ] 3D Explore (next milestone; requirements in SPEC.md).
 - [x] Date-slip comparison verified (smooth horizon).
 - [ ] Sources and limitations complete: per-site sources and limitations shown in the app (4D); awaiting human review.
 - [ ] Deployment tested.
@@ -1460,7 +1726,8 @@ Record tool/model, task, affected files, and human verification.
   `export.py`, `validate.py`, `visibility.py`, `crosscheck_metrics.py`, tests),
   app (`horizon.ts`, `Panorama.tsx`, `ElevationChart.tsx`, `App.tsx`,
   `data.ts`, `mission.ts`, `types.ts`, `styles.css`, `horizon.test.ts`), docs |
-  Human verification: **pending** (not committed; see milestone report).
+  Human verification: **pending** (written before the milestone commit;
+  milestone 3 is now committed as `9e2b1b4` and included in `978f22a`).
 
 - 2026-11-14 | OpenAI Codex | Milestone 4A: site IDs, report/export/cache isolation,
   focused synthetic tests and Athena regression verification | pipeline/,
@@ -1476,18 +1743,33 @@ Record tool/model, task, affected files, and human verification.
   `terrain_sensitivity.py`, `validate.py`, `horizon_crosscheck.py`, `export.py`;
   new `observer_rounding_check.py`; 2 tests | pipeline/, data/horizons,
   data/terrain, app/public/data, docs | Human verification: **pending**
-  (committed locally as `627a4cc`).
+  (`627a4cc`, merged in PR #2).
 
 - 2026-11-14 | Claude Code (Claude Opus 5.5) | Milestone 4D two-site interface:
   `app/src/App.tsx`, `data.ts`, `sites.ts`, `assessment.ts`, `urlState.ts`,
   `Timeline.tsx`, `Panorama.tsx`, `types.ts`, `styles.css`, `index.html`, tests;
-  README, DATA_CONTRACT, STATUS | Human verification: **pending** (uncommitted;
-  see the browser review checklist).
+  README, DATA_CONTRACT, STATUS | Human verification: **pending** (merged in
+  PR #2; browser review checklist not yet ticked by a person).
 
 - 2026-11-14 | Claude Code (Claude Opus 5.5) | CR1 terrain-product assessment:
   `pipeline/pgda.py`, `pipeline/terrain_5m.py`, `pipeline/tests/test_pgda.py`,
   PGDA dispatch in `terrain_horizon.py`, assessment report, docs | Human
-  verification: **pending** (committed locally).
+  verification: **pending** (`ca0c996`, merged in PR #2).
+
+- 2026-11-14 | Claude Code (Claude Opus 5.5) | Science-review follow-up:
+  `app/src/status.ts` (+ tests), `App.tsx`, `Panorama.tsx`, `Timeline.tsx`,
+  `styles.css`, `app.test.tsx`; `pipeline/direction_check.py`,
+  `pipeline/review/`, `pipeline/tests/test_conventions.py`, CR1 wall test;
+  `config.json` dataset ID + full re-export (site files unchanged); docs |
+  Human verification: **pending** (uncommitted on `science-review-followup`).
+
+- 2026-11-14 | OpenAI Codex | Bounded completion of the interrupted
+  science-review follow-up: status interval-gap/final-endpoint guards and six
+  regression tests; Earth-distance provenance and shared-error limitations;
+  stale milestone 3 commit wording; lightweight checks and base-data comparison
+  | `app/src/status.ts`, `status.test.ts`, `pipeline/direction_check.py`,
+  `docs/SCIENCE_REVIEW.md`, `docs/STATUS.md` | Human verification: **pending**;
+  all work remains uncommitted.
 
 ## Handoff template
 - Completed:

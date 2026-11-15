@@ -146,7 +146,9 @@ terrain visibility is therefore **not robust**. It is a DEM result for this exac
 published coordinate, whose accuracy is unknown. It is not a prediction for a
 real lander, whose height and surroundings would matter at this scale.
 Numbers and the full sensitivity table: `STATUS.md`, "Milestone 4C".
-Exported to `app/public/data/connecting-ridge-cr1.json`; not shown in the app yet.
+Exported to `app/public/data/connecting-ridge-cr1.json`. Shown in the two-site
+app since milestone 4D (merged to `main` in PR #2), marked provisional in
+Terrain mode.
 
 ## 5 m terrain-product assessment (2026-11-14)
 

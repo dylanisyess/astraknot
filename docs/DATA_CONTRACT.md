@@ -333,3 +333,38 @@ real lunar conditions.
   (data contract fields unchanged). The CR1 5 m assessment shown in the app is a
   static summary (`app/src/assessment.ts`) tested against
   `data/terrain/connecting-ridge-cr1_terrain_5m_assessment.json`; it is not app data.
+
+### 2026-11-14, science-review follow-up (schema_version stays "1.0"; only `dataset_id` changed)
+- `manifest.dataset_id` is now the site-neutral `lvn-2026-12-01-60d` (was the
+  Athena-named `m2-athena-2026-12-01-60d`). Changed in `pipeline/config.json`
+  and written by a full two-site `export.py` run from the caches. Both site
+  files came out byte-identical (same sha256); only `dataset_id` and
+  `generated_at_utc` changed in the manifest. No consumer parses the value; the
+  pipeline requires manifest = config, and the app shows it in the footer.
+- Clarified definition (unchanged method): `sun_visible` / `earth_visible`
+  refer to the **center** of the Sun and of Earth. Part of either disk can be
+  above the horizon while its center is not, and the reverse. The dataset holds
+  no angular diameters.
+- Clarified resolution (unchanged method): 10 minutes is the sampling and
+  reporting resolution. Interval boundaries and event times are estimates on
+  that grid, not event times of guaranteed accuracy. A grazing crossing pair
+  inside one step can be missed.
+- App-side convention, not a file field: the **selected-time status**
+  (`app/src/status.ts`) reports two separate quantities at a UTC time t:
+  - `visible`: the exported state of the 10-minute step containing t. This is
+    the value every metric and table uses.
+  - `geometry`: the instantaneous center azimuth/elevation and its clearance
+    above the horizon at that azimuth. It is exact at samples and linear
+    between them, with the same formulas as the midpoint rule, so at a step
+    midpoint it reproduces the exported state.
+
+  When both are known and disagree, the status is flagged `nearCrossing`; it
+  never changes either value.
+
+  Edge cases:
+  - The final sample has a position but no step, so its state is unknown
+    ("end of data").
+  - Times outside the samples return nothing; nothing is extrapolated.
+  - Unknown states carry a reason: position unavailable, horizon unknown, or
+    state unknown. A missing interval inside sample coverage is "state
+    unknown" and retains its sample step; it is not the final-sample case.
