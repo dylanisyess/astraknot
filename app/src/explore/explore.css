@@ -1069,3 +1069,9 @@ p.ts-key .sl-sw { display: inline-block; vertical-align: -1px; margin-right: 4px
 .explore .mixed-notice { background: var(--x-caution-bg); border-color: rgba(216, 181, 106, 0.45); color: var(--x-caution); font-size: 12px; }
 .explore .mixed-notice button.primary { background: var(--x-text); color: #111; border-color: var(--x-text); }
 .panel-sitebar .site-chips { flex: 1 1 auto; min-width: 0; }
+
+/* Arrival Window Finder entry point (release 7) */
+.panel-finder { padding: 0 14px 12px; }
+.panel-finder .find-windows-btn { width: 100%; justify-content: center; }
+.panel-body .find-inline { width: 100%; justify-content: center; margin: 2px 0 10px; font-family: inherit; }
+.panel-finder .find-windows-btn { font-family: inherit; }

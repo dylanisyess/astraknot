@@ -4,12 +4,17 @@ A NASA Space Apps prototype that shows when the Sun and Earth are above the
 horizon from documented lunar sites. It is an educational planning tool, not
 flight-qualified analysis.
 
-**Feature-worktree candidate (2026-11-15, uncommitted):** continuous body
-tracking, a catalog/shortlist of up to four sites, and versioned 120-day data
-(2026-12-01 to 2027-03-31, 10-minute samples). Athena, CR1, Apollo 17 and Odysseus
-have Smooth/Terrain visibility, local meshes and slope screening. Accepted
-two-site 60-day data remains unchanged. The dataset and comparison model are
-explicit; different slope measurement scales are disclosed.
+**Releases (2026-11-15).**
+- *Four-site release (accepted; merged to `main` as `c0622dc`):* continuous body
+  tracking, a catalog/shortlist of up to four sites, and versioned 120-day data
+  (2026-12-01 to 2027-03-31, 10-minute samples). Athena, CR1, Apollo 17 and Odysseus
+  have Smooth/Terrain visibility, local meshes and slope screening. Accepted
+  two-site 60-day data remains unchanged. The dataset and comparison model are
+  explicit; different slope measurement scales are disclosed.
+- *Arrival Window Finder release (branch `milestone-7-arrival-finder`):* the finder
+  described below, Earth-blockage metrics, bounded percentage formatting and shipped
+  third-party notices. Frontend only: no dataset, terrain asset or scientific
+  calculation changed. Evidence: [docs/STATUS.md](docs/STATUS.md), "Release summary".
 
 [Coordinate-driven offline preprocessing](docs/COORDINATE_PIPELINE.md) documents
 how to generate observer, skyline, mesh and slope for another supported coordinate
@@ -17,9 +22,23 @@ using configuration or CLI inputs without processing-code edits. It includes the
 third-coordinate smoke test, missing-coverage rejection and NASA source provenance.
 Apollo's mesh agreement target and the Odysseus kernel/DEM height difference
 remain explicit limitations. [Current status and acceptance](docs/STATUS.md)
-records 101 Python tests, 317 frontend tests, passing production build and
-136/266 dataset checks. Browser acceptance is partial because the automation
-tool stopped during final checks; this candidate has not been deployed.
+records, for the four-site release, 101 Python tests, 317 frontend tests (343 at its
+merge), a passing production build and 136/266 dataset checks, with partial browser
+acceptance; for the finder release, 394 frontend tests and its own browser checks.
+Neither release has been deployed.
+
+**Arrival Window Finder (release 7):** "Find arrival
+windows" in Mission setup (Explore) or the shared scenario (Analysis) opens a drawer that
+checks arrivals once per UTC day at a chosen UTC hour for one full mission duration,
+across any sites of the current dataset (or only the active site), with the current horizon
+model. It summarizes the best matching arrival per site, previews +1/+3/+7-day slips for any
+result, and never displays 100 % or 0 % unless exact. It
+ranks by simultaneous Sun + Earth availability (default), sunlight, Earth visibility or the
+shortest longest Sun/Earth blockage within the mission, shows the actual values with
+boundary warnings, applies optional user limits, exports CSV, and changes the scenario only
+through "Use this arrival". Results are the best among evaluated dates, not a
+continuous-time optimum, and not a landing-safety rating. See
+[docs/STATUS.md](docs/STATUS.md), "Arrival Window Finder".
 
 The milestone descriptions below describe the accepted two-site baseline;
 the feature candidate above extends its site count, coverage and terrain sources.
@@ -225,8 +244,14 @@ quantity 4 (airless apparent azimuth/elevation of the target center),
   `python pipeline/slope.py` (needs the cached 1.85 GB raster; about 1 s per site).
 
 ## Third-party software
-- [React](https://react.dev/) and React DOM (MIT License).
+- [React](https://react.dev/) and React DOM 19.3.1, with scheduler 0.28.0 (MIT License).
 - [three.js](https://threejs.org/) 0.187.0 (MIT License, Copyright © 2010-2026
-  three.js authors), used for the 3D Explore view. The minified production
-  bundle does not keep its license comment; ship the license notice with any
-  deployment.
+  three.js authors), used for the 3D Explore view.
+- Vite 8.3.8 runtime helpers (module preload) included in the bundle (MIT License).
+
+The minified bundle drops license comments, so every production build writes
+`dist/THIRD_PARTY_LICENSES.md` with the full license text of each bundled package,
+taken from the installed packages (`build.license` in `app/vite.config.ts`).
+`npm run build` then runs `app/scripts/check-notices.mjs`, which fails the build if
+any of those texts is missing. The app links the file from Analysis, "Method,
+sources and limitations".

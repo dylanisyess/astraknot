@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrivalFinder, FindWindowsButton } from "./ArrivalFinder";
 import Explore from "./explore/Explore";
 import { TerrainComparison } from "./explore/TerrainScreening";
 import { useSlopeAssets } from "./explore/useSlope";
@@ -22,7 +23,8 @@ import {
   bothState,
   clip,
   fmtDuration,
-  fmtHours,
+  fmtOutage,
+  fmtPct,
   fmtSigned,
   fromUtcDateHour,
   nextChange,
@@ -86,12 +88,26 @@ export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
     arrival: sc.arrival, days: sc.days, delay: sc.effDelay, t: new Date(sc.selT).toISOString().replace(".000Z", "Z"),
     horizon: sc.mode, sites: sc.selIds, site: sc.active, view: sc.view, mission: sc.mission, cam: sc.cam, layer: sc.layer, thr: sc.slopeThr,
   }).search;
+  // Arrival Window Finder: mounted on first open, then kept (hidden) so its inputs and results
+  // survive closing; its own staleness rules decide whether results may still be applied.
+  const [finder, setFinder] = useState<{ mounted: boolean; open: boolean }>({ mounted: false, open: false });
+  const opener = useRef<HTMLElement | null>(null);
+  const openFinder = () => {
+    opener.current = document.activeElement as HTMLElement | null;
+    setFinder({ mounted: true, open: true });
+  };
+  const closeFinder = () => {
+    setFinder((f) => ({ ...f, open: false }));
+    const el = opener.current;
+    if (el && el.isConnected) window.setTimeout(() => el.focus(), 0);
+  };
   return (
     <div className={sc.view === "explore" ? "app app-explore" : "app app-analysis"} data-view={sc.view}>
       <TopBar sc={sc} />
       <DatasetBar ds={ds} search={currentSearch} />
       {sc.view === "explore" && <LinkNotices sc={sc} strip />}
-      {!isReady(sc) ? <ActivePending sc={sc} /> : sc.view === "explore" ? <Explore sc={sc} /> : <Analysis sc={sc} />}
+      {!isReady(sc) ? <ActivePending sc={sc} /> : sc.view === "explore" ? <Explore sc={sc} onFindWindows={openFinder} /> : <Analysis sc={sc} onFindWindows={openFinder} />}
+      {finder.mounted && <ArrivalFinder sc={sc} open={finder.open} onClose={closeFinder} />}
     </div>
   );
 }
@@ -159,7 +175,7 @@ function TopBar({ sc }: { sc: Scenario }) {
 
 // ------------------------------------------------------------------ analysis (the dashboard)
 
-export function Analysis({ sc }: { sc: ReadyScenario }) {
+export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindows?: () => void }) {
   const {
     ds, times, selIds, active, setActive, avail, mode, setMode,
     cov, maxDays, days, setDays, durationMs, bounds, arrival, setArrival, delay, setDelay, options, chosen, effDelay,
@@ -302,6 +318,7 @@ export function Analysis({ sc }: { sc: ReadyScenario }) {
           </label>
         </div>
         <div className="quick">
+          {onFindWindows && <FindWindowsButton onOpen={onFindWindows} />}
           <button type="button" onClick={() => setArrival(bounds.earliest)} disabled={arrival === bounds.earliest}>Earliest arrival</button>
           <button type="button" onClick={() => setArrival(bounds.latest)} disabled={arrival === bounds.latest}>Latest arrival without delay</button>
           <span className="muted small">
@@ -540,6 +557,9 @@ export function Analysis({ sc }: { sc: ReadyScenario }) {
           <li>Educational planning prototype, not a flight-qualified analysis tool.</li>
         </ul>
         <p className="muted small">Dataset <code>{manifest.dataset_id}</code>, generated {manifest.generated_at_utc}; site list and capabilities from its catalog.</p>
+        <p className="muted small" data-testid="notices-link">
+          Built with React and three.js (MIT licenses). <a href="THIRD_PARTY_LICENSES.md">Third-party software notices</a>.
+        </p>
       </section>
     </main>
   );
@@ -548,7 +568,7 @@ export function Analysis({ sc }: { sc: ReadyScenario }) {
 // ------------------------------------------------------------------ site card
 
 function pctText(a: Availability<number>) {
-  return a.ok ? `${a.value.toFixed(1)} %` : "unavailable";
+  return a.ok ? fmtPct(a.value) : "unavailable";
 }
 
 function modelLine(site: SiteData, mode: HorizonMode) {
@@ -594,11 +614,19 @@ function SiteCard({ v, mode, delayedLabel, effDelay, cursorT, isActive, onShow }
               {delayedLabel && <td data-label={delayedLabel}><DarkCell m={v.act.longestDark} /></td>}
               {changeHead && <td className="num" data-label={changeHead}>{v.cmp.darkHours === null ? "unavailable" : fmtSigned(v.cmp.darkHours, "h")}</td>}
             </tr>
+            <tr data-field="earth-block">
+              <th scope="row">Longest Earth blockage</th>
+              <td data-label="Baseline"><DarkCell m={v.base.longestEarthBlock} none="None in window" /></td>
+              {delayedLabel && <td data-label={delayedLabel}><DarkCell m={v.act.longestEarthBlock} none="None in window" /></td>}
+              {changeHead && <td className="num" data-label={changeHead}>{v.cmp.earthBlockHours === null ? "unavailable" : fmtSigned(v.cmp.earthBlockHours, "h")}</td>}
+            </tr>
           </tbody>
         </table>
       </div>
       <DarkNotes label="Baseline" m={v.base.longestDark} />
       {delayedLabel && <DarkNotes label={delayedLabel} m={v.act.longestDark} />}
+      <DarkNotes label="Baseline" m={v.base.longestEarthBlock} what="Earth blockage" />
+      {delayedLabel && <DarkNotes label={delayedLabel} m={v.act.longestEarthBlock} what="Earth blockage" />}
       <p className="small at-time" data-field="at-time">
         At {fmtUtc(cursorT)}: Sun <AtState s={st.sun} />, Earth <AtState s={st.earth} />
       </p>
@@ -633,25 +661,25 @@ function MetricRow({ label, col, change, base, act, delta, field }: {
   );
 }
 
-function DarkCell({ m }: { m: Availability<DarkRun | null> }) {
+function DarkCell({ m, none = "None in window" }: { m: Availability<DarkRun | null>; none?: string }) {
   if (!m.ok) return <span title={m.reason}>unavailable</span>;
-  if (!m.value) return <span>None in window</span>;
+  if (!m.value) return <span>{none}</span>;
   const d = m.value;
   return (
     <span className="num">
-      {fmtHours(d.durationMs)}
+      {fmtOutage(d.durationMs)}
       {(d.touchesStart || d.touchesEnd) && <span className="flag" title="Touches a window boundary"> ⚠</span>}
     </span>
   );
 }
 
-function DarkNotes({ label, m }: { label: string; m: Availability<DarkRun | null> }) {
+function DarkNotes({ label, m, what = "darkness" }: { label: string; m: Availability<DarkRun | null>; what?: string }) {
   if (!m.ok || !m.value || !(m.value.touchesStart || m.value.touchesEnd)) return null;
   const d = m.value;
   const where = d.touchesStart && d.touchesEnd ? "both window edges" : d.touchesStart ? "the window start" : "the window end";
   return (
     <details className="note small dark-note">
-      <summary>⚠ {label}: longest darkness touches {where}; its full length may be longer than shown.</summary>
+      <summary>⚠ {label}: longest {what} touches {where}; its full length may be longer than shown.</summary>
       <p>
         In the window: {fmtUtc(d.start)} → {fmtUtc(d.end)}.{" "}
         {d.touchesStart && (
@@ -766,7 +794,7 @@ function metricCell(base: Availability<number>, act: Availability<number> | null
   return `${pctText(base)} → ${pctText(act)} (${delta === null ? "unavailable" : fmtSigned(delta, "pp")})`;
 }
 function darkCell(base: Availability<DarkRun | null>, act: Availability<DarkRun | null> | null, delta: number | null) {
-  const one = (m: Availability<DarkRun | null>) => (!m.ok ? "unavailable" : !m.value ? "none" : `${fmtHours(m.value.durationMs)}${m.value.touchesStart || m.value.touchesEnd ? " ⚠" : ""}`);
+  const one = (m: Availability<DarkRun | null>) => (!m.ok ? "unavailable" : !m.value ? "none" : `${fmtOutage(m.value.durationMs)}${m.value.touchesStart || m.value.touchesEnd ? " ⚠" : ""}`);
   if (!act) return one(base);
   return `${one(base)} → ${one(act)} (${delta === null ? "unavailable" : fmtSigned(delta, "h")})`;
 }

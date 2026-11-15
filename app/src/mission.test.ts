@@ -208,3 +208,43 @@ describe("real dataset cross-check vs independent Python reference", () => {
     for (let i = 1; i < all.length; i++) expect(all[i].start).toBe(all[i - 1].end);
   });
 });
+
+describe("longest Earth blockage (shared run rules with longest darkness)", () => {
+  it("is the longest earth_visible=false run, joining across Sun changes; ties go to the earliest", () => {
+    // Earth false 2 h (sun t), false 1 h (sun f) -> one 3 h run; then visible 1 h; then false 3 h (tie, later).
+    const all = ivs([2, true, false], [1, false, false], [1, true, true], [3, true, false], [1, true, true]);
+    const m = computeMetrics(all, win(0, 8));
+    const e = val(m.longestEarthBlock)!;
+    expect(e.durationMs).toBe(3 * H);
+    expect(e.start).toBe(T0); // the earlier of the two 3 h runs
+    expect(e.touchesStart).toBe(true);
+    expect(e.touchesEnd).toBe(false);
+    // Sun darkness is unchanged by the refactor: the 1 h dark interval.
+    expect(val(m.longestDark)!.durationMs).toBe(1 * H);
+  });
+
+  it("is clipped to the window, flagged at the edge, and reports its full extent", () => {
+    const all = ivs([4, true, true], [10, true, false], [4, true, true]);
+    const m = computeMetrics(all, win(6, 18));
+    const e = val(m.longestEarthBlock)!;
+    expect(e.durationMs).toBe(8 * H); // 6..14 inside the window, not the full 10 h
+    expect(e.touchesStart).toBe(true);
+    expect(e.fullStart).toBe(T0 + 4 * H);
+    expect(e.fullEnd).toBe(T0 + 14 * H);
+    expect(e.fullStartAtCoverageEdge).toBe(false);
+  });
+
+  it("is null (none) when Earth is visible throughout, and unavailable when any Earth state is unknown", () => {
+    expect(val(computeMetrics(ivs([5, false, true]), win(0, 5)).longestEarthBlock)).toBeNull();
+    const unk = computeMetrics(ivs([2, true, false], [1, true, null], [2, true, false]), win(0, 5));
+    expect(unk.longestEarthBlock.ok).toBe(false);
+    // an unknown Earth state never affects the Sun metric
+    expect(val(unk.longestDark)).toBeNull();
+  });
+
+  it("compare reports the change in hours", () => {
+    const all = ivs([2, true, false], [10, true, true], [5, true, false], [10, true, true]);
+    const c = compare(computeMetrics(all, win(0, 12)), computeMetrics(all, win(12, 27)));
+    expect(c.earthBlockHours).toBeCloseTo(3, 9);
+  });
+});

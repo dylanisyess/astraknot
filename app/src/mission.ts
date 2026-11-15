@@ -116,6 +116,9 @@ export interface WindowMetrics {
   bothPct: Availability<number>;
   /** value null = no modeled darkness in the window. */
   longestDark: Availability<DarkRun | null>;
+  /** Longest continuous run without a modeled direct line of sight to Earth (earth_visible false);
+   *  value null = none in the window. Same run rules and boundary flags as longestDark. */
+  longestEarthBlock: Availability<DarkRun | null>;
 }
 
 const unavailable = (reason: string) => ({ ok: false as const, reason });
@@ -145,7 +148,7 @@ export function computeMetrics(all: Interval[], w: TimeWindow): WindowMetrics {
   const full = contiguous && covered === durationMs;
   if (!full) {
     const r = "Window is not fully covered by the available data";
-    return { window: w, durationMs, sunPct: unavailable(r), earthPct: unavailable(r), bothPct: unavailable(r), longestDark: unavailable(r) };
+    return { window: w, durationMs, sunPct: unavailable(r), earthPct: unavailable(r), bothPct: unavailable(r), longestDark: unavailable(r), longestEarthBlock: unavailable(r) };
   }
 
   const pct = (state: (iv: Interval) => Tri, label: string): Availability<number> => {
@@ -158,33 +161,8 @@ export function computeMetrics(all: Interval[], w: TimeWindow): WindowMetrics {
     return { ok: true, value: (100 * visible) / durationMs };
   };
 
-  let longestDark: Availability<DarkRun | null>;
-  if (parts.some((iv) => iv.sun === null)) {
-    longestDark = unavailable("Sun state unknown for part of the window");
-  } else {
-    const dark = runs(parts, (iv) => iv.sun === false);
-    let best: { start: number; end: number } | null = null;
-    for (const r of dark) if (!best || r.end - r.start > best.end - best.start) best = r; // ties: earliest
-    if (!best) longestDark = { ok: true, value: null };
-    else {
-      const b = best;
-      const fullRun = runs(all, (iv) => iv.sun === false).find((r) => r.start <= b.start && r.end >= b.end)!;
-      longestDark = {
-        ok: true,
-        value: {
-          start: b.start,
-          end: b.end,
-          durationMs: b.end - b.start,
-          touchesStart: b.start === w.start,
-          touchesEnd: b.end === w.end,
-          fullStart: fullRun.start,
-          fullEnd: fullRun.end,
-          fullStartAtCoverageEdge: fullRun.start === all[0].start,
-          fullEndAtCoverageEdge: fullRun.end === all[all.length - 1].end,
-        },
-      };
-    }
-  }
+  const longestDark = longestBlockedRun(parts, all, w, "sun");
+  const longestEarthBlock = longestBlockedRun(parts, all, w, "earth");
 
   return {
     window: w,
@@ -193,6 +171,39 @@ export function computeMetrics(all: Interval[], w: TimeWindow): WindowMetrics {
     earthPct: pct((iv) => iv.earth, "Earth"),
     bothPct: pct((iv) => bothState(iv.sun, iv.earth), "Combined"),
     longestDark,
+    longestEarthBlock,
+  };
+}
+
+/**
+ * Longest continuous run in the window where the body's modeled state is false (the Sun:
+ * darkness; Earth: no direct line of sight), on the window-clipped intervals `parts`. Shared by
+ * both bodies so they follow one rule set: a null interval breaks a run and makes the metric
+ * unavailable; adjacent false intervals join even when the other body's state differs; ties go
+ * to the earliest run; touching a window edge is flagged and the run's full extent in the data
+ * is reported (it may continue outside the window).
+ */
+function longestBlockedRun(parts: Interval[], all: Interval[], w: TimeWindow, body: Body): Availability<DarkRun | null> {
+  if (parts.some((iv) => iv[body] === null)) return unavailable(`${body === "sun" ? "Sun" : "Earth"} state unknown for part of the window`);
+  const blocked = runs(parts, (iv) => iv[body] === false);
+  let best: { start: number; end: number } | null = null;
+  for (const r of blocked) if (!best || r.end - r.start > best.end - best.start) best = r; // ties: earliest
+  if (!best) return { ok: true, value: null };
+  const b = best;
+  const fullRun = runs(all, (iv) => iv[body] === false).find((r) => r.start <= b.start && r.end >= b.end)!;
+  return {
+    ok: true,
+    value: {
+      start: b.start,
+      end: b.end,
+      durationMs: b.end - b.start,
+      touchesStart: b.start === w.start,
+      touchesEnd: b.end === w.end,
+      fullStart: fullRun.start,
+      fullEnd: fullRun.end,
+      fullStartAtCoverageEdge: fullRun.start === all[0].start,
+      fullEndAtCoverageEdge: fullRun.end === all[all.length - 1].end,
+    },
   };
 }
 
@@ -201,19 +212,25 @@ export interface Comparison {
   earthPp: number | null;
   bothPp: number | null;
   darkHours: number | null;
+  /** Change in the longest Earth blockage, hours. */
+  earthBlockHours: number | null;
 }
 
 /** Changes of `other` relative to `base`: percentage points, and hours for darkness. */
 export function compare(base: WindowMetrics, other: WindowMetrics): Comparison {
   const d = (a: Availability<number>, b: Availability<number>) => (a.ok && b.ok ? b.value - a.value : null);
-  const darkMs = (m: WindowMetrics) => (m.longestDark.ok ? (m.longestDark.value?.durationMs ?? 0) : null);
-  const bd = darkMs(base);
-  const od = darkMs(other);
+  const runMs = (a: Availability<DarkRun | null>) => (a.ok ? (a.value?.durationMs ?? 0) : null);
+  const h = (a: Availability<DarkRun | null>, b: Availability<DarkRun | null>) => {
+    const x = runMs(a);
+    const y = runMs(b);
+    return x === null || y === null ? null : (y - x) / HOUR_MS;
+  };
   return {
     sunPp: d(base.sunPct, other.sunPct),
     earthPp: d(base.earthPct, other.earthPct),
     bothPp: d(base.bothPct, other.bothPct),
-    darkHours: bd === null || od === null ? null : (od - bd) / HOUR_MS,
+    darkHours: h(base.longestDark, other.longestDark),
+    earthBlockHours: h(base.longestEarthBlock, other.longestEarthBlock),
   };
 }
 
@@ -278,4 +295,24 @@ export function fmtSigned(v: number, unit: string, digits = 1): string {
   const s = Math.abs(v).toFixed(digits);
   if (Number(s) === 0) return `0.${"0".repeat(digits)} ${unit}`;
   return `${v > 0 ? "+" : "−"}${s} ${unit}`;
+}
+
+/**
+ * A mission percentage at `digits` decimals. "100.0 %" and "0.0 %" are reserved for exactly
+ * complete and exactly zero availability; a value that would round to them is shown bounded
+ * (">99.9 %", "<0.1 %") so rounding never hides a nonzero difference. Display only: ranking,
+ * limits and exports use the unrounded value.
+ */
+export function fmtPct(v: number, digits = 1): string {
+  const s = v.toFixed(digits);
+  const step = 10 ** -digits;
+  if (v < 100 && Number(s) >= 100) return `>${(100 - step).toFixed(digits)} %`;
+  if (v > 0 && Number(s) <= 0) return `<${step.toFixed(digits)} %`;
+  return `${s} %`;
+}
+
+/** A blockage duration: minutes below one hour (always a multiple of the 10-minute grid here), else hours at one decimal. */
+export function fmtOutage(ms: number): string {
+  if (ms < HOUR_MS) return `${Math.round(ms / 60_000)} min`;
+  return fmtHours(ms);
 }
