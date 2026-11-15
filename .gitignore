@@ -159,3 +159,10 @@ data/prepared/c5bc6b9fa8f2435ed4ad2df196223a0c26782dbb4bd688a26f8cc3ad8d571d7c/
 data/prepared/460b82845724869e2e202fcf0fc91402adfa1063727ca06c4f5888a6dddc693c/
 data/prepared/5e26f6c1dec9793228f8374f539a5e3e11d28b0fd5f65ea42686a70aeb7ea25b/
 data/prepared/ad7de77e0a2e4fa00484986568306b67096b76ec9a734ae255944eb0396d9036/
+
+# Custom-coordinate prototype workspace: local only (private config, checks, screenshots, the
+# separate prototype dataset and its superseded bundle). The published demonstration site's
+# files are tracked explicitly under app/public, data/horizons and data/prepared instead.
+data/custom/
+app/public/data/custom-*/
+data/prepared/c7e967076de0ce2ba6a299cd976130d48c997508ecd03a2affb669d796213cee/

@@ -115,6 +115,36 @@
       },
       "terrain_coordinate_frame": "MOON_ME_DE421",
       "prepared_terrain": "data/prepared/ffa37016303a8b91ff89c88dc7b63f050d306b23ad57e881db1c0c4a689c03e0"
+    },
+    {
+      "id": "custom-85p5s-315e",
+      "name": "Custom-coordinate demonstration (85.5 S, 315.0 E)",
+      "latitude_deg": -85.5,
+      "longitude_deg_east": 315.0,
+      "coordinate_frame": "User-defined study point entered directly in MOON_ME (DE421 mean Earth/polar axis) body-fixed coordinates, planetocentric latitude, east-positive longitude: the frame of the cached LOLA products and of Horizons MOON_ME. No conversion was applied.",
+      "terrain_coordinate_frame": "MOON_ME_DE421",
+      "coordinate_source_url": "urn:astraknots:user-defined-study-point",
+      "coordinate_source_title": "User-defined study point (entered coordinate; no published source)",
+      "coordinate_source_retrieved_at_utc": "2026-11-15",
+      "coordinate_source_product": "Entered coordinate 85.5 S, 315.0 E for the custom-coordinate demonstration; processed offline with pipeline/prepare_site.py (coordinate-terrain-1)",
+      "point_type": "user_defined_study_point",
+      "point_description": "User-defined study point chosen to demonstrate offline custom-coordinate processing; not a documented landing site or an approved landing target",
+      "coordinate_accuracy_note": "exact as entered; it represents no physical feature or measured position",
+      "observer_height_above_surface_m": 1,
+      "surface_elevation_m": -3866.4,
+      "surface_elevation_reference": "Height above the 1737.4 km LOLA reference sphere, LDEM_80S_20M V2.0, bilinear at the entered point. Rounded to 0.1 m. No local LOLA RDR shot consistency check was made and no absolute vertical accuracy is claimed.",
+      "horizons_site_altitude_km": -3.8654,
+      "horizons_altitude_reference": "Height above the Horizons reference body for the Moon: a 1737.4 km sphere (response header 'Center radii'), the same reference as LOLA heights.",
+      "altitude_conversion_note": "horizons_site_altitude_km = (surface_elevation_m + observer_height_above_surface_m) / 1000 = (-3866.4 m + 1 m) / 1000 = -3.8654 km (negative: the point lies below the 1737.4 km sphere). Both heights are relative to the same sphere, so no datum conversion is needed. Rounding: the bilinear LDEM_80S_20M surface is -3866.4137 m; it was rounded to 0.1 m before forming the altitude, so the submitted point is 1.0137 m above the interpolated surface (nominal 1 m). The terrain horizon, mesh and slope use this same observer.",
+      "horizon_model": "smooth",
+      "preparation_status": "Coordinate-driven offline terrain preparation; capabilities advertised only from validated complete bundle and published assets. Demonstration of one generated result; live coordinate processing is not available on the deployment.",
+      "catalog": {
+        "short_name": "Custom demo",
+        "location_type": "user_defined_study_point",
+        "location_label": "Custom-coordinate demonstration: user-defined study point; not a documented landing site or an approved landing target",
+        "provisional_note": "Not reviewed: one generated result without site-specific sensitivity checks"
+      },
+      "prepared_terrain": "data/prepared/92fe1a278e16d3ae7c4cfd42942c49a149e9af45cb82c6c3fd2bc48651f9616a"
     }
   ],
   "terrain": {

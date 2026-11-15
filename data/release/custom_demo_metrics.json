@@ -1,0 +1,75 @@
+{
+ "site": "custom-85p5s-315e",
+ "dataset_id": "lvn-2026-12-01-120d",
+ "method": "Independent re-implementation (does not import visibility.py): each 10-minute step's state is the body at the step midpoint (positions interpolated, azimuth across the shortest arc) strictly above the horizon interpolated linearly and periodically at that azimuth. Metrics are shares of elapsed time. Two scopes are reported separately and must not be confused:",
+ "full_coverage": {
+  "window": [
+   "2026-12-01T00:00Z",
+   "2027-03-31T00:00Z"
+  ],
+  "smooth": {
+   "sun_pct": 53.1308,
+   "earth_pct": 56.8692,
+   "both_pct": 19.0104,
+   "neither_pct": 9.0104,
+   "steps": 17280
+  },
+  "terrain": {
+   "sun_pct": 10.7465,
+   "earth_pct": 31.1806,
+   "both_pct": 0.0,
+   "neither_pct": 58.0729,
+   "steps": 17280
+  }
+ },
+ "full_coverage_any_simultaneous_terrain_step": false,
+ "mission_windows": {
+  "days": 14,
+  "arrival_hour_utc": 0,
+  "candidates": 107,
+  "terrain_both_pct_max": 0.0,
+  "smooth_both_pct_max": 71.131,
+  "smooth_both_pct_max_arrival": "2026-12-15T00:00Z"
+ },
+ "demo_window": {
+  "rule": "largest smooth-minus-terrain simultaneous (Sun + Earth) share among the candidates; earliest on ties",
+  "arrival": "2026-12-15T00:00Z",
+  "end": "2026-12-29T00:00Z",
+  "smooth": {
+   "sun_pct": 71.9742,
+   "earth_pct": 99.1567,
+   "both_pct": 71.131,
+   "neither_pct": 0.0,
+   "steps": 2016
+  },
+  "terrain": {
+   "sun_pct": 16.4683,
+   "earth_pct": 62.7976,
+   "both_pct": 0.0,
+   "neither_pct": 20.7341,
+   "steps": 2016
+  },
+  "comparison_site": {
+   "id": "im2-athena",
+   "smooth": {
+    "sun_pct": 100.0,
+    "earth_pct": 100.0,
+    "both_pct": 100.0,
+    "neither_pct": 0.0,
+    "steps": 2016
+   },
+   "terrain": {
+    "sun_pct": 98.6607,
+    "earth_pct": 100.0,
+    "both_pct": 98.6607,
+    "neither_pct": 0.0,
+    "steps": 2016
+   }
+  },
+  "url": "/?ds=lvn-2026-12-01-120d&sites=im2-athena,custom-85p5s-315e&site=custom-85p5s-315e&arrival=2026-12-15T00:00Z&days=14&delay=0&horizon=terrain&view=analysis"
+ },
+ "cross_check": {
+  "max_abs_difference_vs_exported_intervals_pp": 0.0,
+  "note": "independent midpoint rule vs exported visibility intervals"
+ }
+}

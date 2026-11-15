@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "dataset_id": "lvn-2026-12-01-120d",
-  "generated_at_utc": "2026-11-15T10:01:40Z",
+  "generated_at_utc": "2026-11-15T19:46:56Z",
   "coverage_start_utc": "2026-12-01T00:00:00Z",
   "coverage_end_utc": "2027-03-31T00:00:00Z",
   "sample_step_seconds": 600,
@@ -25,6 +25,11 @@
       "id": "apollo17-lm",
       "name": "Apollo 17 lunar module (Taurus-Littrow valley)",
       "file": "apollo17-lm.json"
+    },
+    {
+      "id": "custom-85p5s-315e",
+      "name": "Custom-coordinate demonstration (85.5 S, 315.0 E)",
+      "file": "custom-85p5s-315e.json"
     }
   ],
   "is_synthetic": false

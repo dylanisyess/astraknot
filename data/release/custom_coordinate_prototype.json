@@ -1,0 +1,138 @@
+{
+ "record": "custom-coordinate prototype, 2026-11-15 (local only; not deployed; not in curated catalog)",
+ "coordinate": {
+  "latitude_deg": -85.5,
+  "longitude_deg_east": 315.0,
+  "frame": "MOON_ME_DE421",
+  "observer_height_above_surface_m": 1,
+  "site_id": "custom-85p5s-315e",
+  "dataset_id": "custom-85p5s-315e-120d"
+ },
+ "scenario": {
+  "coverage_start_utc": "2026-12-01T00:00:00Z",
+  "coverage_end_utc": "2027-03-31T00:00:00Z",
+  "sample_step_seconds": 600,
+  "samples": 17281
+ },
+ "bundle": {
+  "fingerprint": "c7e967076de0ce2ba6a299cd976130d48c997508ecd03a2affb669d796213cee",
+  "surface_m": -3866.413681,
+  "horizons_site_altitude_km": -3.8654,
+  "eye_above_dem_m": 1.013681,
+  "surface_source": "LDEM_80S_20M"
+ },
+ "supported_region_evidence": {
+  "method": "strided raw-pixel nodata scan + per-longitude bilinear-valid edge (pipeline sampler)",
+  "LDEM_80S_20M": "0 invalid of 2,310,400 strided pixels; valid edge 80.01 S on 0/90/180/270 E axes, 75.9 S at diagonal corners",
+  "LDEM_75S_60M": "0 invalid of 2,325,625; edge 75.01 S axes, 68.91 S corners",
+  "LDEM_64": "0 invalid of 1,179,648; valid to the pole",
+  "SLDEM tile": "registered but not cached on this machine",
+  "proposed_conservative_region": "latitude <= -80.5 at any longitude (>= ~15 km inside the 20 m raster edge), then per-run proof: all 3,600 rays stopped in valid data, mesh/slope footprints fully local"
+ },
+ "terrain_results": {
+  "unknown_azimuths": 0,
+  "stop_km_min_median_max": [
+   89.7,
+   130.3,
+   176.9
+  ],
+  "products_used": [
+   "LDEM_80S_20M"
+  ],
+  "source_transitions": 0,
+  "skyline_elevation_deg_min_max": [
+   1.834,
+   7.83285
+  ],
+  "max_increase_beyond_50km_deg": 2.356873,
+  "max_increase_beyond_100km_deg": 0.0,
+  "half_step_refinement_max_deg": 0.015639,
+  "mesh_inside_footprint": {
+   "n": 746,
+   "abs_max_deg": 0.05735,
+   "n_over_0.05_target": 7,
+   "meets_proposed_target": false
+  },
+  "slope": {
+   "median_deg": 5.42,
+   "p95_deg": 8.03,
+   "max_deg": 12.79,
+   "valid_fraction": 1.0,
+   "baseline_m": 40.04
+  }
+ },
+ "visibility_120d": {
+  "smooth_intervals": 18,
+  "terrain_intervals": 24,
+  "sun_centre_above_terrain_fraction": 0.1076,
+  "earth_centre_above_terrain_fraction": 0.3119,
+  "simultaneous_sun_earth_terrain": "never in 120 days (terrain); smooth 0-deg model gives 71.1% for the best 14-day window"
+ },
+ "stages_seconds": {
+  "prepare_fresh(observer+3600 rays+refinement+mesh+slope, 4 workers)": 47.6,
+  "of_which_source_sha256_warm_cache": 3.0,
+  "prepare_cache_replay": 3.9,
+  "horizons_fetch_24_requests_sequential": 53.0,
+  "publish(export+assets+catalog)": 8.4,
+  "context_terrain": 1.7,
+  "validate(65/65)": 1.5,
+  "fresh_total_excluding_replay": 112.2
+ },
+ "peak_memory_mb_sampled_250ms_all_python_processes": {
+  "prepare_fresh": {
+   "working_set": 1313,
+   "private": 536,
+   "processes": 5,
+   "note": "working set includes shared mmap DEM pages"
+  },
+  "horizons_fetch": {
+   "working_set": 32,
+   "private": 20
+  },
+  "export": {
+   "working_set": 62,
+   "private": 60
+  },
+  "context_terrain": {
+   "working_set": 251,
+   "private": 132,
+   "processes": 5
+  }
+ },
+ "network": {
+  "horizons_requests_live": 24,
+  "horizons_failures": 0,
+  "horizons_raw_bytes": 2434368,
+  "terrain_downloads": 0,
+  "note": "terrain sampling is offline (cached rasters); cache replay makes 0 requests"
+ },
+ "served_asset_bytes": {
+  "site_json": 3355469,
+  "site_json_gzip": 655776,
+  "terrain_bin": 7096332,
+  "terrain_bin_gzip": 5272622,
+  "terrain_json": 2853,
+  "context_bin": 677388,
+  "context_json": 4666,
+  "slope_json": 32967,
+  "manifest_plus_catalog": 1937,
+  "total_raw": 11171612
+ },
+ "worker_inputs": {
+  "LDEM_80S_20M": 1848320000,
+  "LDEM_75S_60M": 465003008,
+  "LDEM_64": 530841600,
+  "total_bytes": 2844164608
+ },
+ "bundle_bytes": {
+  "total": 10827665,
+  "rays_3600_files": 1549590
+ },
+ "accepted_assets": "61 pre-existing files under app/public/{data,render,screening} and data/prepared hashed before and after: 0 changed",
+ "tests": {
+  "python": "104 OK",
+  "frontend": "415 passed",
+  "build": "passed",
+  "app_level_check": "custom dataset loads via loadIndexedDataset; terrain/slope/context assets pass app validators; finder evaluates 107 arrivals in smooth and terrain; curated default still 4 sites"
+ }
+}

@@ -1,0 +1,45 @@
+{
+  "site_id": "custom-85p5s-315e",
+  "target_key": "earth",
+  "request_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&OBJ_DATA=%27YES%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27315.0%2C-85.5%2C-3.8654%27&START_TIME=%272027-02-09%2000%3A00%3A00%27&STOP_TIME=%272027-02-19%2000%3A00%3A00%27&STEP_SIZE=%2710%20min%27&QUANTITIES=%274%27&APPARENT=%27AIRLESS%27&TIME_TYPE=%27UT%27&TIME_DIGITS=%27SECONDS%27&CAL_FORMAT=%27CAL%27&ANG_FORMAT=%27DEG%27&EXTRA_PREC=%27YES%27&CSV_FORMAT=%27YES%27&REF_SYSTEM=%27ICRF%27&ELEV_CUT=%27-90%27&SKIP_DAYLT=%27NO%27",
+  "request_params": {
+    "format": "json",
+    "COMMAND": "'399'",
+    "OBJ_DATA": "'YES'",
+    "MAKE_EPHEM": "'YES'",
+    "EPHEM_TYPE": "'OBSERVER'",
+    "CENTER": "'coord@301'",
+    "COORD_TYPE": "'GEODETIC'",
+    "SITE_COORD": "'315.0,-85.5,-3.8654'",
+    "START_TIME": "'2027-02-09 00:00:00'",
+    "STOP_TIME": "'2027-02-19 00:00:00'",
+    "STEP_SIZE": "'10 min'",
+    "QUANTITIES": "'4'",
+    "APPARENT": "'AIRLESS'",
+    "TIME_TYPE": "'UT'",
+    "TIME_DIGITS": "'SECONDS'",
+    "CAL_FORMAT": "'CAL'",
+    "ANG_FORMAT": "'DEG'",
+    "EXTRA_PREC": "'YES'",
+    "CSV_FORMAT": "'YES'",
+    "REF_SYSTEM": "'ICRF'",
+    "ELEV_CUT": "'-90'",
+    "SKIP_DAYLT": "'NO'"
+  },
+  "retrieved_at_utc": "2026-11-15T19:30:27Z",
+  "http_status": 200,
+  "response_headers": {
+    "Server": "nginx",
+    "Date": "Sun, 15 Nov 2026 19:30:27 GMT",
+    "Content-Type": "application/json",
+    "Transfer-Encoding": "chunked",
+    "Connection": "close"
+  },
+  "api_signature": {
+    "version": "1.2",
+    "source": "NASA/JPL Horizons API"
+  },
+  "api_version_matches_documented": false,
+  "response_sha256": "83aacc8253ee1e5292936cc572130d09440538c71ddd67ea3a08b03621abac94",
+  "response_file": "custom-85p5s-315e__earth__177851860858.response.json"
+}

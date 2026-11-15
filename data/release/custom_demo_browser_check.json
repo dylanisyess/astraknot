@@ -1,0 +1,156 @@
+{
+ "record": "Real-browser acceptance of the custom-coordinate demonstration, 2026-11-15 (local; not deployed)",
+ "environment": "Microsoft Edge headless (new), SwiftShader WebGL, 1440x900, driven via the Chrome DevTools Protocol; production build served by vite preview on 127.0.0.1:4173",
+ "passed": 12,
+ "steps": 12,
+ "results": [
+  {
+   "step": "default selection unchanged (Apollo 17 only) with the 5-site dataset",
+   "ok": true,
+   "detail": {
+    "chips": [
+     "apollo17-lm"
+    ],
+    "datasetBar": "120 days · 4 sites + custom demo · 2026-12-01 to 2027-03-31 UTC · 10-minute samples"
+   }
+  },
+  {
+   "step": "catalog lists the custom point with its label, type and capabilities; add it",
+   "ok": true,
+   "detail": {
+    "caps": [
+     "positions:yes",
+     "smooth:yes",
+     "terrain:yes",
+     "terrain3d:yes",
+     "slope:yes"
+    ],
+    "chips": [
+     "apollo17-lm",
+     "custom-85p5s-315e"
+    ],
+    "active": "custom-85p5s-315e"
+   }
+  },
+  {
+   "step": "Explore About panel shows entered coordinates, sources, observer, sampling, limitations",
+   "ok": true,
+   "detail": "User-defined study point: inputs and limitations | Entered coordinates | 85.5000° S, 315.0000° E | Frame | User-defined study point entered directly in MOON_ME (DE421 mean Earth/polar axis) body-fixed coordinates, planetocentric latitude, east-positive longitude: the frame of the cached LOLA products and of Horizons MOON_ME. No conversion was applied. | Terrain sources | LDEM_80S_20M (20.0 m pixels); 0 unknown skyline directions"
+  },
+  {
+   "step": "Horizon view and Site overview; terrain mesh, context and slope assets load for the custom site",
+   "ok": true,
+   "detail": {
+    "fetched": 6,
+    "screening": {
+     "kind": "none",
+     "site": "Custom demo",
+     "layer": "exceed",
+     "text": "TERRAIN SCREENING "
+    }
+   }
+  },
+  {
+   "step": "Smooth/Terrain switching changes the model and status for the custom site",
+   "ok": true,
+   "detail": {
+    "terrain_sun": "Direct sunlight blocked",
+    "smooth_sun": "Direct sunlight available"
+   }
+  },
+  {
+   "step": "URL reload keeps sites, active site, mode, camera and time",
+   "ok": true,
+   "detail": {
+    "href": "/?ds=lvn-2026-12-01-120d&view=explore&arrival=2026-12-15T00%3A00Z&days=14&delay=0&horizon=terrain&t=2026-12-20T12%3A00%3A00Z&sites=apollo17-lm%2Ccustom-85p5s-315e&site=custom-85p5s-315e&mission=baseline&cam=overview&layer=exceed&thr=15",
+    "chips": [
+     "apollo17-lm",
+     "custom-85p5s-315e"
+    ],
+    "active": "custom-85p5s-315e",
+    "mode": "terrain",
+    "cam": "overview"
+   }
+  },
+  {
+   "step": "switch active site back and forth, then remove the custom point",
+   "ok": true,
+   "detail": {
+    "chips": [
+     "apollo17-lm"
+    ],
+    "search": "?ds=lvn-2026-12-01-120d&view=explore&arrival=2026-12-15T00%3A00Z&days=14&delay=0&horizon=terrain&t=2026-12-20T12%3A00%3A00Z&sites=apollo17-lm&site=apollo17-lm&mission=baseline&cam=overview&layer=exceed&thr=15"
+   }
+  },
+  {
+   "step": "four-site limit: with four documented sites selected, the custom point cannot be added",
+   "ok": true,
+   "detail": "Cannot add: the comparison is full (4 sites); remove one first."
+  },
+  {
+   "step": "Analysis: Athena vs custom point, source-aware banner and sources",
+   "ok": true,
+   "detail": {
+    "basis": "published coordinates and a user-defined study point (an entered coordinate)",
+    "sources": {
+     "link": false,
+     "coord": "Coordinates: User-defined study point (entered coordinate; no published source)",
+     "facts": true
+    },
+    "metrics": [
+     "Metric Athena Custom demo ⚠ provisional",
+     "Sun center visible 98.7 % 16.5 %",
+     "Earth center visible 100.0 % 62.8 %",
+     "Both visible 98.7 % 0.0 %",
+     "Longest darkness 4.5 h ⚠ 280.7 h ⚠",
+     "Terrain model 20 m LOLA model (LDEM_80S_20M; LDEM_75S_60M beyond its edge) 20 m LOLA model (LDEM_80S_20M)"
+    ]
+   }
+  },
+  {
+   "step": "Analysis Smooth vs Terrain: simultaneous share differs for the custom point",
+   "ok": true,
+   "detail": {
+    "terrain": "Both visible 98.7 % 0.0 %",
+    "smooth": "Both visible 100.0 % 71.1 %"
+   }
+  },
+  {
+   "step": "Arrival finder runs across Athena + custom point in Terrain mode",
+   "ok": true,
+   "detail": {
+    "chosen": [
+     "im2-athena:true",
+     "connecting-ridge-cr1:false",
+     "im1-odysseus:false",
+     "apollo17-lm:false",
+     "custom-85p5s-315e:true"
+    ],
+    "best": [
+     {
+      "site": "im2-athena",
+      "state": "match",
+      "text": "Athena 2026-12-16 00:00 UTC → 12-30 00:00 UTC #1 overall Sun + Earth 100.0 % Sun 100.0 % Earth 100.0 % Longest Sun blockage None in window Longest Earth blockag"
+     },
+     {
+      "site": "custom-85p5s-315e",
+      "state": "match",
+      "text": "Custom demo 2026-12-01 00:00 UTC → 12-15 00:00 UTC #99 overall Sun + Earth 0.0 % Sun 8.3 % Earth 0.0 % Longest Sun blockage 308.2 h ⚠ Longest Earth blockage 336"
+     }
+    ]
+   }
+  },
+  {
+   "step": "no uncaught errors",
+   "ok": true,
+   "detail": "none"
+  }
+ ],
+ "uncaught_errors": [],
+ "not_covered": [
+  "narrow/phone layout",
+  "keyboard-only navigation",
+  "reduced motion",
+  "non-Edge browsers"
+ ]
+}

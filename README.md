@@ -29,6 +29,13 @@ keeps its controls out of that corner either way. See [docs/STATUS.md](docs/STAT
   third-party notices. Frontend only: no dataset, terrain asset or scientific
   calculation changed. Evidence: [docs/STATUS.md](docs/STATUS.md), "Release summary".
 
+**Custom-coordinate demonstration.** Custom coordinates can be processed with the offline Python
+pipeline. This site demonstrates one generated result. Live coordinate processing is not available
+on this deployment. The result (85.5° S, 315.0° E, a user-defined study point, not a documented
+landing site or an approved landing target) is an optional fifth site of the 120-day dataset; see
+[docs/CUSTOM_COORDINATES.md](docs/CUSTOM_COORDINATES.md), which also records the prototype
+measurements and a proposed public worker, queue and hosting design.
+
 [Coordinate-driven offline preprocessing](docs/COORDINATE_PIPELINE.md) documents
 how to generate observer, skyline, mesh and slope for another supported coordinate
 using configuration or CLI inputs without processing-code edits. It includes the

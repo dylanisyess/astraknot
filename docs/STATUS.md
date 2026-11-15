@@ -5,6 +5,33 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
+## Custom-coordinate demonstration as an optional fifth site — 2026-11-15, afternoon Pacific
+
+On `main`'s working tree. **Not committed, pushed or deployed.** Full record:
+[CUSTOM_COORDINATES.md](CUSTOM_COORDINATES.md), "Current capability".
+
+> Custom coordinates can be processed with the offline Python pipeline. This site demonstrates
+> one generated result. Live coordinate processing is not available on this deployment.
+
+**What changed:**
+- **Data:** 85.5° S, 315.0° E is now `custom-85p5s-315e` in the 120-day dataset, labelled "Custom-coordinate demonstration" with catalog type `user_defined_study_point`. It was built through the configured-site path, reusing the cached ephemerides (0 new requests).
+- **Defaults:** the default selection (Apollo 17), the four-site comparison limit and the guided example's four documented sites are unchanged.
+- **Wording:** coordinate wording now depends on the location type, so the app no longer calls the point "published". Its coordinate source is unlinked, and an inputs-and-limitations panel is added.
+- **Pipeline fix:** `catalog.py` now uses LF bytes for `terrain_3d.bytes`. Athena's value changes by −214 bytes and CR1's by −190, display only.
+
+**Verified:**
+- `validate.py`: 331/331 (120-day dataset, five sites) and 136/136 (60-day dataset).
+- The four existing sites' data, render, screening files and bundles are byte-identical.
+- 104 Python tests and 422 frontend tests pass; the build passes.
+- Headless Edge browser run: 12/12 steps.
+- Terrain versus smooth was cross-checked from the exported data:
+  - **Full coverage (120 days):** Sun + Earth 19.01 % smooth versus 0.00 % terrain.
+  - **14-day window from 2026-12-15:** 71.13 % smooth versus 0.00 % terrain.
+
+**Known issue:** `validate_bundle` reads `input.json` without an explicit encoding, so non-ASCII
+site text fails validation on Windows. Not fixed, because fixing it changes the
+implementation hash.
+
 ## Onboarding and the Apollo 17 guided example — 2026-11-15, 10:40 Pacific (system clock)
 
 Same branch (`presentation-polish`), on top of the presentation polish below. **Not committed,

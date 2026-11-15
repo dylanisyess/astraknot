@@ -35,10 +35,14 @@ import {
 } from "./mission";
 import {
   type SiteProfile,
+  coordinateBasis,
+  isUserDefined,
   horizonUnderBodies,
+  linkableUrl,
   terrainFacts,
   terrainModelLabel,
 } from "./sites";
+import { UserDefinedPointFacts } from "./UserDefinedPoint";
 import {
   type BodyStatus,
   NEAR_CROSSING,
@@ -177,7 +181,7 @@ export function Workspace({ ds, search, onHelp, guide = null }: { ds: Dataset; s
     finderOpened: guideFinder,
     finderOpen: finder.open,
     openFinder: () => {
-      if (!guideFinder) setPreset((p) => ({ n: (p?.n ?? 0) + 1, chosen: [...sc.allIds] }));
+      if (!guideFinder) setPreset((p) => ({ n: (p?.n ?? 0) + 1, chosen: sc.allIds.filter((id) => !isUserDefined(sc.catalogSite(id))) }));
       setGuideFinder(true);
       openFinder();
     },
@@ -342,8 +346,8 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
         <div className="banner banner-terrain" role="note" data-mode="terrain">
           <strong>Terrain horizon for every site shown.</strong> “Visible” means the body’s center is above the skyline
           computed from each site’s terrain model (named on its card) for an observer 1 m above the modeled surface. This applies to both the Sun and Earth:
-          part of either disk can still be above the skyline when its center is hidden. These are terrain-model results for
-          published coordinates, not the conditions of an actual lander. Earth visible is a geometric opportunity, not a
+          part of either disk can still be above the skyline when its center is hidden. These are terrain-model results for{" "}
+          <span data-field="coordinate-basis">{coordinateBasis(views.map((v) => v.profile))}</span>, not the conditions of an actual lander. Earth visible is a geometric opportunity, not a
           guaranteed radio link. Sun visible is not electrical power output.
         </div>
       ) : (
@@ -1007,9 +1011,12 @@ function SiteSources({ v, mode }: { v: SiteView; mode: HorizonMode }) {
           <p>{meta.altitude_conversion_note}</p>
         </details>
       )}
+      {v.profile.pointSource === "user-defined" && <UserDefinedPointFacts site={site} open />}
       <h4>Sources</h4>
       <ul className="sources">
-        {coord && <li>Coordinates: <a href={coord.url} target="_blank" rel="noreferrer">{coord.title}</a></li>}
+        {coord && (linkableUrl(coord.url)
+          ? <li>Coordinates: <a href={coord.url} target="_blank" rel="noreferrer">{coord.title}</a></li>
+          : <li data-field="coordinate-source">Coordinates: {coord.title}</li>)}
         <li>
           Positions: {querySources.length} exact JPL Horizons queries:{" "}
           {querySources.map((x, k) => (

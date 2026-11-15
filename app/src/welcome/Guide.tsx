@@ -185,7 +185,7 @@ export function GuideCard(p: GuideCardProps) {
           {p.onOpenFinder && (
             <button type="button" className="gd-action" onClick={p.onOpenFinder} data-testid="guide-open-finder">{p.finderOpened ? "Show Find arrival windows" : "Open Find arrival windows"}</button>
           )}
-          {p.finderOpened && <p className="gd-hint">All four sites are selected for comparison. Press <strong>Find windows</strong>; nothing changes here until you choose <strong>Use this arrival</strong>.</p>}
+          {p.finderOpened && <p className="gd-hint">All four documented sites are selected for comparison. Press <strong>Find windows</strong>; nothing changes here until you choose <strong>Use this arrival</strong>.</p>}
         </div>
       )}
     </section>

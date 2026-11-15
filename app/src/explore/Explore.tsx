@@ -10,7 +10,8 @@ import { compass, fmtDeg, fmtLat, fmtLonEast, fmtUtc, nearestIndex } from "../da
 import { type Availability, type DarkRun, type TimeWindow, fmtDuration, fmtOutage, fmtPct, fromUtcDateHour, nextChange, scenarioWindow, utcDateString, utcHour } from "../mission";
 import type { ReadyScenario, Scenario, SiteView } from "../scenario";
 import { MixedTerrainNotice, SiteChips } from "../SiteCatalog";
-import { terrainModelLabel, terrainModelShortLabel } from "../sites";
+import { linkableUrl, terrainModelLabel, terrainModelShortLabel } from "../sites";
+import { UserDefinedPointFacts } from "../UserDefinedPoint";
 import { type BodyStatus, NEAR_CROSSING, horizonName, nearCrossingExplanation, signedClearance, unknownText } from "../status";
 import type { HorizonMode } from "../types";
 import type { MissionKey } from "../urlState";
@@ -586,6 +587,7 @@ function MissionPanel({ sc, focus, open, onToggle, onFindWindows }: { sc: ReadyS
             <p className="small"><strong>{v.profile.label}</strong></p>
             <p className="small">{v.profile.kind}.</p>
             <p className="small num">{fmtLat(meta.latitude_deg)}, {fmtLonEast(meta.longitude_deg_east)}</p>
+            {v.profile.pointSource === "user-defined" && <UserDefinedPointFacts site={v.data} />}
           </details>
           <div className="ctl ctl-inline">
             <span className="ctl-label" id="lbl-model">Horizon model</span>
@@ -1199,7 +1201,7 @@ function DetailsSheet({ v, mode, meta, assetState, contextMeta, onClose, onAnaly
             <h3>Site and coordinates</h3>
             <dl className="facts">
               <dt>Point</dt><dd>{v.profile.label}. {v.profile.kind}.</dd>
-              <dt>Coordinates</dt><dd className="num">{fmtLat(s.latitude_deg)}, {fmtLonEast(s.longitude_deg_east)}{coord ? <> · <a href={coord.url} target="_blank" rel="noreferrer">source</a></> : null}</dd>
+              <dt>Coordinates</dt><dd className="num">{fmtLat(s.latitude_deg)}, {fmtLonEast(s.longitude_deg_east)}{coord && linkableUrl(coord.url) ? <> · <a href={coord.url} target="_blank" rel="noreferrer">source</a></> : coord ? <> · {coord.title}</> : null}</dd>
               <dt>Frame</dt><dd>{s.coordinate_frame}</dd>
               <dt>Observer</dt><dd className="num">Horizons altitude {s.horizons_site_altitude_km} km above the 1737.4 km sphere</dd>
               {v.profile.provisionalTerrain && <><dt>Status</dt><dd><strong>{v.profile.provisionalTerrain}.</strong> {v.profile.limitations.join(" ")}</dd></>}

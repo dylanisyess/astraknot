@@ -13,6 +13,8 @@ export interface SiteProfile {
   short: string;
   /** What kind of point this is. */
   kind: string;
+  /** Where the coordinate comes from: a cited source (curated sites) or user input (catalog location type). */
+  pointSource: "published" | "user-defined";
   /** Shown next to the metrics in Terrain mode when the terrain result is provisional. */
   provisionalTerrain: string | null;
   /** Measured effect of the 0.1 m surface rounding on the observer and skyline (from the pipeline evidence). */
@@ -32,6 +34,7 @@ export const PROFILES: Record<string, SiteProfile> = {
     label: "IM-2 Athena landing point",
     short: "Athena",
     kind: "Published landing point of Intuitive Machines’ IM-2 Athena lander (Mons Mouton region)",
+    pointSource: "published",
     provisionalTerrain: null,
     roundingEffect:
       "The submitted point is 0.0196 m higher than an exact 1 m eye: at most 0.0034° on the skyline and one 10-minute Sun step (the 2026-12-30 sunset); no demo-window metric changes.",
@@ -45,6 +48,7 @@ export const PROFILES: Record<string, SiteProfile> = {
     short: "CR1",
     kind:
       "Assumed landing point in a notional NASA traverse study (Lunar Surface Data Book ACD-50044 Rev A, §7.3.3); not an actual or approved landing site",
+    pointSource: "published",
     provisionalTerrain: "Provisional: sensitive to terrain model",
     roundingEffect:
       "The submitted point is 0.0206 m lower than an exact 1 m eye: up to 0.0235° on the skyline, 13 Sun and 3 Earth 10-minute steps over 60 days, at most +0.25 pp Sun share and −0.83 h longest darkness in the demo windows.",
@@ -58,23 +62,55 @@ export const PROFILES: Record<string, SiteProfile> = {
   },
 };
 
+/** The deployment's capability statement for user-defined study points (docs/CUSTOM_COORDINATES.md). */
+export const CUSTOM_CAPABILITY_NOTE =
+  "Custom coordinates can be processed with the offline Python pipeline. This site demonstrates one generated result. Live coordinate processing is not available on this deployment.";
+
+/** Limitations that follow from the point being user-defined (catalog location type), not from one site ID. */
+export const USER_DEFINED_LIMITATIONS = [
+  "User-defined study point: an entered coordinate with no published source. It is not a documented landing site or an approved landing target.",
+  CUSTOM_CAPABILITY_NOTE,
+  "Not reviewed: no site-specific sensitivity checks (observer position, observer height or terrain product) were made for this point.",
+  "No LOLA laser-shot consistency check was made at the point, and shot counts at the skyline points are not assessed (unknown, not zero).",
+];
+
+/** True for a site whose coordinate was entered by a user rather than taken from a cited source. */
+export const isUserDefined = (cat?: Pick<CatalogSite, "location_type">) => cat?.location_type === "user_defined_study_point";
+
 /** Presentation for a site: its PROFILES entry, else neutral wording from its catalog entry or file. */
 export function profileFor(site: SiteData | null, cat?: CatalogSite): SiteProfile {
   const id = site?.site.id ?? cat?.id ?? "";
   const p = PROFILES[id];
   if (p) return p;
+  const user = isUserDefined(cat);
   return {
     label: cat?.name ?? site?.site.name ?? id,
     short: cat?.short_name ?? id,
     kind: cat?.location_label ?? "Documented lunar surface point",
+    pointSource: user ? "user-defined" : "published",
     provisionalTerrain: cat?.capabilities.provisional ?? null,
     roundingEffect: null,
-    realityNote: "DEM-based visibility for the published coordinate, not actual operating conditions.",
-    limitations: [],
+    realityNote: user
+      ? "DEM-based visibility for a user-defined study point (an entered coordinate), not actual operating conditions; not a documented landing site or an approved landing target."
+      : "DEM-based visibility for the published coordinate, not actual operating conditions.",
+    limitations: user ? USER_DEFINED_LIMITATIONS : [],
     panoramaCenterAz: 0,
     assessment: null,
   };
 }
+
+/** What the shown coordinates are, for banners: never calls a user-defined point "published". */
+export function coordinateBasis(profiles: Pick<SiteProfile, "pointSource">[]): string {
+  const user = profiles.filter((p) => p.pointSource === "user-defined").length;
+  const published = profiles.length - user;
+  const userText = user === 1 ? "a user-defined study point (an entered coordinate)" : "user-defined study points (entered coordinates)";
+  if (!user) return "published coordinates";
+  if (!published) return userText;
+  return `published coordinates and ${userText}`;
+}
+
+/** A source URL that may be shown as a link (http/https only); user-defined points have none. */
+export const linkableUrl = (url: string | undefined) => (url && /^https?:\/\//.test(url) ? url : null);
 
 /** Name of the terrain model actually displayed, from the file's own metadata. */
 export function terrainModelLabel(site: SiteData): string | null {

@@ -17,6 +17,7 @@ export const LOCATION_TYPE_LABEL: Record<LocationType, string> = {
   actual_landing_point: "Actual landing point",
   intended_landing_target: "Intended landing target",
   study_location: "Study location",
+  user_defined_study_point: "User-defined study point",
 };
 
 export interface CapabilityRow {

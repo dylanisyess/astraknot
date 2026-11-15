@@ -68,7 +68,7 @@ export function manifestTimes(manifest: Manifest): number[] {
   return out;
 }
 
-const LOCATION_TYPES = ["actual_landing_point", "intended_landing_target", "study_location"];
+const LOCATION_TYPES = ["actual_landing_point", "intended_landing_target", "study_location", "user_defined_study_point"];
 
 /** The catalog must describe exactly the manifest's sites, in the same order and coverage. */
 export function checkCatalog(manifest: Manifest, catalog: Catalog): void {

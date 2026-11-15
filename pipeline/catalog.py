@@ -32,7 +32,7 @@ ROOT = sites.REPO_ROOT
 CONFIG = ROOT / "pipeline" / "config.json"
 PUBLIC = ROOT / "app" / "public"
 CATALOG_VERSION = "1"
-LOCATION_TYPES = ("actual_landing_point", "intended_landing_target", "study_location")
+LOCATION_TYPES = ("actual_landing_point", "intended_landing_target", "study_location", "user_defined_study_point")
 
 
 def _lf(path: Path) -> bytes:
@@ -63,7 +63,7 @@ def _render(site: dict, observer_radius: float | None) -> dict:
     return {
         "available": True,
         "source_product": m["source_dem"]["product"],
-        "bytes": m["counts"]["bin_bytes"] + p.stat().st_size,
+        "bytes": m["counts"]["bin_bytes"] + len(_lf(p)),  # LF bytes, like every other catalog size
         "near_spacing_m": m["levels"][0]["spacing_m"],
     }
 

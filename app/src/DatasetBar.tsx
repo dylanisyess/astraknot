@@ -40,7 +40,7 @@ export function DatasetBar({ ds, search }: { ds: Dataset; search: string }) {
         <>
           <span>Original dataset retained for this link.</span>
           {others.map((d) => (
-            <a key={d.id} href={datasetSearch(search, d.id)}>Switch to 120 days / 4 sites</a>
+            <a key={d.id} href={datasetSearch(search, d.id)}>Switch to {d.label}</a>
           ))}
         </>
       ) : (

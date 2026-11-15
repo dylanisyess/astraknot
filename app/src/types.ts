@@ -144,7 +144,7 @@ export interface SiteEntry {
 // catalog.json next to a manifest (pipeline/catalog.py): site list, location type and measured
 // data capabilities, so the app can list sites without loading their time series.
 
-export type LocationType = "actual_landing_point" | "intended_landing_target" | "study_location";
+export type LocationType = "actual_landing_point" | "intended_landing_target" | "study_location" | "user_defined_study_point";
 
 export type Capability<T = Record<string, never>> = ({ available: true } & T) | { available: false; reason: string };
 

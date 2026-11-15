@@ -46,13 +46,13 @@ describe("dataset selection and legacy scenarios", () => {
     const oldManifest = read<Manifest>("data/manifest.json");
     const html = renderToStaticMarkup(<DatasetBar ds={{ manifest: oldManifest, catalog, sites: [], times: [], selection: { index, legacyLink: true } }} search="?delay=7" />);
     expect(html).toContain("Original dataset retained");
-    expect(html).toContain("Switch to 120 days / 4 sites");
+    expect(html).toContain("Switch to 120 days · 4 sites + custom demo");
     expect(html).toContain(`delay=7&amp;ds=${expanded}`);
   });
   it("current dataset: coverage stays visible; the previous dataset is under Details", () => {
     const html = renderToStaticMarkup(<DatasetBar ds={{ manifest, catalog, sites: [], times: [], selection: { index, legacyLink: false } }} search="?delay=7" />);
     const cov = html.slice(0, html.indexOf("<details"));
-    expect(cov).toContain("120 days · 4 sites");
+    expect(cov).toContain("120 days · 4 sites + custom demo");
     expect(cov).toContain("2026-12-01 to 2027-03-31 UTC · 10-minute samples");
     expect(cov).not.toContain("Open accepted 60-day dataset");
     const details = html.slice(html.indexOf("<details"));
@@ -80,9 +80,10 @@ describe("dataset selection and legacy scenarios", () => {
 });
 
 describe("real expanded release and protected existing windows", () => {
-  it("has four checked sites, 120 days at ten minutes, inclusive final positions", () => {
+  it("has the four documented sites plus the custom-coordinate demonstration, 120 days at ten minutes, inclusive final positions", () => {
     checkCatalog(manifest, catalog);
-    expect(manifest.sites).toHaveLength(4);
+    expect(manifest.sites.map((s) => s.id)).toEqual(["im2-athena", "connecting-ridge-cr1", "im1-odysseus", "apollo17-lm", "custom-85p5s-315e"]);
+    expect(catalog.sites.map((s) => s.location_type)).toEqual(["actual_landing_point", "study_location", "actual_landing_point", "actual_landing_point", "user_defined_study_point"]);
     expect(times).toHaveLength(17281);
     expect(times.at(-1)! - times[0]).toBe(120 * DAY_MS);
     expect(new Date(times.at(-1)!).toISOString()).toBe("2027-03-31T00:00:00.000Z");

@@ -32,7 +32,7 @@ function About({ onClose }: { onClose: () => void }) {
         <h2 id="lp-about-h">About this navigator</h2>
         <button type="button" className="lp-about-x" onClick={onClose} aria-label="Close About">✕</button>
       </div>
-      <p>Compare sunlight, direct-to-Earth visibility and terrain steepness at documented lunar landing and study sites, and see what changes when arrival slips.</p>
+      <p>Compare sunlight, direct-to-Earth visibility and terrain steepness at documented lunar landing and study sites (plus one labelled custom-coordinate demonstration), and see what changes when arrival slips.</p>
       <h3>The Apollo 17 example</h3>
       <p>
         A <strong>hypothetical</strong> {EXAMPLE.days}-day mission at the historic Apollo 17 landing site, arriving {exampleDate} UTC within this dataset’s dates. It

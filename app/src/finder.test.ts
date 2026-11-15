@@ -346,7 +346,7 @@ describe("CSV export", () => {
 
 // ------------------------------------------------------------ real 120-day dataset
 
-describe("real 120-day dataset (four sites)", () => {
+describe("real 120-day dataset (four documented sites + custom-coordinate demonstration)", () => {
   const dir = new URL("../public/data/lvn-2026-12-01-120d/", import.meta.url);
   const manifest = JSON.parse(readFileSync(new URL("manifest.json", dir), "utf-8")) as Manifest;
   const files = manifest.sites.map((s) => JSON.parse(readFileSync(new URL(s.file, dir), "utf-8")) as SiteData);
@@ -359,14 +359,14 @@ describe("real 120-day dataset (four sites)", () => {
     expect(arrivalLimits(cov, 14 * DAY_MS, 12)).toMatchObject({ earliestDate: "2026-12-01", latestDate: "2027-03-16" });
   });
 
-  it("evaluates 4 x 107 candidates with complete data, quickly", () => {
+  it("evaluates 5 x 107 candidates with complete data, quickly", () => {
     const t0 = performance.now();
     const c = checkInputs({ siteIds: sites.map((s) => s.id), days: 14, fromDate: "2026-12-01", toDate: "2027-03-17", hour: 0 }, cov);
     if (!c.ok) throw new Error(c.problems.join(" "));
     const rows = evaluate(sites, c.arrivals, c.durationMs);
     const v = resultView(rows, "both", NO_LIMITS);
     const ms = performance.now() - t0;
-    expect(rows.length).toBe(4 * 107);
+    expect(rows.length).toBe(5 * 107);
     expect(v.ranking.unevaluable).toEqual([]);
     expect(rows.every((r) => r.end <= cov.end)).toBe(true);
     expect(ms).toBeLessThan(1000);
