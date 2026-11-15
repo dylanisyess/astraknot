@@ -29,6 +29,21 @@ import { type ScenarioCore, applyResult } from "./finder";
 import { type CamMode, type LayerKey, type MissionKey, type View, DEFAULT_VIEW, type SiteRequest, addBlockedReason, parseUrlState, resolveActive, resolveSites, withSite, withoutSite, writeUrlState } from "./urlState";
 
 export const DEFAULT_ARRIVAL = "2026-12-05T00:00:00Z";
+
+/**
+ * Where a playback run that STARTS at sample `sel` stops: the end of the shown mission windows
+ * (i1) when it starts before that end, otherwise the last sample of the data. It is decided once,
+ * when Play is pressed, and kept for the whole run; recomputing it from the moving viewing time
+ * would switch to "end of data" on reaching the mission end, and playback would never stop there.
+ */
+export function playbackEnd(sel: number, i1: number, last: number): number {
+  return sel < i1 ? i1 : last;
+}
+
+/** The sample after one playback tick of n samples from c: never past the run's stop sample. */
+export function playAdvance(c: number, n: number, stop: number, last: number): number {
+  return Math.min(clampNum(c, 0, last) + n, clampNum(stop, 0, last));
+}
 export const clampNum = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 export interface SiteView {
@@ -116,6 +131,8 @@ export interface Scenario {
   setSel: (i: number) => void;
   /** Step the selected viewing time by n samples, clamped to the coverage. */
   stepSel: (n: number) => void;
+  /** Playback step: n samples forward, never past the playback endpoint (end of the shown windows, or of the data once past them). */
+  playStep: (n: number) => void;
   /** Explore: which mission window is active (delayed only when a delay applies). */
   mission: MissionKey;
   setMission: (m: MissionKey) => void;
@@ -193,6 +210,8 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
   const entries = selIds.map(readyEntry).filter((e): e is SiteEntry => e !== null);
   const [view, setViewRaw] = useState<View>(init.view ?? DEFAULT_VIEW);
   const [playing, setPlaying] = useState(false);
+  /** Stop sample of the current playback run, fixed when Play was pressed (playbackEnd). */
+  const [playStop, setPlayStop] = useState<number | null>(null);
   const [applyN, setApplyN] = useState(0);
   const [missionRaw, setMissionRaw] = useState<MissionKey>(() => init.mission ?? ((init.delay ?? 3) > 0 ? "delayed" : "baseline"));
   const [cam, setCam] = useState<CamMode>(init.cam ?? "overview");
@@ -240,8 +259,9 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
   const cursor = clampNum(cursorRaw, i0, i1);
   const cursorT = times[cursor];
   const mission: MissionKey = missionRaw === "delayed" && effDelay > 0 ? "delayed" : "baseline";
-  // playback runs to the end of the shown windows, or (when already past them) to the end of the data
-  const playEnd = sel < i1 ? i1 : last;
+  // A run started before the end of the shown windows stops there; one started at or after it runs
+  // to the end of the data. The stop is fixed for the run (playStop), not recomputed as time moves.
+  const playEnd = playing && playStop !== null ? Math.min(playStop, last) : playbackEnd(sel, i1, last);
 
   // Per-site results for the shared model and the identical windows.
   // parsed intervals per loaded site and model (each site's own file only)
@@ -415,6 +435,7 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
     selT,
     setSel: (i: number) => setCursorRaw(clampNum(i, 0, last)),
     stepSel: (n: number) => setCursorRaw((c) => clampNum(clampNum(c, 0, last) + n, 0, last)),
+    playStep: (n: number) => setCursorRaw((c) => playAdvance(c, n, playEnd, last)),
     mission,
     setMission: setMissionRaw,
     cam,
@@ -425,7 +446,13 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
     setSlopeThr: (deg: number) => {
       if (Number.isFinite(deg)) setSlopeThrRaw(clampThreshold(deg));
     },
-    setPlaying: (p: boolean) => setPlaying(p && sel < playEnd),
+    setPlaying: (p: boolean) => {
+      if (!p) return setPlaying(false);
+      const stop = playbackEnd(sel, i1, last);
+      if (sel >= stop) return;
+      setPlayStop(stop);
+      setPlaying(true);
+    },
     views,
     activeView,
     activeSite,

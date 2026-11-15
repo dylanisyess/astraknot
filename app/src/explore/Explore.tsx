@@ -46,12 +46,21 @@ const HOURS = Array.from({ length: 24 }, (_, h) => h);
 /** Composed default overview distance per site (m): CR1's skyline is within 480 m, Athena's to 30 km. */
 // (5C: a little closer than 5B so the 500 m assessed area is discoverable; the horizon stays in frame.)
 const OVERVIEW_DIST: Record<string, number> = { "connecting-ridge-cr1": 3000, "im2-athena": 4800 };
+/**
+ * Playback speeds in viewing time per real second. Each tick advances `perTick` 10-minute samples,
+ * at stepsPerSec / perTick ticks per second (12 h/s moves two samples per tick, so it renders no
+ * more often than 6 h/s). Playback never passes its endpoint (scenario.ts playStep).
+ */
 export const SPEEDS = [
-  { id: "10m", label: "10 min/s", stepsPerSec: 1 },
-  { id: "1h", label: "1 h/s", stepsPerSec: 6 },
-  { id: "6h", label: "6 h/s", stepsPerSec: 36 },
+  { id: "10m", label: "10 min/s", stepsPerSec: 1, perTick: 1 },
+  { id: "1h", label: "1 h/s", stepsPerSec: 6, perTick: 1 },
+  { id: "6h", label: "6 h/s", stepsPerSec: 36, perTick: 1 },
+  { id: "12h", label: "12 h/s", stepsPerSec: 72, perTick: 2 },
 ] as const;
 type Speed = (typeof SPEEDS)[number];
+export const speedById = (id: Speed["id"]): Speed => SPEEDS.find((s) => s.id === id)!;
+/** Speed when Play is first pressed. */
+export const DEFAULT_SPEED: Speed = speedById("6h");
 const SUN_R = 0.265;
 const EARTH_R = 0.95;
 
@@ -160,7 +169,7 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
   useEffect(() => {
     if (narrow) setSetupOpen(false);
   }, [narrow]);
-  const [speed, setSpeed] = useState<Speed>(SPEEDS[1]);
+  const [speed, setSpeed] = useState<Speed>(DEFAULT_SPEED);
   const [evBody, setEvBody] = useState<"sun" | "earth">("sun");
   const [evRange, setEvRange] = useState<"mission" | "all">("mission");
   const [evMsg, setEvMsg] = useState<EventMsg | null>(null);
@@ -183,12 +192,12 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
   const win = activeWindow(sc, sc.mission);
   const st = v.statusSel;
 
-  // Playback: one 10-minute step per tick; stops at the endpoint (scenario.ts) and pauses on leave.
-  const stepRef = useRef(sc.stepSel);
-  stepRef.current = sc.stepSel;
+  // Playback: `perTick` 10-minute steps per tick, never past the endpoint (scenario.ts); pauses on leave.
+  const stepRef = useRef(sc.playStep);
+  stepRef.current = sc.playStep;
   useEffect(() => {
     if (!sc.playing) return;
-    const id = window.setInterval(() => stepRef.current(1), 1000 / speed.stepsPerSec);
+    const id = window.setInterval(() => stepRef.current(speed.perTick), (1000 * speed.perTick) / speed.stepsPerSec);
     return () => window.clearInterval(id);
   }, [sc.playing, speed]);
   useEffect(() => () => sc.setPlaying(false), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -243,7 +252,7 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
     }
     sc.setSel(nearestIndex(sc.times, plan.targetT));
     anchor.current = plan.anchor;
-    setSpeed(evBody === "sun" ? SPEEDS[0] : SPEEDS[1]);
+    setSpeed(speedById(evBody === "sun" ? "10m" : "1h"));
     // Crossing navigation tracks the event's body. A first engagement frames the crossing
     // (narrower field of view); while already tracking, the user's field of view is kept.
     if (!track) cmd("fov", evBody === "sun" ? 10 : 18);
