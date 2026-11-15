@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { ArrivalFinder, FindWindowsButton } from "./ArrivalFinder";
-import Explore from "./explore/Explore";
+import Explore, { type ExploreGuide } from "./explore/Explore";
 import { TerrainComparison } from "./explore/TerrainScreening";
 import { useSlopeAssets } from "./explore/useSlope";
 import { CR1_5M } from "./assessment";
@@ -11,6 +11,8 @@ import { timeScale, useWidth } from "./axis";
 import { compass, fmtDeg, fmtLat, fmtLonEast, fmtUtc, nearestIndex } from "./data";
 import { Locator } from "./Locator";
 import { DatasetBar } from "./DatasetBar";
+import { EXAMPLE, type GuideStep, exampleSearch, isExampleScenario, showWelcomeOnEntry, writeOnboarded } from "./onboarding";
+import { Welcome } from "./welcome/Welcome";
 import { loadIndexedDataset } from "./datasets";
 import { MixedTerrainNotice, PendingCard, SiteChips, pendingText } from "./SiteCatalog";
 import {
@@ -48,18 +50,55 @@ import {
 } from "./status";
 import type { Dataset, HorizonMode, SiteData, TerrainHorizonBlock } from "./types";
 import { type ReadyScenario, type Scenario, type SiteView, clampNum, isReady, useScenario } from "./scenario";
-import { type View, writeUrlState } from "./urlState";
+import { type View, parseUrlState, writeUrlState } from "./urlState";
 
-export function App() {
+/**
+ * `entrySearch`: the address the visitor arrived with, captured in main.tsx before the app writes
+ * the canonical scenario into the URL. A root visit without a scenario shows the welcome screen
+ * (unless it was completed or skipped before); any scenario link loads directly.
+ */
+export function App({ entrySearch = typeof window === "undefined" ? "" : window.location.search }: { entrySearch?: string }) {
   const [ds, setDs] = useState<Dataset | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // the search that selects the dataset; changes only when the example needs another dataset
+  const [load, setLoad] = useState({ search: entrySearch, n: 0 });
+  const [welcome, setWelcome] = useState(() => showWelcomeOnEntry(entrySearch));
+  const [help, setHelp] = useState<{ current: string | null } | null>(null);
+  const [guide, setGuide] = useState<GuideStep | null>(null);
+  const [wsKey, setWsKey] = useState(0);
   useEffect(() => {
     let live = true;
-    loadIndexedDataset(import.meta.env.BASE_URL, window.location.search)
+    setError(null);
+    loadIndexedDataset(import.meta.env.BASE_URL, load.search)
       .then((data) => { if (live) setDs(data); })
       .catch((e: unknown) => { if (live) setError(e instanceof Error ? e.message : String(e)); });
     return () => { live = false; };
-  }, []);
+  }, [load]);
+
+  /** The explicit action that changes the scenario: load the example and start the guide. */
+  const startExample = () => {
+    writeOnboarded();
+    const q = exampleSearch();
+    window.history.replaceState(null, "", `${window.location.pathname}${q}${window.location.hash}`);
+    if (ds && ds.manifest.dataset_id !== EXAMPLE.datasetId) {
+      setDs(null);
+      setLoad((l) => ({ search: q, n: l.n + 1 }));
+    }
+    setWsKey((k) => k + 1); // a fresh scenario read from the example address
+    setGuide(1);
+    setWelcome(false);
+    setHelp(null);
+  };
+  const openNavigator = () => {
+    writeOnboarded();
+    setWelcome(false);
+  };
+  const openHelp = () => {
+    const search = window.location.search;
+    setHelp({ current: isExampleScenario(search) ? null : describeScenario(search, ds) });
+  };
+
+  if (welcome) return <Welcome mode="page" onExplore={startExample} onOpen={openNavigator} />;
   if (error) {
     return (
       <main className="page">
@@ -70,8 +109,40 @@ export function App() {
       </main>
     );
   }
-  if (!ds) return <main className="page"><p className="muted">Loading data…</p></main>;
-  return <Workspace ds={ds} />;
+  if (!ds) return <main className="page"><p className="muted" role="status">Loading data…</p></main>;
+  return (
+    <>
+      <Workspace
+        key={wsKey}
+        ds={ds}
+        onHelp={openHelp}
+        guide={guide === null ? null : { step: guide, setStep: setGuide, exit: () => setGuide(null), finish: () => { writeOnboarded(); setGuide(null); } }}
+      />
+      {help && <Welcome mode="dialog" current={help.current} onExplore={startExample} onOpen={() => setHelp(null)} />}
+    </>
+  );
+}
+
+/** Short description of the scenario in an address, for the "replaces the current scenario" note. */
+export function describeScenario(search: string, ds: Dataset | null): string {
+  const u = parseUrlState(search);
+  const names = (u.sites ?? []).map((id) => ds?.catalog.sites.find((c) => c.id === id)?.short_name ?? id);
+  const parts = [
+    names.length ? names.join(", ") : null,
+    u.arrival !== null ? `arrival ${fmtUtc(u.arrival)}` : null,
+    u.days !== null ? `${u.days} days` : null,
+    u.delay ? `delay +${u.delay} d` : null,
+    u.horizon ? (u.horizon === "terrain" ? "Terrain" : "Smooth") : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "the current view";
+}
+
+/** Guide state owned by the App (it survives view switches; a new example remounts the workspace). */
+export interface AppGuide {
+  step: GuideStep;
+  setStep: (s: GuideStep) => void;
+  exit: () => void;
+  finish: () => void;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
@@ -81,7 +152,7 @@ const HOURS = Array.from({ length: 24 }, (_, h) => h);
 /** Shell: one shared scenario, two views. Explore (3D) is the default; Analysis is the dashboard.
  *  The Explore shell (controls, status, time bar) is plain React; only its 3D scene is lazy-loaded,
  *  so Analysis and the status stay usable if the renderer or an asset fails. */
-export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
+export function Workspace({ ds, search, onHelp, guide = null }: { ds: Dataset; search?: string; onHelp?: () => void; guide?: AppGuide | null }) {
   const sc = useScenario(ds, search);
   // Render switch links from the current scenario, before replaceState's effect runs.
   const currentSearch = writeUrlState(new URL(search ?? window.location.search, "http://localhost/"), {
@@ -96,6 +167,21 @@ export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
     opener.current = document.activeElement as HTMLElement | null;
     setFinder({ mounted: true, open: true });
   };
+  // Guide step 3: the finder with example inputs (all dataset sites for a site comparison). Only
+  // its inputs are set; nothing is searched or applied for the user.
+  const [preset, setPreset] = useState<{ n: number; chosen: string[] } | null>(null);
+  const [guideFinder, setGuideFinder] = useState(false);
+  const exploreGuide: ExploreGuide | null = guide && {
+    ...guide,
+    delayDays: EXAMPLE.delay,
+    finderOpened: guideFinder,
+    finderOpen: finder.open,
+    openFinder: () => {
+      if (!guideFinder) setPreset((p) => ({ n: (p?.n ?? 0) + 1, chosen: [...sc.allIds] }));
+      setGuideFinder(true);
+      openFinder();
+    },
+  };
   const closeFinder = () => {
     setFinder((f) => ({ ...f, open: false }));
     const el = opener.current;
@@ -103,11 +189,34 @@ export function Workspace({ ds, search }: { ds: Dataset; search?: string }) {
   };
   return (
     <div className={sc.view === "explore" ? "app app-explore" : "app app-analysis"} data-view={sc.view}>
-      <TopBar sc={sc} />
-      <DatasetBar ds={ds} search={currentSearch} />
+      <TopBar sc={sc} coverage={<DatasetBar ds={ds} search={currentSearch} />} onHelp={onHelp} />
       {sc.view === "explore" && <LinkNotices sc={sc} strip />}
-      {!isReady(sc) ? <ActivePending sc={sc} /> : sc.view === "explore" ? <Explore sc={sc} onFindWindows={openFinder} /> : <Analysis sc={sc} onFindWindows={openFinder} />}
-      {finder.mounted && <ArrivalFinder sc={sc} open={finder.open} onClose={closeFinder} />}
+      {guide && (!isReady(sc) || sc.view !== "explore") && <GuidePaused sc={sc} guide={guide} />}
+      {!isReady(sc) ? <ActivePending sc={sc} /> : sc.view === "explore" ? <Explore sc={sc} onFindWindows={openFinder} guide={exploreGuide} /> : <Analysis sc={sc} onFindWindows={openFinder} />}
+      {finder.mounted && <ArrivalFinder sc={sc} open={finder.open} onClose={closeFinder} preset={preset} />}
+    </div>
+  );
+}
+
+/** The guide lives in Explore; elsewhere (Analysis, or the example site unavailable) it says so and can be left. */
+function GuidePaused({ sc, guide }: { sc: Scenario; guide: AppGuide }) {
+  const p = sc.pending.find((x) => x.id === sc.active);
+  return (
+    <div className="guide-paused" role="status" data-testid="guide-paused">
+      {p && p.state !== "loading" ? (
+        <p>
+          <strong>The guided example cannot continue:</strong> {p.short} {p.state === "error" ? `could not be loaded (${p.reason})` : "has no terrain horizon here"}.
+          Retry below, open Analysis, or exit the guide and use the navigator.
+        </p>
+      ) : p ? (
+        <p>Loading the {p.short} example…</p>
+      ) : (
+        <p>Guide paused (step {guide.step} of 3): it continues in Explore.</p>
+      )}
+      <div className="gp-actions">
+        {sc.view !== "explore" && isReady(sc) && <button type="button" onClick={() => sc.setView("explore")} data-testid="guide-resume">Return to Explore</button>}
+        <button type="button" onClick={guide.exit} data-testid="guide-paused-exit">Exit guide</button>
+      </div>
     </div>
   );
 }
@@ -135,7 +244,8 @@ function ActivePending({ sc }: { sc: Scenario }) {
   );
 }
 
-function TopBar({ sc }: { sc: Scenario }) {
+/** Header: product name, view tabs, current dataset coverage (always visible) and the UTC note. */
+function TopBar({ sc, coverage, onHelp }: { sc: Scenario; coverage?: ReactNode; onHelp?: () => void }) {
   const synthetic = sc.ds.manifest.is_synthetic || Object.values(sc.loads).some((l) => l.state === "ready" && l.entry.data.site.is_synthetic);
   const tabs: { v: View; label: string; hint: string }[] = [
     { v: "explore", label: "Explore", hint: "3D terrain around the modeled observer" },
@@ -148,7 +258,7 @@ function TopBar({ sc }: { sc: Scenario }) {
           <circle cx="10" cy="10" r="8.25" />
           <path d="M3 12.5c3-1.6 5.3-1.1 7-0.2s4.3 1.2 7-0.6" />
         </svg>
-        <span className="brand-name">Lunar Visibility Navigator</span>
+        <span className="brand-name">Lunar Landing Site Navigator</span>
       </div>
       <nav className="view-tabs" aria-label="View">
         {tabs.map((t) => (
@@ -165,7 +275,13 @@ function TopBar({ sc }: { sc: Scenario }) {
           </button>
         ))}
       </nav>
+      {coverage}
       <div className="topbar-meta">
+        {onHelp && (
+          <button type="button" className="tb-help" onClick={onHelp} aria-haspopup="dialog" data-testid="how-to-use">
+            <span aria-hidden="true" className="tb-help-ic">?</span><span className="tb-help-t">How to use</span>
+          </button>
+        )}
         {synthetic && <span className="tb-badge tb-warn">Synthetic data</span>}
         <span className="tb-badge tb-utc">All times UTC</span>
       </div>
@@ -213,7 +329,7 @@ export function Analysis({ sc, onFindWindows }: { sc: ReadyScenario; onFindWindo
     <main className="page" id="analysis">
       <header className="masthead">
         <div>
-          <p className="eyebrow">Lunar Visibility Navigator · {selIds.length}-site comparison · {mode === "terrain" ? "Terrain horizon" : "Smooth horizon"}</p>
+          <p className="eyebrow">Lunar Landing Site Navigator · {selIds.length}-site comparison · {mode === "terrain" ? "Terrain horizon" : "Smooth horizon"}</p>
           <h1>Sun and Earth visibility: {joinNames(sc.selIds.map((id) => views.find((v) => v.entry.id === id)?.profile.short ?? sc.catalogSite(id).short_name))}</h1>
         </div>
         <div className="badges">

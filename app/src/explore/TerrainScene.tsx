@@ -428,6 +428,24 @@ export default function TerrainScene(props: SceneProps) {
       labelHost.appendChild(d);
       return d;
     }
+    // "blocked here" points: a button per body; the geometry line opens on hover, focus or click
+    const blockOpen = { sun: false, earth: false };
+    function blockBtn(b: "sun" | "earth") {
+      const d = document.createElement("button");
+      d.type = "button";
+      d.className = `scene-label lbl-block lbl-block-${b}`;
+      d.dataset.body = b;
+      d.dataset.pos = "r";
+      d.style.display = "none";
+      d.setAttribute("aria-expanded", "false");
+      d.addEventListener("click", () => {
+        blockOpen[b] = !blockOpen[b];
+        d.setAttribute("aria-expanded", String(blockOpen[b]));
+        requestRender();
+      });
+      labelHost.appendChild(d);
+      return d;
+    }
     const lab = {
       observer: mk("lbl-observer"),
       north: mk("lbl-north", "N"),
@@ -439,8 +457,8 @@ export default function TerrainScene(props: SceneProps) {
       offSun: chip("sun"),
       offEarth: chip("earth"),
       inspect: mk("lbl-inspect", '<span class="insp-mark" aria-hidden="true"></span><span class="lbl-name">Terrain inspection point</span>'),
-      blockSun: mk("lbl-block lbl-block-sun"),
-      blockEarth: mk("lbl-block lbl-block-earth"),
+      blockSun: blockBtn("sun"),
+      blockEarth: blockBtn("earth"),
     };
     const ringLabels = [100, 250, 500].map((r) => ({ r, el: mk("lbl-ring", r === 500 ? "500 m · analysis area" : `${r} m`) }));
     const cardinals = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"].map((t, k) => ({ az: k * 45, el: mk(k % 2 ? "lbl-card minor" : "lbl-card", t) }));
@@ -773,10 +791,21 @@ export default function TerrainScene(props: SceneProps) {
       };
       const shown = (el: HTMLElement) => el.style.display !== "none";
       const stage = { l: 0, t: 0, r: w, b: h };
-      const obstacles = Array.from(document.querySelectorAll<HTMLElement>(".view-toolbar, .mission-panel, .right-col > .panel, .terrain-layers, .scene-legend, .event-card, .stage-note"))
+      const obstacles = Array.from(document.querySelectorAll<HTMLElement>(".view-toolbar, .mission-panel, .right-col > .panel, .terrain-layers, .scene-legend, .event-card, .stage-note, .guide-card"))
         .filter((e) => e.offsetParent !== null)
         .map(box)
         .filter((r) => r.r > r.l && hit2(r, stage));
+      // an overview body label never covers a "blocked here" mark: it moves to the other side of its
+      // own marker (above instead of below) when it would
+      const marks = [lab.blockSun, lab.blockEarth].filter(shown).map((el) => box(el.querySelector(".blk-mark")!));
+      if (camMode === "overview" && marks.length) {
+        for (const el of bodyLabels) {
+          if (!shown(el) || !marks.some((m) => hit2(box(el), m))) continue;
+          const was = el.style.translate;
+          el.style.translate = was.includes("-100%") ? "-50% 22px" : "-50% calc(-100% - 20px)";
+          if (marks.some((m) => hit2(box(el), m))) el.style.translate = was;
+        }
+      }
       // on-screen body labels step sideways off a panel (the marker itself never moves)
       for (const el of bodyLabels) {
         el.style.marginLeft = "0px";
@@ -785,24 +814,68 @@ export default function TerrainScene(props: SceneProps) {
         const ob = obstacles.find((o) => hit2(r, o));
         if (ob) el.style.marginLeft = `${((ob.l + ob.r) / 2 > (r.l + r.r) / 2 ? ob.l - r.r - 4 : ob.r - r.l + 4).toFixed(0)}px`;
       }
-      // a blocked-view label sits right of its point, or left of it when a panel or the edge is in the way
+      const inStage = (q: Box) => q.l >= 4 && q.t >= 4 && q.r <= w - 4 && q.b <= h - 4;
+      // Body labels (short name + status) have priority; the "blocked here" titles take the first clear
+      // spot around their point (the mark itself never moves), else show only the mark (title and
+      // geometry stay on hover, focus and in the button's name).
+      const taken: Box[] = [...bodyLabels, ...markers.map((m) => m.btn), lab.inspect].filter(shown).map(box);
+      const blockBox = (el: HTMLElement): Box => {
+        const m = box(el.querySelector(".blk-mark")!);
+        const t = el.querySelector(".blk-text");
+        if (!t || el.dataset.pos === "none") return m;
+        const q = box(t);
+        return { l: Math.min(m.l, q.l), t: Math.min(m.t, q.t), r: Math.max(m.r, q.r), b: Math.max(m.b, q.b) };
+      };
       for (const el of [lab.blockSun, lab.blockEarth]) {
-        delete el.dataset.flip;
         if (!shown(el)) continue;
-        const q = box(el);
-        if (q.r > w - 4 || obstacles.some((o) => hit2(q, o))) el.dataset.flip = "true";
+        // a mark under a panel or the toolbar (or off the stage) is not shown or focusable; the sight line remains
+        const mk = box(el.querySelector(".blk-mark")!);
+        if (!inStage(mk) || obstacles.some((o) => hit2(mk, o))) {
+          el.style.display = "none";
+          continue;
+        }
+        let pos = "none";
+        for (const c of ["r", "l", "ur", "ul", "dr", "dl"]) {
+          el.dataset.pos = c;
+          const q = blockBox(el);
+          if (inStage(q) && !taken.some((o) => hit2(q, o)) && !obstacles.some((o) => hit2(q, o))) {
+            pos = c;
+            break;
+          }
+        }
+        el.dataset.pos = pos;
+        taken.push(blockBox(el));
       }
-      // the observer label takes the first clear spot: right of the pin, left of it, or below it
+      // the observer label takes the first clear spot around the pin; if none, it drops its eye-height
+      // line (also in Details) and tries again
       if (shown(lab.observer) && camMode === "overview") {
-        const others = [...bodyLabels, lab.blockSun, lab.blockEarth, ...markers.map((m) => m.btn)].filter(shown).map(box);
-        for (const tr of ["", "calc(-100% - 10px) -50%", "-50% 14px"]) {
-          lab.observer.style.translate = tr;
-          const o = box(lab.observer);
-          if (!others.some((q) => hit2(o, q)) && !obstacles.some((q) => hit2(o, q))) break;
+        const spots = ["", "calc(-100% - 10px) -50%", "10px 4px", "calc(-100% - 10px) 4px", "10px calc(-100% - 4px)", "calc(-100% - 10px) calc(-100% - 4px)", "-50% 14px", "-50% calc(-100% - 12px)"];
+        const area = (o: Box, q: Box) => Math.max(0, Math.min(o.r, q.r) - Math.max(o.l, q.l)) * Math.max(0, Math.min(o.b, q.b) - Math.max(o.t, q.t));
+        let best: { compact: boolean; tr: string; cost: number } | null = null;
+        search: for (const compact of [false, true]) {
+          if (compact) lab.observer.dataset.compact = "true";
+          else delete lab.observer.dataset.compact;
+          for (const tr of spots) {
+            lab.observer.style.translate = tr;
+            const o = box(lab.observer);
+            const cost = [...taken, ...obstacles].reduce((sum, q) => sum + area(o, q), 0) + (inStage(o) ? 0 : 1e6);
+            if (!best || cost < best.cost) best = { compact, tr, cost };
+            if (cost === 0) break search;
+          }
+        }
+        // no clear spot: the least-overlapping one, compact (the label stays at its pin)
+        if (best && best.cost > 0) {
+          lab.observer.dataset.compact = "true";
+          lab.observer.style.translate = best.tr;
+        } else if (best) {
+          if (best.compact) lab.observer.dataset.compact = "true";
+          else delete lab.observer.dataset.compact;
+          lab.observer.style.translate = best.tr;
         }
       }
       const fixed: Box[] = [...obstacles];
-      for (const el of [lab.observer, lab.inspect, lab.blockSun, lab.blockEarth, ...bodyLabels, ...markers.map((m) => m.btn)]) if (shown(el)) fixed.push(box(el));
+      for (const el of [lab.observer, lab.inspect, ...bodyLabels, ...markers.map((m) => m.btn)]) if (shown(el)) fixed.push(box(el));
+      for (const el of [lab.blockSun, lab.blockEarth]) if (shown(el)) fixed.push(blockBox(el));
       for (const el of [lab.offSun, lab.offEarth]) {
         if (!shown(el)) continue;
         const bx = Number(el.dataset.bx);
@@ -904,7 +977,10 @@ export default function TerrainScene(props: SceneProps) {
             continue;
           }
           const t = blockingText(b === "sun" ? "Sun" : "Earth", bp);
-          el.innerHTML = `<span class="blk-mark" aria-hidden="true"></span><span class="lbl-name">${t.title}</span><span class="lbl-sub">${t.sub}</span>`;
+          const html = `<span class="blk-mark" aria-hidden="true"></span><span class="blk-text"><span class="lbl-name">${t.title}</span><span class="lbl-sub">${t.sub}</span></span>`;
+          if (el.innerHTML !== html) el.innerHTML = html;
+          el.setAttribute("aria-label", `${t.title}: ${t.sub}`);
+          el.title = `${t.title}: ${t.sub}`;
           place(el, bp.position, w, h, cam);
         }
         const ins = p.inspection;
@@ -1024,23 +1100,6 @@ export default function TerrainScene(props: SceneProps) {
           else low.el.style.translate = `-50% ${low.gap.toFixed(0)}px`;
         }
       }
-      // keep overview marker labels and markers clear of the observer label
-      if (ov && lab.observer.style.display !== "none") {
-        lab.observer.style.translate = "";
-        // markers and edge chips both push the observer label aside (labels never move a marker)
-        const hitsMarker = [...markers.map((m) => m.btn), lab.offSun, lab.offEarth].some((btn) => {
-          if (btn.style.display === "none") return false;
-          const a = btn.getBoundingClientRect();
-          const o = lab.observer.getBoundingClientRect();
-          return a.left < o.right && a.right > o.left && a.top < o.bottom && a.bottom > o.top;
-        });
-        if (hitsMarker) lab.observer.style.translate = "calc(-100% - 10px) -50%"; // to the left of the pin
-        const ob = lab.observer.getBoundingClientRect();
-        for (const q of placed) {
-          const r = q.el.getBoundingClientRect();
-          if (r.left < ob.right && r.right > ob.left && r.top < ob.bottom && r.bottom > ob.top) q.el.style.translate = "-50% calc(-100% - 20px)";
-        }
-      }
       resolveCollisions(w, h, placed.map((q) => q.el));
       // eye-view references
       if (!ov) {
@@ -1079,6 +1138,19 @@ export default function TerrainScene(props: SceneProps) {
         } else lab.zero.style.display = "none";
         lab.zero.dataset.mode = p.mode;
         lab.edge.style.display = "none";
+        // line labels and cardinal letters yield to panels and the toolbar (the legend explains the lines)
+        const hb = host.getBoundingClientRect();
+        const panels = Array.from(document.querySelectorAll<HTMLElement>(".view-toolbar, .mission-panel, .right-col > .panel, .scene-legend, .event-card, .stage-note, .track-indicator, .guide-card"))
+          .filter((e) => e.offsetParent !== null)
+          .map((e) => e.getBoundingClientRect());
+        // body labels and their selection rings have priority over the line labels too
+        for (const el of [lab.sun, lab.earth, ...hits.map((x) => x.btn)]) if (el.style.display !== "none") panels.push(el.getBoundingClientRect());
+        for (const el of [lab.skyline, lab.zero, ...cardinals.map((c) => c.el)]) {
+          if (el.style.display === "none") continue;
+          const r = el.getBoundingClientRect();
+          const out = r.left < hb.left + 4 || r.right > hb.right - 4;
+          if (out || panels.some((q) => r.left < q.right && r.right > q.left && r.top < q.bottom && r.bottom > q.top)) el.style.display = "none";
+        }
       } else {
         for (const c of cardinals) c.el.style.display = "none";
         lab.skyline.style.display = "none";

@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DataError, checkCatalog, checkSiteFile, loadDataset, manifestTimes } from "./data";
-import { capabilityRows } from "./SiteCatalog";
+import { GENERAL_MODEL_NOTE, capabilityRows, modelNotes } from "./SiteCatalog";
 import { isSouthPolar, lon180, placeLabels } from "./Locator";
 import { modeAvailability, profileFor } from "./sites";
 import type { Catalog, Manifest, SiteData } from "./types";
@@ -94,16 +94,34 @@ describe("lazy loading: only the requested sites are fetched", () => {
 });
 
 describe("explicit capabilities", () => {
-  it("six rows in a fixed order, from the catalog only", () => {
+  it("five capability rows in a fixed order, from the catalog only", () => {
     const rows = capabilityRows(catalog().sites[1]);
     expect(rows.map((r) => r.label)).toEqual([
-      "Cached position coverage", "Smooth visibility", "Terrain horizon", "3D terrain", "Slope screening", "Provisional limitations",
+      "Cached position coverage", "Smooth visibility", "Terrain horizon", "3D terrain", "Slope screening",
     ]);
     expect(rows[0].text).toMatch(/2026-12-01 00:00 UTC – 2027-01-30 00:00 UTC \(60 days, 10-minute samples\)/);
     expect(rows[2].text).toMatch(/LDEM_80S_20M \+ LDEM_75S_60M \(20 m pixels/);
     expect(rows[4].text).toMatch(/20 m pixels, slope over ≈40 m, within 500 m/);
-    expect(rows[5]).toMatchObject({ caution: true, text: "Provisional: sensitive to terrain model" });
-    expect(capabilityRows(catalog().sites[0])[5]).toMatchObject({ ok: true, text: "None recorded" });
+  });
+  it("model notes are separate from capabilities and never read as 'no limitations'", () => {
+    const cr1 = modelNotes(catalog().sites[1]);
+    expect(cr1.caution).toBe("Provisional: sensitive to terrain model");
+    expect(cr1.site.length).toBeGreaterThan(0);
+    expect(cr1.noneRecorded).toBe(false);
+    const athena = modelNotes(catalog().sites[0]);
+    expect(athena.caution).toBeNull();
+    expect(athena.noneRecorded).toBe(true);
+    expect(athena.reality).toMatch(/not a reconstruction/);
+    // documented caveats of sites without a profile are kept, and stay with their own site
+    const c = catalog().sites[0];
+    const apollo = modelNotes({ ...c, id: "apollo17-lm", short_name: "Apollo 17" });
+    const odysseus = modelNotes({ ...c, id: "im1-odysseus", short_name: "Odysseus" });
+    expect(apollo.site.join(" ")).toMatch(/0\.05° target/);
+    expect(odysseus.site.join(" ")).toMatch(/2\.583 km/);
+    expect(apollo.site.join(" ")).not.toMatch(/2\.583/);
+    expect(apollo.noneRecorded || odysseus.noneRecorded).toBe(false);
+    expect(GENERAL_MODEL_NOTE).toMatch(/not power output, a radio link or a landing-safety rating/);
+    expect(capabilityRows(c).some((r) => /None recorded|Provisional limitations/.test(r.label + r.text))).toBe(false);
   });
   it("a missing capability states its reason; Terrain availability uses the catalog for sites not yet loaded", () => {
     const c = catalog().sites[0];

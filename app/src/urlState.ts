@@ -73,7 +73,12 @@ export function parseUrlState(search: string): UrlState {
 
 /** Largest comparison shortlist in this release. */
 export const MAX_SITES = 4;
-/** Sites compared when a link names none: the first two catalog sites (all sites of the 60-day release). */
+/**
+ * Sites compared when a link names none: DEFAULT_SITES where the dataset has them (the 120-day
+ * release opens on Apollo 17 alone); otherwise the first two catalog sites (all sites of the
+ * accepted 60-day release, so its links are unchanged).
+ */
+export const DEFAULT_SITES = ["apollo17-lm"];
 export const DEFAULT_SITE_COUNT = 2;
 
 export interface SiteRequest {
@@ -89,7 +94,8 @@ export interface SiteRequest {
 
 /** Requested site IDs that exist, in catalog order; unknown, duplicate and excess IDs are reported. Empty/none -> default. */
 export function resolveSites(requested: string[] | null, available: string[]): SiteRequest {
-  const fallback = available.slice(0, DEFAULT_SITE_COUNT);
+  const preferred = DEFAULT_SITES.filter((id) => available.includes(id));
+  const fallback = preferred.length ? preferred : available.slice(0, DEFAULT_SITE_COUNT);
   if (!requested) return { ids: fallback, unknown: [], duplicates: [], dropped: [] };
   const unknown = [...new Set(requested.filter((id) => !available.includes(id)))];
   const duplicates = [...new Set(requested.filter((id, k) => requested.indexOf(id) !== k))];

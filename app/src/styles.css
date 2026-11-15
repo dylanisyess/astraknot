@@ -576,6 +576,9 @@ h4 { font-size: 0.85rem; margin: 10px 0 4px; }
 .ci-cap[data-ok="no"] .cap-mark { color: var(--text-muted); }
 .ci-cap[data-ok="no"] dd { color: var(--text-muted); }
 .ci-cap[data-ok="caution"] .cap-mark, .ci-cap[data-ok="caution"] dd { color: var(--warn-ink); }
+.ci-sub { margin: 10px 0 0; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.ci-notes { margin: 4px 0 0; padding-left: 18px; color: var(--text-secondary); display: grid; gap: 2px; }
+.ci-notes .ci-caution { color: var(--warn-ink); font-weight: 600; list-style: none; margin-left: -18px; }
 @media (max-width: 560px) { .ci-cap { grid-template-columns: 1fr; gap: 0; } .ci-head { flex-direction: column; } }
 
 .mixed-notice { border: 1px solid var(--warn-border); background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; }

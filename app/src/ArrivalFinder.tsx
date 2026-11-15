@@ -131,8 +131,17 @@ export function FindWindowsButton({ onOpen, className = "" }: { onOpen: () => vo
   );
 }
 
-export function ArrivalFinder({ sc, open, onClose }: { sc: Scenario; open: boolean; onClose: () => void }) {
+export function ArrivalFinder({ sc, open, onClose, preset = null }: {
+  sc: Scenario;
+  open: boolean;
+  onClose: () => void;
+  /** Guided example: sites to choose for the search (inputs only; nothing is searched or applied). */
+  preset?: { n: number; chosen: string[] } | null;
+}) {
   const [form, setForm] = useState<Form>(() => formFromScenario(sc));
+  useEffect(() => {
+    if (preset) setForm((f) => ({ ...f, activeOnly: false, chosen: preset.chosen.filter((id) => sc.allIds.includes(id)) }));
+  }, [preset?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   const [limitForm, setLimitForm] = useState<LimitForm>(initialLimits);
   const [criterion, setCriterion] = useState<Criterion>(DEFAULT_CRITERION);
   const [results, setResults] = useState<Results | null>(null);

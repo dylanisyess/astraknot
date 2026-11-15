@@ -1,0 +1,54 @@
+{
+  "files": {
+    "moon-560.avif": {
+      "bytes": 34179,
+      "sha256": "ca0e35854cdea8655134ca6a3b51d66d2619b20800313f48179638f07ed38f93"
+    },
+    "moon-560.webp": {
+      "bytes": 35414,
+      "sha256": "32bbf4842b7fd83b4fac441a21cbe29c50d2e2c0ac2a4faad72d76d463a779ae"
+    },
+    "moon-960.avif": {
+      "bytes": 80563,
+      "sha256": "3c012b6ab6661838422d4ea0d317a3125d70ca21c8361c91dc06b44a00c9dab6"
+    },
+    "moon-960.webp": {
+      "bytes": 82610,
+      "sha256": "6bfa41b97a39487106e7f0d60b4e43e93284e6e9b91e9e95d5b9179c84c5bfef"
+    },
+    "moon-1400.avif": {
+      "bytes": 145275,
+      "sha256": "8401e132c7e89dec2b134d8aee9838ef3575d78d4d546593fc69ae2b07ac0dec"
+    },
+    "moon-1400.webp": {
+      "bytes": 151162,
+      "sha256": "5213ec24e676d770aa05f24211d617bce0b886e83ca802260853e0483d7b3c18"
+    },
+    "moon-960.jpg": {
+      "bytes": 122508,
+      "sha256": "4c22df8a50096ec0cbfce65fb7053083814c35e534d0ff96c5a67398d0f871e6"
+    }
+  },
+  "widths": [
+    560,
+    960,
+    1400
+  ],
+  "fallback": "moon-960.jpg",
+  "projection": {
+    "type": "orthographic",
+    "center_lat_deg": 0.0,
+    "center_lon_deg_east": 0.0,
+    "north_up": true
+  },
+  "source": {
+    "name": "CGI Moon Kit colour map (2019), lroc_color_poles_4k.tif, 4096x2048",
+    "page": "https://svs.gsfc.nasa.gov/4720/",
+    "url": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_poles_4k.tif",
+    "sha256": "918649a7f8ed2f1329b2cd95bb0d25483befdcb60ae1a66db681a637cc21344f",
+    "derived_from": "LRO LROC WAC Hapke-normalized mosaic (643, 566, 415 nm); polar fill from LOLA albedo",
+    "credit": "NASA's Scientific Visualization Studio"
+  },
+  "rendering": "Static orthographic near side; no displacement; fixed gentle light (Lommel-Seeliger/Lambert mix); saturation 0.45. Illustration, not a photograph of a particular date.",
+  "reproduce": "python app/scripts/render_welcome_moon.py --texture lroc_color_poles_4k.tif"
+}

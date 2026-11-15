@@ -1,8 +1,21 @@
-# astraknots: Lunar Visibility Navigator
+# astraknots: Lunar Landing Site Navigator
 
 A NASA Space Apps prototype that shows when the Sun and Earth are above the
-horizon from documented lunar sites. It is an educational planning tool, not
-flight-qualified analysis.
+horizon from documented lunar landing and study sites. It is an educational
+planning tool, not flight-qualified analysis. (Earlier milestone records below
+use its former name, Lunar Visibility Navigator; dataset IDs and URLs are unchanged.)
+
+**First visit.** A root visit without a scenario opens a short welcome screen; "Explore
+Apollo 17" loads a hypothetical 14-day mission at the historic Apollo 17 landing site
+(arrival 2027-01-13, dataset dates, not a replay of the 1972 mission) with a skippable
+three-step guide; "How to use" in the header reopens it. Scenario links open directly. See
+[docs/STATUS.md](docs/STATUS.md), "Onboarding".
+
+**Hosting note.** A Netlify "Powered by Netlify" badge in the bottom-right corner is
+injected by Netlify at the edge, not by this app. The owner can turn it off in the
+Netlify UI under *Project configuration > General > Powered by Netlify badge*; the app
+keeps its controls out of that corner either way. See [docs/STATUS.md](docs/STATUS.md),
+"Presentation polish".
 
 **Releases (2026-11-15).**
 - *Four-site release (accepted; merged to `main` as `c0622dc`):* continuous body

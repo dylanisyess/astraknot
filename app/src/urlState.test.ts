@@ -16,6 +16,15 @@ describe("URL state", () => {
     expect(resolveActive(s.site, sites.ids)).toBe("im2-athena");
   });
 
+  it("a link without sites opens on Apollo 17 alone where the dataset has it; the 60-day release keeps both of its sites", () => {
+    const four = ["im2-athena", "connecting-ridge-cr1", "im1-odysseus", "apollo17-lm"];
+    expect(resolveSites(null, four).ids).toEqual(["apollo17-lm"]);
+    expect(resolveSites(["nope"], four).ids).toEqual(["apollo17-lm"]);
+    expect(resolveActive(null, resolveSites(null, four).ids)).toBe("apollo17-lm");
+    expect(resolveSites(null, IDS).ids).toEqual(IDS);
+    expect(resolveSites(["im2-athena", "connecting-ridge-cr1"], four).ids).toEqual(IDS); // explicit links unchanged
+  });
+
   it("restores the selected sites (manifest order) and the active site", () => {
     const s = parseUrlState("?sites=connecting-ridge-cr1,im2-athena&site=connecting-ridge-cr1");
     expect(resolveSites(s.sites, IDS).ids).toEqual(IDS);

@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import { fmtLat, fmtLonEast, fmtUtc, parseUtc } from "./data";
 import type { PendingSite, Scenario } from "./scenario";
 import type { CatalogSite, LocationType } from "./types";
+import { profileFor } from "./sites";
 import { MAX_SITES } from "./urlState";
 
 export const LOCATION_TYPE_LABEL: Record<LocationType, string> = {
@@ -19,18 +20,16 @@ export const LOCATION_TYPE_LABEL: Record<LocationType, string> = {
 };
 
 export interface CapabilityRow {
-  key: "positions" | "smooth" | "terrain" | "terrain3d" | "slope" | "provisional";
+  key: "positions" | "smooth" | "terrain" | "terrain3d" | "slope";
   label: string;
   ok: boolean;
-  /** "provisional" is a caution, not a missing capability */
-  caution?: boolean;
   text: string;
 }
 
 const days = (a: string, b: string) => Math.round((parseUtc(b) - parseUtc(a)) / 86_400_000);
 const metres = (n: number) => Number(n.toFixed(1));
 
-/** The six explicit capabilities of a catalog site, in a fixed order. */
+/** The five measured data capabilities of a catalog site, in a fixed order (caveats: modelNotes). */
 export function capabilityRows(c: CatalogSite): CapabilityRow[] {
   const k = c.capabilities;
   const p = k.positions;
@@ -60,8 +59,44 @@ export function capabilityRows(c: CatalogSite): CapabilityRow[] {
       ok: sl.available,
       text: sl.available ? `${sl.source_product}: ${metres(sl.dem_pixel_m)} m pixels, slope over ≈${Math.round(sl.baseline_m)} m, within ${sl.radius_m} m` : sl.reason,
     },
-    { key: "provisional", label: "Provisional limitations", ok: !k.provisional, caution: !!k.provisional, text: k.provisional ?? "None recorded" },
   ];
+}
+
+/**
+ * Documented site-specific caveats that are not in the catalog file (sources: docs/STATUS.md,
+ * docs/COORDINATE_PIPELINE.md, docs/ADDITIONAL_SITE_TERRAIN.md). Keyed by site ID so text written
+ * for one site never appears for another.
+ */
+const DOCUMENTED_NOTES: Record<string, string[]> = {
+  "apollo17-lm": [
+    "The 3D terrain mesh departs from the exported skyline by up to about 0.11° in some directions (10 of 50 checked exceed the proposed 0.05° target). Status and Horizon view use the exported skyline.",
+  ],
+  "im1-odysseus": [
+    "The NAIF IM-1 kernel lists a 2.583 km landing-site altitude, about 11.5 m below the DEM-based observer used here (2.5945 km); the cause is unresolved. The DEM-based observer is used throughout.",
+  ],
+};
+
+/** Applies to every site; stated so that a site without its own caveat is never read as having none. */
+export const GENERAL_MODEL_NOTE =
+  "Sun and Earth visibility refers to body centers at 10-minute samples, for a modeled observer 1 m above the terrain model. It is not power output, a radio link or a landing-safety rating.";
+
+export interface ModelNotes {
+  /** Catalog provisional flag, shown as a caution. */
+  caution: string | null;
+  /** Site-specific caveats (site profile and documentation). */
+  site: string[];
+  /** What the result is (and is not) for this point. */
+  reality: string;
+  /** True when no site-specific caveat is recorded (not a claim that there are no limitations). */
+  noneRecorded: boolean;
+}
+
+/** Model notes for a catalog site, separate from its capabilities. */
+export function modelNotes(c: CatalogSite): ModelNotes {
+  const p = profileFor(null, c);
+  const site = [...p.limitations, ...(DOCUMENTED_NOTES[c.id] ?? [])];
+  const caution = c.capabilities.provisional ?? null;
+  return { caution, site, reality: p.realityNote, noneRecorded: !caution && site.length === 0 };
 }
 
 // ------------------------------------------------------------------ chips (selected sites)
@@ -111,7 +146,9 @@ export function SiteChips({ sc, theme }: { sc: Scenario; theme: "explore" | "pag
           + Add site{more > 0 ? <span className="chip-more"> ({more} more)</span> : null}
         </button>
       </div>
-      <p className="chip-count small">{sc.selIds.length} of {MAX_SITES} sites compared · one shown in 3D and the panorama</p>
+      <p className="chip-count small">
+        {sc.selIds.length} of {MAX_SITES} sites compared · {theme === "explore" ? "the selected one is shown in 3D" : "one shown in 3D and the panorama"}
+      </p>
       {open && createPortal(<CatalogDialog sc={sc} onClose={() => setOpen(false)} />, document.body)}
     </div>
   );
@@ -176,24 +213,41 @@ export function CatalogDialog({ sc, onClose }: { sc: Scenario; onClose: () => vo
                   )}
                 </div>
                 {!inComparison && blocked && <p className="small ci-blocked">Cannot add: {blocked}.</p>}
+                <h4 className="ci-sub small">Capabilities</h4>
                 <dl className="ci-caps small">
                   {capabilityRows(c).map((r) => (
-                    <div key={r.key} className="ci-cap" data-cap={r.key} data-ok={r.caution ? "caution" : r.ok ? "yes" : "no"}>
+                    <div key={r.key} className="ci-cap" data-cap={r.key} data-ok={r.ok ? "yes" : "no"}>
                       <dt>
-                        <span className="cap-mark" aria-hidden="true">{r.caution ? "⚠" : r.ok ? "✓" : "✕"}</span>
+                        <span className="cap-mark" aria-hidden="true">{r.ok ? "✓" : "✕"}</span>
                         {r.label}
-                        <span className="sr-only">: {r.caution ? "caution" : r.ok ? "available" : "not available"}</span>
+                        <span className="sr-only">: {r.ok ? "available" : "not available"}</span>
                       </dt>
                       <dd>{r.text}</dd>
                     </div>
                   ))}
                 </dl>
+                <ModelNotesList n={modelNotes(c)} />
               </li>
             );
           })}
         </ul>
       </div>
     </div>
+  );
+}
+
+function ModelNotesList({ n }: { n: ModelNotes }) {
+  return (
+    <>
+      <h4 className="ci-sub small">Model notes</h4>
+      <ul className="ci-notes small" data-testid="model-notes">
+        {n.caution && <li className="ci-caution" data-note="provisional"><span aria-hidden="true">⚠ </span>{n.caution}.</li>}
+        {n.site.map((t) => <li key={t} data-note="site">{t}</li>)}
+        {n.noneRecorded && <li data-note="none-recorded">No site-specific caveat is recorded in this catalog. That does not mean the terrain model has no limitations; the notes below apply.</li>}
+        <li data-note="reality">{n.reality}</li>
+        <li data-note="general">{GENERAL_MODEL_NOTE}</li>
+      </ul>
+    </>
   );
 }
 

@@ -1075,3 +1075,101 @@ p.ts-key .sl-sw { display: inline-block; vertical-align: -1px; margin-right: 4px
 .panel-finder .find-windows-btn { width: 100%; justify-content: center; }
 .panel-body .find-inline { width: 100%; justify-content: center; margin: 2px 0 10px; font-family: inherit; }
 .panel-finder .find-windows-btn { font-family: inherit; }
+
+/* ================================================================ presentation polish (pre-onboarding)
+   Header carries the coverage line; panels fit 1280x720 without scrolling; scene legend sits between
+   the panels; the bottom-right corner is left to a host badge (Netlify "Powered by" badge). */
+
+/* header: product name + tabs + current coverage (always visible) + UTC */
+.topbar .dataset-bar { position: relative; flex: 0 1 auto; min-width: 0; margin-left: auto; padding: 0; background: none; border: 0; color: var(--x-text-2); font-size: 12px; gap: 4px 12px; flex-wrap: nowrap; }
+.topbar .dataset-bar strong { color: var(--x-text); font-weight: 600; }
+.topbar .dataset-bar + .topbar-meta { margin-left: 0; }
+.ds-cov { white-space: nowrap; }
+.ds-details { position: static; }
+.ds-details summary { list-style: none; cursor: pointer; font-size: 12px; color: var(--x-text-2); border: 1px solid var(--x-border-2); border-radius: 4px; padding: 1px 8px; white-space: nowrap; }
+.ds-details summary::-webkit-details-marker { display: none; }
+.ds-details summary::after { content: " ▾"; font-size: 10px; }
+.ds-details[open] summary { color: var(--x-text); border-color: var(--x-text-2); }
+.ds-details summary:hover { color: var(--x-text); }
+.ds-details summary:focus-visible { outline: 2px solid var(--x-focus); outline-offset: 2px; }
+.ds-pop { position: absolute; z-index: 40; top: calc(100% + 10px); right: 0; width: min(340px, calc(100vw - 24px)); padding: 10px 12px; background: var(--x-panel-solid); color: var(--x-text-2); border: 1px solid var(--x-border-2); border-radius: var(--x-radius); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5); white-space: normal; line-height: 1.45; }
+.ds-pop p { margin: 0 0 6px; }
+.ds-pop p:last-child { margin-bottom: 0; }
+.ds-pop .ds-h { margin-top: 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--x-muted); }
+.ds-pop .ds-h:first-child { margin-top: 0; }
+.ds-pop a { color: var(--x-earth); }
+.ds-pop code { font-family: var(--mono); font-size: 11px; color: var(--x-text-2); }
+.brand-name { line-height: 1.15; }
+@media (max-width: 1199px) {
+  .topbar { height: auto; min-height: 48px; flex-wrap: wrap; row-gap: 0; }
+  .view-tabs { height: 48px; }
+  .topbar .dataset-bar { order: 3; flex: 1 0 100%; margin: 0 -16px; padding: 6px 16px; border-top: 1px solid var(--x-border); flex-wrap: wrap; }
+  .topbar .dataset-bar + .topbar-meta { margin-left: auto; }
+}
+@media (max-width: 760px) {
+  .topbar .dataset-bar { margin: 0 -10px; padding: 5px 10px; font-size: 11px; }
+  .ds-cov { white-space: normal; }
+  /* the product name stays readable: it wraps onto two short lines instead of disappearing */
+  .brand-name { display: block; white-space: normal; font-size: 12.5px; max-width: 118px; }
+  .brand { gap: 7px; }
+}
+
+/* mission panel: compact rows, no internal scrolling at 1280x720 */
+.mission-panel { max-height: calc(100% - var(--timebar-h) - 24px); }
+.mission-panel .panel-body { gap: 8px; padding: 9px 14px 11px; }
+.panel-sitebar { padding-bottom: 8px; gap: 4px; }
+.ctl-inline { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
+.ctl-inline .ctl-label { margin: 0; white-space: nowrap; }
+.ctl-row-end { align-items: flex-end; }
+.ctl-row-end .find-inline { flex: 1; width: auto; margin: 0; height: 31px; justify-content: center; }
+.ms-caveat { margin: 4px 0 0; color: var(--x-caution); font-size: 11.5px; line-height: 1.35; }
+
+/* conditions: may use the full stage height (the legend no longer sits under it) */
+.right-col { max-height: calc(100% - var(--timebar-h) - 24px); }
+.status-panel .model-chip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status-panel .status-group { padding: 8px 14px 7px; }
+
+/* scene legend: bottom centre, between the side panels (clear of both, and of the bottom-right corner) */
+.scene-legend { left: calc(12px + 300px + 12px); right: calc(12px + 320px + 12px); width: fit-content; max-width: none; margin: 0 auto; }
+.event-card { bottom: 56px; }
+@media (max-width: 1000px) { .scene-legend { left: calc(12px + 270px + 12px); right: calc(12px + 270px + 12px); } }
+
+/* time area: crossings sit left of the legend; the bottom-right corner is kept free of controls so a
+   host badge there (Netlify "Powered by Netlify", injected by the host) covers no control */
+.tb-foot { justify-content: flex-start; gap: 6px 18px; }
+.tb-foot .tb-info { max-width: calc(100% - 560px); }
+
+/* overview labels: the "blocked here" mark stays on its terrain point; the short title is placed
+   in the first clear position around it; the geometry explanation opens on hover, focus or click */
+.lbl-block { translate: none; display: block; width: 0; height: 0; padding: 0; border: 0; background: none; pointer-events: auto; cursor: pointer; font: inherit; color: inherit; }
+.lbl-block .blk-mark { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; box-sizing: border-box; }
+.lbl-block .blk-text { position: absolute; display: flex; flex-direction: column; white-space: nowrap; text-align: left; }
+.lbl-block[data-pos="r"] .blk-text { left: 11px; top: 0; translate: 0 -50%; }
+.lbl-block[data-pos="l"] .blk-text { right: 11px; top: 0; translate: 0 -50%; align-items: flex-end; text-align: right; }
+.lbl-block[data-pos="ur"] .blk-text { left: 6px; bottom: 9px; }
+.lbl-block[data-pos="dr"] .blk-text { left: 6px; top: 9px; }
+.lbl-block[data-pos="ul"] .blk-text { right: 6px; bottom: 9px; align-items: flex-end; text-align: right; }
+.lbl-block[data-pos="dl"] .blk-text { right: 6px; top: 9px; align-items: flex-end; text-align: right; }
+.lbl-block[data-pos="none"] .blk-text { display: none; left: 11px; top: 0; translate: 0 -50%; }
+.lbl-block .lbl-name { border-radius: 4px; padding: 1px 6px; }
+.lbl-block .lbl-sub { display: none; border-radius: 0 0 4px 4px; }
+.lbl-block:is(:hover, :focus-visible, [aria-expanded="true"]) { z-index: 6; }
+.lbl-block:is(:hover, :focus-visible, [aria-expanded="true"]) .blk-text { display: flex; }
+.lbl-block:is(:hover, :focus-visible, [aria-expanded="true"]) .lbl-name { border-radius: 4px 4px 0 0; }
+.lbl-block:is(:hover, :focus-visible, [aria-expanded="true"]) .lbl-sub { display: block; }
+.lbl-block:focus-visible { outline: none; }
+.lbl-block:focus-visible .blk-mark { outline: 2px solid var(--x-focus); outline-offset: 2px; }
+.lbl-block:focus-visible .lbl-name { box-shadow: 0 0 0 2px var(--x-focus); }
+.lbl-observer[data-compact] .lbl-sub { display: none; }
+
+@media (max-width: 760px) {
+  .scene-legend { left: auto; right: 8px; width: auto; max-width: calc(100% - 16px); margin: 0; }
+  .event-card { bottom: 48px; }
+  .tb-foot .tb-info { max-width: none; }
+  /* room to scroll the last controls clear of a host badge fixed in the bottom-right corner */
+  .explore { padding-bottom: 72px; }
+}
+/* the shortlist count is also stated by "Add site (n more)"; kept for screen readers */
+.chips-explore .chip-count { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mission-panel .panel-head { padding-top: 8px; padding-bottom: 6px; }
+@media (max-width: 760px) { .ds-pop { right: 10px; width: min(340px, calc(100vw - 32px)); } }
