@@ -147,3 +147,24 @@ published coordinate, whose accuracy is unknown. It is not a prediction for a
 real lander, whose height and surroundings would matter at this scale.
 Numbers and the full sensitivity table: `STATUS.md`, "Milestone 4C".
 Exported to `app/public/data/connecting-ridge-cr1.json`; not shown in the app yet.
+
+## 5 m terrain-product assessment (2026-11-14)
+
+NASA GSFC PGDA's Site01 "Connecting ridge" 5 m product (Barker et al. 2021;
+https://pgda.gsfc.nasa.gov/products/78) covers CR1 with at least 7.9 km of margin
+in every direction. Its metadata is consistent with LDEM_80S_20M: same
+projection and sphere, pixel-centre registration, no missing pixels, and a
++0.15 m vertical offset near the point. Its best fit among the tested
+horizontal shifts (±40 m in 5 m steps) is (0, 0); smaller or untested offsets are
+not ruled out. Its 5 m surface at CR1 is 1942.159 m (+0.34 m).
+
+Recomputing the horizon with it changes the skyline by up to 0.97° and the
+baseline Sun share by −5.6 pp. Comparisons with a coarsened copy suggest the
+change comes mainly from the different product rather than pixel spacing. These
+are comparisons, not an additive error decomposition. The change is of the same
+order as the angle scale of the product's own documented 1σ height error at the
+30–450 m skyline. That scale is a per-azimuth indicator, not a propagated
+uncertainty. A 0.4 m eye-height change or a 100 m move matters as much or ten
+times more. **CR1 terrain therefore remains provisional.**
+The exported data still uses the 20 m result, and no new Horizons altitude was
+adopted. Details and tables: `STATUS.md`, "CR1 terrain-product assessment".

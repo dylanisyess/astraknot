@@ -96,6 +96,9 @@ class Raster:
 
     @classmethod
     def from_files(cls, dem_name: str, count_name: str | None) -> "Raster":
+        if dem_name.startswith("PGDA_"):  # GSFC PGDA GeoTIFF products (pgda.py); counts are built in
+            import pgda
+            return pgda.raster(dem_name)
         lbl = lola.load_label(dem_name)
         if lbl.sample_type != "LSB_INTEGER" or lbl.sample_bits != 16 or sys.byteorder != "little":
             raise RuntimeError(f"{dem_name}: expected LSB int16 on a little-endian host")

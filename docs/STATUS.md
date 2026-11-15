@@ -5,13 +5,22 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
-## Start here (handoff for a new session, updated 2026-11-14 after milestone 4C)
+## Start here (handoff for a new session, updated 2026-11-14 after the CR1 5 m assessment)
 Read this section first, then `docs/SPEC.md` and `docs/DATA_CONTRACT.md`.
 The rest of this file is the detailed record behind it.
 
-**Current checkpoint:** Milestone 4C complete on `milestone-4-site-comparison`,
-starting from verified `94cf13f` with a clean tree; **changes are uncommitted
-for review**. `connecting-ridge-cr1` (NASA notional study point, 89.468 S,
+**Latest:** 4C committed locally as `627a4cc` ("feat: add provisional CR1
+dataset and sensitivity evidence"; not pushed). The follow-up **CR1 terrain-
+product assessment** (5 m PGDA Site01 vs 20 m LDEM) is committed locally as "feat: add CR1 5 m terrain-product assessment" (recommendation accepted).
+See "CR1 terrain-product assessment" below. **Recommendation: retain CR1
+terrain as provisional.** The 5 m product is documented, numerically converged,
+and best-fits the 20 m map at zero shift among the tested shifts.
+But it shifts results by about as much as its own documented error, and 100 m
+position changes are ten times larger. No exported data changed; no Horizons
+re-fetch was needed, because no new surface elevation was adopted.
+
+**Milestone 4C checkpoint:** complete on `milestone-4-site-comparison`,
+starting from verified `94cf13f` with a clean tree. `connecting-ridge-cr1` (NASA notional study point, 89.468 S,
 222.6 E; [SECOND_SITE.md](SECOND_SITE.md)) now has real 60-day Horizons
 positions (12 sequential live requests at 1.9428 km, raw responses cached), a
 full 0.1° terrain horizon with sensitivity, cross-checks and an exported
@@ -57,6 +66,11 @@ Pipeline (`pipeline/`, Python standard library only; run from the repo root):
   (4B preparation) and `_{terrain_horizon,horizon_crosscheck,observer_rounding_check}.json` (4C).
 - `observer_rounding_check.py` (4C): recomputes a site's profile with the eye at
   exactly the nominal height and reports skyline/step/demo-metric changes.
+- `pgda.py` (assessment): GSFC PGDA 5 m GeoTIFF download (sequential, resumable,
+  size = Content-Length, sha256) into git-ignored `data/raw/pgda/`, a stdlib
+  GeoTIFF reader, and `PGDA_*` rasters for the ray march (`terrain_horizon.Raster.from_files`
+  dispatches on the name prefix; PDS products unchanged).
+- `terrain_5m.py` (assessment) → `data/terrain/connecting-ridge-cr1_terrain_5m_assessment.json`.
 - `config.json`: sites, altitude, coverage, chunking, shared terrain product choice (single source of truth).
 - `sites.py`: site selection, canonical report paths, identity and report fingerprint checks.
   Every pipeline entry point accepts `--site ID`; batch fetch/export/validate
@@ -195,7 +209,9 @@ python pipeline/fetch.py --site connecting-ridge-cr1                 # "0 live r
 python pipeline/crosscheck_metrics.py --site connecting-ridge-cr1 --terrain  # 12-05 +0 d: sun 72.123..., earth 25.446..., dark 62.833 h (touches end)
 python pipeline/crosscheck_metrics.py --site connecting-ridge-cr1    # 12-05 +0 d: sun 100.0, earth 28.373..., dark 0.0 h
 python pipeline/observer_rounding_check.py --site connecting-ridge-cr1  # max 0.0235 deg; sun 13, earth 3 steps
-python -m unittest discover -s pipeline/tests      # Ran 55 tests ... OK
+python -m unittest discover -s pipeline/tests      # Ran 58 tests ... OK
+python pipeline/pgda.py fetch Site01 surf ldec toterr   # 3 x ~41 MB into data/raw/pgda/site01 (~60 KB/s observed)
+python pipeline/terrain_5m.py --site connecting-ridge-cr1   # ~12 min; F5_fixed vs L20: max 0.97 deg, 321 Sun steps
 python pipeline/fetch.py --site im2-athena                           # "0 live request(s) made" (all cached)
 python pipeline/crosscheck_metrics.py --site im2-athena              # 12-05 +0 d: sun 43.353..., dark 190.333 h
 python pipeline/crosscheck_metrics.py --site im2-athena --terrain    # 12-05 +0 d: sun 27.232..., earth 67.262..., dark 244.5 h
@@ -229,14 +245,15 @@ Environment notes (Windows):
 - `numpy` happens to be installed globally but is deliberately **not** used:
   the pipeline stays standard-library only.
 
-### Next steps (after review of 4C)
+### Next steps
 
-1. Review and commit the 4C changes (nothing was committed, pushed or merged).
-2. Decide how to present CR1's terrain result given its near-field
-   sensitivity, e.g. show it only with a prominent robustness caveat and its
-   scenario table, or present smooth and terrain side by side. This is a
-   product/communication decision, not a pipeline fix. No higher-resolution
-   DEM was evaluated, and whether one covers CR1 was not checked (out of scope).
+1. (Done) The 5 m assessment is committed; the recommendation to keep CR1 terrain provisional was accepted and terrain research stopped for this milestone.
+2. Decide how to present CR1's provisional terrain result: for example,
+   smooth and terrain side by side with a prominent caveat, or a range across
+   DEMs, observer eye heights and position scenarios. This is a
+   product/communication decision. If CR1 terrain is later adopted from the 5 m
+   product, its surface (1942.159 m) changes the observer: re-fetch Horizons at
+   1.9432 km (nominal convention) before publishing, as recorded in the assessment.
 3. Then the two-site frontend (milestone 5): load both manifest entries;
    comparison cards; shared timeline. Rename `dataset_id` with a full re-export.
 
@@ -244,6 +261,172 @@ To regenerate CR1 from the caches (order matters; all inputs cached, no network)
 `export.py` → `validate.py` → `terrain_horizon.py` (~5 min) →
 `horizon_crosscheck.py` (~5 min; RDR boxes cached) → `export.py` →
 `validate.py` → `observer_rounding_check.py`, all with `--site connecting-ridge-cr1`.
+
+## CR1 terrain-product assessment: 5 m PGDA vs 20 m LDEM (2026-11-14)
+
+Bounded follow-up to 4C, started after committing 4C as `627a4cc`. Committed
+locally; recommendation accepted. No change to any exported app data, Athena output or frontend.
+
+### Product and checks of its metadata
+- Sources: PGDA product 78, "High-Resolution LOLA Topography for Lunar South
+  Pole Sites", **Site01 Connecting ridge** (https://pgda.gsfc.nasa.gov/products/78,
+  README https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/README). Barker et al. 2021,
+  PSS 203, 105119, doi:10.1016/j.pss.2020.105119. The 87–90°S mosaic (product 81,
+  3.3 GB, no uncertainty layer listed) was not needed: Site01 covers the point.
+- Downloaded sequentially (2026-11-14T23:10–23:56Z, ~60 KB/s; one transient
+  DNS failure, resumed): `_surf` (sha256 3ba7b97c…), `_ldec` (16d6ed21…),
+  `_toterr` (cf2cf52f…), 40 980 744–40 980 810 bytes each = Content-Length,
+  in git-ignored `data/raw/pgda/site01/` (`download.meta.json`). Not downloaded:
+  slope layers, the point cloud and the 100 clones.
+- Read from the files, not assumed: 3 200 × 3 200 float32, uncompressed;
+  X −19 000…−3 000 m, Y −20 000…−4 000 m (16 × 16 km); 5 m pixels.
+  - **Registration:** GeoTIFF PixelIsArea, tiepoint at the outer corner, and GMT
+    `xyz2grd -r` (`node_offset 1`), so centres are at corner + 2.5 m. This matches the
+    README's "pixel-registered (centres)".
+  - **Projection:** polar stereographic, origin −90°, pole longitude 0, scale 1, on a
+    1 737 400 m sphere, the same as the PDS LOLA products. Frame MOON_ME/DE421 (README).
+  - **Nodata:** NaN (`GDAL_NODATA`); **0 NaN** in all three layers. Empty pixels
+    are filled by interpolation upstream.
+- **Height reference** (not stated by PGDA): checked against LDEM_80S_20M,
+  heights above 1737.4 km. The 4 × 4 block mean of the 5 m surface falls exactly
+  on LDEM_80S_20M's pixel centres. Block mean − LDEM is +0.28 m over the tile
+  (sd 1.29 m, 640 000 px) and +0.15 m within 1 km (sd 1.14 m). This is consistent
+  with the same reference, with sub-metre product differences.
+- **Horizontal alignment:** among the shifts tested (±40 m in 5 m steps, 5 m
+  surface vs LDEM_80S_20M bilinear), the lowest RMS is at **(0, 0)**, both within
+  1 km and within 6 km (RMS about the mean 1.006 m). This is the best fit among
+  those shifts only. It does not resolve offsets below 5 m, does not test shifts
+  beyond ±40 m, rotations or local distortions, and does not prove that
+  either product is correctly positioned. Both derive from LOLA, so a shared
+  positioning error would not appear here.
+- **Coverage:** the point (map −10 919.5, −11 874.8 m) is ≥ 7 875 m from every
+  tile edge, and all 3 600 setting points lie in the tile. Rays continue in the
+  validated LDEM_80S_20M / LDEM_75S_60M beyond it. 5 m − 20 m heights 25 m inside
+  the edge: mean +0.46 m, sd 1.45 m, max 11.0 m, worth ≤ 0.061° there. Terrain
+  beyond the tile is at least **1.46° below** every azimuth's horizon, so the
+  hand-off cannot change the result.
+- **Interpolation and uncertainty:** the nearest 5 m pixel has 0 LOLA returns;
+  93 % of 5 m pixels within 100 m (90 % within 500 m) are interpolated. PGDA
+  total-Z RMS error is 0.34 m at the point (median 0.34 m, p95 0.64 m within 500 m).
+  At the 5 m setting points it is median 0.27 m (p95 0.79 m). Converted to an
+  angle, atan(σ_Z / distance), that is a **median 0.16° (p95 1.40°, max 1.62°)**,
+  because the skyline is 29–450 m away. *What this conversion includes:* only
+  PGDA's per-pixel vertical RMS at each azimuth's setting point, bilinearly
+  interpolated, at that point's distance. *What it omits:* the observer's own
+  surface height error (which shifts every elevation angle at once), horizontal
+  position error, error correlation between pixels, other terrain points that
+  could become the new skyline, the coordinate's unknown accuracy, and
+  sub-pixel relief or rocks. It is a per-azimuth scale indicator, not a
+  propagated uncertainty of the horizon or of any mission metric. Finer
+  pixels here mean more interpolated pixels between tracks, not measured detail.
+
+### Observer conventions
+Surface at the point (bilinear): LDEM_80S_20M 1941.821 m; 5 m **1942.159 m**
+(+0.338 m); 5 m block mean 1942.549 m.
+- *Fixed absolute radius* r = 1 739 342.8 m: the same point in space as the
+  fetched Horizons positions. Eye above the 20 m / 5 m / block surface:
+  0.979 / **0.641** / 0.251 m; never below a surface (the script refuses that).
+- *Nominal height on the 5 m surface* (pipeline rounding): 1942.2 + 1 m gives
+  1.9432 km, r = 1 739 343.2 m, eye 1.041 m. It would need new Horizons positions
+  and was evaluated for the skyline only. Sun/Earth directions are unchanged at
+  ~1e-9° per 0.4 m, but are not consistent for publication.
+
+### Results (ray sampling 1.25 m to 2 km, then 5 m; 0.1° azimuth; 0 unknown in every run)
+Each row is a **pairwise comparison** of two full recomputations that differ in
+the stated way (Sun / Earth = 10-minute steps that differ, of 8 640). The rows
+are not an additive decomposition of error. Effects do not sum, the
+"sampling" and "product" rows are two different comparisons rather than two
+parts of the 20 m → 5 m difference, and the scenario rows are not uncertainties.
+
+category | comparison | skyline max (median) | Sun / Earth steps
+---|---|---|---
+numerical convergence | 5 m: radial 0.625/2.5 m vs base | 0.017° (0.000°) | 0 / 0
+numerical convergence | 5 m: radial 5/10 m vs base | 0.092° (0.003°) | 2 / 1
+numerical convergence | 5 m: azimuth 0.05° vs 0.1° | 0.003° | 0 / 0
+numerical convergence | 20 m: 4C sampling vs 1.25/5 m | 0.087° (0.005°) | 3 / 0
+terrain product (fixed radius, same sampling) | LDEM 20 m → PGDA 5 m | **0.97° (0.23°)** | **321 / 3**
+comparison: same product, coarser grid | PGDA 5 m → its own 20 m block mean | 0.38° (0.057°) | 78 / 11
+comparison: different product, same 20 m grid | LDEM 20 m → PGDA block mean | 1.00° (0.20°) | 307 / 12
+observer convention | 5 m: eye 0.641 → 1.041 m | 0.60° (0.24°) | 248 / 53
+product + own nominal observer | 4C result → 5 m nominal | 1.25° (0.14°) | 340 / 56
+observer location (scenarios) | 5 m: 100 m N / E / S / W | 3.51 / 3.08 / 3.78 / 3.47° | 4 153 / 3 416 / 3 701 / 3 079 Sun
+removing real nearby terrain | 5 m: ignore < 20 / 50 / 100 / 300 m | 0 / 0.15 / 1.18 / 3.78° | 0 / 0 / 85 / 5 498 Sun
+PGDA error, non-statistical illustration | every setting point's elevation moved by its own atan(σ_Z/d), all up or all down | median 0.16° | 432 (up) / 179 (down) Sun
+
+- The 5 m skyline is still set **29–450 m** away (median 95 m), range −0.31°
+  to +3.82° (20 m: −0.83° to +4.11°, 50–480 m).
+- Comparing the two products on the same 20 m grid changes the skyline about
+  as much as the full 20 m → 5 m comparison (1.00° vs 0.97° max; 307 vs 321 Sun
+  steps). Coarsening the 5 m surface by itself changes it less (0.38°, 78
+  steps). This **suggests** that the change comes mainly from the different
+  product (track-adjusted LOLA vs LDEM V2.0) rather than pixel spacing. It is a
+  comparison, not an attribution: block-averaging is not how LDEM_80S_20M was
+  made, and the effects are not additive. The product difference is of the same
+  order as the angle scale of the 5 m product's stated 1σ error (above).
+
+Mission metrics (14-day demo windows from 2026-12-05; Sun % / both % / longest dark h):
+
+The last column is the non-statistical "all up / all down" illustration above.
+It is not a confidence interval, does not bound the metrics, and has no stated probability.
+
+window | 20 m (4C, exported) | 5 m fixed radius | 5 m nominal eye | 5 m block mean (fixed) | 5 m all-up / all-down illustration (Sun %, dark h)
+---|---|---|---|---|---
++0 d | 72.12 / 6.75 / 62.8 | 66.52 / 0.20 / 85.0 | 69.59 / 2.88 / 78.3 | 68.15 / 0.94 / 83.2 | 62.9–69.0, 78.7–92.5
++1 d | 72.12 / 6.75 / 86.8 | 66.52 / 0.20 / 109.0 | 69.54 / 2.88 / 102.3 | 68.11 / 0.94 / 107.2 | 62.9–69.0, 102.7–116.5
++3 d | 59.87 / 6.75 / 134.8 | 53.27 / 0.20 / 157.0 | 55.26 / 2.88 / 150.3 | 53.82 / 0.94 / 155.2 | 51.0–55.2, 150.7–164.5
++7 d | 45.59 / 21.03 / 182.8 | 39.04 / 14.53 / 204.8 | 42.31 / 18.50 / 193.8 | 39.29 / 14.98 / 204.0 | 34.6–42.4, 193.7–219.7
+
+Earth share changes by ≤ 0.8 pp across these (Earth's path crosses lower, more
+distant skyline). Sun transitions over 60 days (UTC; rise ↑ / set ↓):
+
+event | 20 m (4C) | 5 m fixed | 5 m nominal | block mean
+---|---|---|---|---
+first sunrise | 12-06 06:50 | 12-06 03:30 | 12-05 23:50 | 12-05 23:50
+sunset | 12-16 09:10 | 12-15 11:00 | 12-15 17:40 | 12-15 12:50
+sunrise | 12-24 00:00 | 12-23 23:50 | 12-23 19:30 | 12-24 00:50
+sunset | 12-27 08:00 | 12-27 18:00 | 12-27 23:50 | 12-27 17:50
+sunrise | 01-05 03:30 | 01-05 03:50 | 01-05 00:30 | 01-05 02:40
+sunset | 01-13 05:00 | 01-12 11:20 | 01-12 23:30 | 01-12 16:30
+extra sunlit period | — | — | 01-24 01:00–06:20 | —
+longest darkness (60 d) | 403.0 h (to coverage end) | 420.7 h | 265.5 h | 415.5 h
+
+Events move by up to ~22 h between products. A 0.4 m eye change creates or
+removes a 5 h sunlit interval, which by itself changes the 60-day longest darkness
+from 420.7 to 265.5 h.
+
+### Recommendation: retain CR1 terrain as provisional
+Do not adopt either DEM's CR1 terrain as a final result.
+- **For the 5 m product:** it is well suited technically. It covers the point,
+  best-fits LDEM_80S_20M at zero shift among the tested shifts, and has a
+  consistent height reference, no missing data and numerical convergence. It
+  ships documented uncertainty. If CR1 terrain is shown, it is the
+  better-documented surface.
+- **Against calling either result final:**
+  - The difference between the two products (0.97° max; −5.6 pp Sun and +22 h
+    darkness in the baseline window) is the same order as the effect of the 5 m
+    product's own stated 1σ height error. The non-statistical all-up/all-down
+    illustration moves the same window by about −3.6/+2.5 pp and +7.5/−6.3 h.
+  - A 0.4 m change of eye height has comparable effects.
+  - A 100 m change of position has ~10× larger effects.
+  - The coordinate's accuracy, the lander's height and local rocks are unknown
+    and act at this scale.
+- **The finer DEM does not make CR1 robust;** it confirms that CR1's Sun
+  visibility in this window is decided by metre-scale relief within ~100 m.
+- **Consequences:**
+  - The exported CR1 file stays the committed 20 m provisional result.
+  - No Horizons re-fetch was made, because no surface elevation was adopted.
+  - Adopting the 5 m surface later would require positions at 1.9432 km
+    (nominal convention) and a re-run of export/validation.
+
+### Checks observed
+- `python -m unittest discover -s pipeline/tests`: **58 passed** (3 new synthetic
+  GeoTIFF tests: header parsing, PixelIsArea centres, exact mapping onto the
+  ray-march grid incl. stencil edges, off-lattice rejection).
+- `validate.py` (both sites): **136/136**. Athena's 74 tracked files are
+  sha256-identical. Athena and CR1 exports recompute byte-identically after the
+  `terrain_horizon.py` change (PDS products take the unchanged code path).
+- Not done (bounded scope): clone ensemble (100 × 41 MB), slope layers, the
+  87–90°S mosaic, sub-5 m horizontal alignment, re-fetching Horizons.
 
 ## Milestone 4C: CR1 positions, terrain horizon and validation (2026-11-14)
 
@@ -994,6 +1177,13 @@ date | check | inputs | expected behavior | observed result | pass/fail
 2026-11-14 | CR1 metrics cross-check (4C) | demo windows, both models | independent Python = pipeline | exact (72.123 %, 25.446 %, 62.833 h terrain +0 d) | pass
 2026-11-14 | Athena preservation (4C) | 74 tracked Athena files; export recomputed in memory | identical | sha256 74/74; export content identical; 68/68; metrics unchanged | pass
 2026-11-14 | Tests and build (4C) | pipeline, vitest, build | pass | 55 OK; 43 passed; build OK | pass
+2026-11-14 | PGDA Site01 download (5 m assessment) | surf, ldec, toterr | size = Content-Length; sha256 recorded | 3/3; one transient DNS failure resumed | pass
+2026-11-14 | PGDA metadata (5 m assessment) | GeoTIFF tags, GeoKeys, GMT history | registration, projection, sphere, nodata as documented | PixelIsArea + GMT -r (centres = corner + 2.5 m); polar stereographic on 1737.4 km sphere; NaN nodata, 0 NaN | pass
+2026-11-14 | 5 m vs 20 m alignment (5 m assessment) | 640 000 coincident 20 m cells; shift search ±40 m | consistent height reference; best fit among tested shifts | +0.28 m tile / +0.15 m within 1 km; lowest RMS at (0, 0) among ±40 m in 5 m steps (sub-5 m, larger, rotational offsets not tested) | pass
+2026-11-14 | 5 m tile edge (5 m assessment) | 640 edge points; beyond-tile profile | hand-off cannot set the horizon | Δh mean +0.46 m (≤ 0.061°); beyond-tile terrain ≥ 1.46° below | pass
+2026-11-14 | 5 m numerical convergence (5 m assessment) | radial, azimuth variants | converged | ≤ 0.017° and 0 steps (radial halving); 0.003° (azimuth) | pass
+2026-11-14 | 5 m vs 20 m horizon and metrics (5 m assessment) | product, sampling, observer, location, near terrain | report separately | product 0.97° / 321 Sun steps; sampling 0.38° / 78; eye 0.4 m 0.60° / 248; 100 m 3.1–3.8° / 3 079–4 153 | reported; recommendation provisional
+2026-11-14 | Regression after 5 m code (5 m assessment) | tests, validate, exports | unchanged | 58 OK; 136/136; Athena 74/74 sha256; both exports byte-identical | pass
 
 Not yet checked: screen readers, Firefox/Safari, real touch hardware,
 keyboard-only use of the timeline (the slider is keyboard-accessible; the
@@ -1017,6 +1207,9 @@ timeline itself is pointer-only).
   change by tens of percentage points under 100 m scenarios, the 60 m DEM, or
   ignoring terrain < 300 m. Lander height, boulders and sub-pixel relief are
   unmodeled and would matter here. How to present this is undecided.
+  The 5 m PGDA assessment is consistent with this: the product change is of the
+  same order as the angle scale of its own stated 1σ error, and eye height and
+  position matter as much or more. **CR1 terrain stays provisional.**
 - CR1 eye is 0.979 m (rounded surface), skyline effect ≤ 0.024°, 13 Sun steps:
   kept for consistency with the established convention.
 - CR1 RDR skyline comparison is uninformative (0–2 shots per window); no
@@ -1063,6 +1256,7 @@ exported but not shown in the app.
 - [x] Milestone 4A: explicit site selection and pipeline file isolation.
 - [x] Milestone 4B: second point cited, cached coverage planned, surface/observer altitude documented.
 - [x] Milestone 4C: CR1 positions fetched and validated; terrain horizon computed, implementation-checked, sensitivity reported (not robust).
+- [x] CR1 terrain-product assessment (5 m PGDA Site01): recommendation, retain CR1 terrain as provisional.
 - [ ] Second site integrated (frontend).
 - [x] Date-slip comparison verified (smooth horizon).
 - [ ] Sources and limitations complete (terrain sources/limits added; second site pending).
@@ -1114,7 +1308,12 @@ Record tool/model, task, affected files, and human verification.
   `terrain_sensitivity.py`, `validate.py`, `horizon_crosscheck.py`, `export.py`;
   new `observer_rounding_check.py`; 2 tests | pipeline/, data/horizons,
   data/terrain, app/public/data, docs | Human verification: **pending**
-  (uncommitted).
+  (committed locally as `627a4cc`).
+
+- 2026-11-14 | Claude Code (Claude Opus 5.5) | CR1 terrain-product assessment:
+  `pipeline/pgda.py`, `pipeline/terrain_5m.py`, `pipeline/tests/test_pgda.py`,
+  PGDA dispatch in `terrain_horizon.py`, assessment report, docs | Human
+  verification: **pending** (committed locally).
 
 ## Handoff template
 - Completed:

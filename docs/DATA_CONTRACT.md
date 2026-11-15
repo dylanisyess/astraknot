@@ -310,3 +310,10 @@ real lunar conditions.
 - Horizons altitude echo: validated by recomputing `Center cylindric` Dxy/Dz from
   the submitted latitude/altitude and comparing at the printed decimals (precision
   varies: Dz to 1e-3 km near the pole), not with a fixed |r| tolerance.
+
+### 2026-11-14, CR1 5 m terrain assessment (no app data change)
+- Pipeline evidence only: `data/terrain/<site_id>_terrain_5m_assessment.json`
+  (`pipeline/terrain_5m.py`), carrying site identity and the 20 m terrain report sha256.
+- `terrain_horizon.Raster.from_files` also accepts `PGDA_<SITE>_5M` and
+  `PGDA_<SITE>_5M_B4` (GSFC PGDA GeoTIFFs via `pipeline/pgda.py`; raw files in
+  git-ignored `data/raw/pgda/`). These are not referenced by `config.json`, and no exported file uses them.
