@@ -4,19 +4,22 @@ A NASA Space Apps prototype that shows when the Sun and Earth are above the
 horizon from lunar south-polar sites. It is an educational planning tool, not
 flight-qualified analysis.
 
-**Milestone 4B complete (second-site terrain preparation):** mission windows for one documented
-site (IM-2 Athena landing point, 84.7906° S, 29.1957° E) with a **terrain
-horizon** computed from the LOLA terrain model (20 m pixels), and the smooth 0° horizon kept as a
-comparison mode. The data is 60 days (2026-12-01 to 2027-01-30 UTC) of real
-JPL Horizons Sun and Earth azimuth/elevation at 10-minute steps, for an
-observer 1 m above the LOLA surface. You can pick a baseline arrival and
-duration, compare +1/+3/+7-day slips, switch Smooth/Terrain, and see a horizon
-panorama, visibility timelines, an elevation chart and readouts that share one
-cursor. This is regional DEM-based visibility, not a reconstruction of
-Athena's actual conditions. A second point, NASA's notional Connecting Ridge CR1
-study location (89.468 S, 222.6 E), is configured with cached coverage/elevation
-evidence; it has no fetched positions or final horizon yet. See
-[docs/SECOND_SITE.md](docs/SECOND_SITE.md) and [docs/STATUS.md](docs/STATUS.md).
+**Two-site comparison (milestone 4, interface under review):** the app compares
+the IM-2 Athena landing point (84.7906° S, 29.1957° E) with Connecting Ridge CR1,
+a NASA notional study point (89.468° S, 222.6° E; not an actual or approved landing
+site). Both use 60 days (2026-12-01 to 2027-01-30 UTC) of real JPL Horizons Sun
+and Earth azimuth/elevation at 10-minute steps, for an observer 1 m above the LOLA
+surface. One shared scenario (baseline arrival, duration, +1/+3/+7-day slip,
+Smooth or Terrain horizon, selected UTC time) drives a comparison card per site,
+both sites' visibility timelines on one UTC axis, and a site selector for the
+horizon panorama, readouts and elevation chart. The terrain horizon comes from
+the LOLA terrain model (20 m pixels); the smooth 0° horizon is a comparison mode.
+**CR1's terrain result is provisional**: its skyline is set by modeled relief
+within ~500 m and changes noticeably with the terrain model, observer height and
+position (a 5 m terrain assessment is summarized in the app). Results are
+DEM-based visibility for published coordinates, not actual lander conditions,
+and the app does not rank the sites. See [docs/SECOND_SITE.md](docs/SECOND_SITE.md)
+and [docs/STATUS.md](docs/STATUS.md).
 
 ## Layout
 
@@ -95,10 +98,9 @@ python pipeline/crosscheck_metrics.py --site im2-athena 2026-12-05T00:00:00Z 14 
 Fetch, export and validation default to all configured sites. The other commands
 use the sole configured site by default; with multiple sites, specify `--site`.
 IDs must be unique lowercase letters/digits separated by hyphens. Unknown IDs
-are errors. Two sites are configured and both have exported app data (CR1 since
-milestone 4C), but the frontend still displays only Athena. CR1's terrain horizon
-is set by relief within ~500 m and is highly position-sensitive; see
-`docs/STATUS.md`, "Milestone 4C".
+are errors. Two sites are configured and both have exported app data; the frontend
+loads every manifest site and compares them. CR1's terrain horizon is set by relief
+within ~500 m and is highly position-sensitive (provisional); see `docs/STATUS.md`.
 
 Repeat CR1 preparation without network access:
 

@@ -130,11 +130,18 @@ export interface SiteData {
 
 export type HorizonMode = "smooth" | "terrain";
 
+/** One manifest site after the loader's checks. */
+export interface SiteEntry {
+  id: string;
+  data: SiteData;
+  /** Why the terrain horizon cannot be offered for this site (missing or failed a loader check), or null. */
+  terrainProblem: string | null;
+}
+
 export interface Dataset {
   manifest: Manifest;
-  site: SiteData;
-  /** Parsed sample times in epoch milliseconds, same order as samples. */
+  /** In manifest order. Every site shares exactly the same sample times. */
+  sites: SiteEntry[];
+  /** Parsed sample times in epoch milliseconds, identical for every site. */
   times: number[];
-  /** Why the terrain horizon cannot be offered (missing or failed a loader check), or null. */
-  terrainProblem: string | null;
 }

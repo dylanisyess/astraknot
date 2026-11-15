@@ -440,3 +440,60 @@ tbody tr:hover { background: var(--surface-0); }
 .site-shift details p { margin-top: 6px; }
 .shift-table th, .shift-table td { padding: 4px 8px; white-space: nowrap; }
 .shift-table thead th { white-space: normal; vertical-align: bottom; }
+
+/* ---------------------------------------------------------------- milestone 4: two-site comparison */
+.locator-card { display: flex; flex-direction: column; gap: 8px; }
+.locator { margin: 0; display: grid; justify-items: center; gap: 6px; }
+.locator svg { max-width: 100%; height: auto; }
+.locator .loc-edge { fill: var(--surface-0); stroke: var(--border); }
+.locator .loc-ring { fill: none; stroke: var(--grid); }
+.locator .loc-tick { fill: var(--text-muted); font-size: 9px; }
+.locator .loc-pole { stroke: var(--text-secondary); stroke-width: 1.2; }
+.locator .loc-site circle { fill: var(--accent); stroke: var(--surface-1); stroke-width: 1.5; }
+.locator .loc-site text { fill: var(--text-primary); font-size: 11px; font-weight: 600; paint-order: stroke; stroke: var(--surface-0); stroke-width: 3px; }
+.locator .loc-off { opacity: 0.4; }
+.locator figcaption { justify-self: stretch; }
+.site-toggles { border: 0; padding: 0; margin: 0; display: grid; gap: 4px; }
+.site-toggles legend { color: var(--text-muted); margin-bottom: 2px; }
+
+.window-line { margin-top: 12px; color: var(--text-secondary); }
+
+.compare-grid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+.compare-foot { grid-column: 1 / -1; }
+.site-compare { display: flex; flex-direction: column; gap: 6px; }
+.site-compare.active-site { border-color: var(--text-secondary); box-shadow: inset 0 0 0 1px var(--text-secondary); }
+.site-compare .coords { font-size: 1.1rem; }
+.model-line { color: var(--text-secondary); }
+.provisional {
+  color: var(--warn-ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-weight: 600;
+}
+.provisional .small { font-weight: 400; }
+.at-time { color: var(--text-secondary); }
+.show-btn { align-self: flex-start; }
+.assessment { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 8px; }
+.assessment summary { cursor: pointer; font-weight: 600; }
+.assessment p, .assessment ul { margin: 6px 0; }
+.assessment ul { padding-left: 18px; display: grid; gap: 4px; }
+h4 { font-size: 0.85rem; margin: 10px 0 4px; }
+.shift-table { font-size: 0.8rem; }
+.shift-table th, .shift-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+
+.site-select { margin: 10px 0 0; }
+.timeline .track-label { fill: var(--text-primary); font-size: 13px; font-weight: 700; }
+.timeline .track-note { fill: var(--warn-ink); font-size: 11px; font-weight: 600; }
+.timeline .track-sep { stroke: var(--border); }
+
+.site-sources h3 { margin-top: 4px; }
+.sources-card .common-limits { margin-top: 14px; }
+
+@media (max-width: 640px) {
+  .shift-table { display: block; overflow-x: auto; }
+}
+.site-compare .compare td, .site-compare .compare th { padding: 6px 8px; }
+.site-compare .compare thead th { white-space: normal; vertical-align: bottom; line-height: 1.25; }
+.site-compare .table-scroll.plain { overflow-x: visible; }

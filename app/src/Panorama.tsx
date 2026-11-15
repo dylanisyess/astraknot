@@ -14,6 +14,8 @@ interface Props {
   i1: number;
   selected: number;
   selectedTime: number;
+  /** Azimuth shown in the middle of the panorama (multiple of 45; default 0 = north). */
+  centerAz?: number;
 }
 
 type Body = "sun" | "earth";
@@ -22,13 +24,14 @@ const BODIES: { key: Body; label: string }[] = [
   { key: "earth", label: "Earth" },
 ];
 
-// x axis runs S -> W -> N -> E -> S so north (and Earth, at az ~320-350) sits in the middle.
-const toU = (az: number) => norm360(az - 180); // 0..360, 180 = north
-const fromU = (u: number) => norm360(u + 180);
-const TICKS = [180, 225, 270, 315, 0, 45, 90, 135, 180];
+// The x axis runs 360 degrees with centerAz in the middle (default north: S -> W -> N -> E -> S).
+// Sites choose a centre near their Earth direction so Earth is not split at the panorama's edges.
 const TICK_NAMES: Record<number, string> = { 0: "N", 45: "NE", 90: "E", 135: "SE", 180: "S", 225: "SW", 270: "W", 315: "NW" };
 
-export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, selected, selectedTime }: Props) {
+export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, selected, selectedTime, centerAz = 0 }: Props) {
+  const toU = (az: number) => norm360(az - centerAz + 180); // 0..360, 180 = centerAz
+  const fromU = (u: number) => norm360(u + centerAz - 180);
+  const TICKS = Array.from({ length: 9 }, (_, k) => norm360(centerAz + 180 + 45 * k));
   const [hoverU, setHoverU] = useState<number | null>(null);
   const narrow = width < 560;
   const left = narrow ? 40 : 52;
@@ -85,7 +88,7 @@ export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, selec
       unknown: gaps,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [horizon, width, yLo, yHi]);
+  }, [horizon, width, yLo, yHi, centerAz]);
 
   // Faint tracks of each body over the plotted windows (broken at the S seam).
   const tracks = useMemo(() => {
@@ -110,7 +113,7 @@ export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, selec
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [samples, i0, i1, width, yLo, yHi]);
+  }, [samples, i0, i1, width, yLo, yHi, centerAz]);
 
   const s = samples[selected];
   const markers = BODIES.map(({ key, label }) => {
@@ -320,7 +323,7 @@ export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, selec
         ))}
       </ul>
       <p className="muted small">
-        Horizontal axis: azimuth (south at both edges, north in the middle). Vertical axis: elevation angle, stretched about{" "}
+        Horizontal axis: azimuth ({TICK_NAMES[norm360(centerAz + 180)]} at both edges, {TICK_NAMES[norm360(centerAz)]} in the middle). Vertical axis: elevation angle, stretched about{" "}
         {Math.round(exaggeration)}× relative to azimuth. Markers are the body centers at the selected time; hollow markers are
         below the {mode === "terrain" ? "skyline" : "0° line"}, and arrows mark bodies outside the view. Faint lines are each
         body’s path through the plotted windows. Timeline states use the 10-minute midpoint rule, so near a crossing the

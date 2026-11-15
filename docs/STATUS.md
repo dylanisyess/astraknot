@@ -5,11 +5,24 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
-## Start here (handoff for a new session, updated 2026-11-14 after the CR1 5 m assessment)
+## Start here (handoff for a new session, updated 2026-11-14 after the two-site interface)
 Read this section first, then `docs/SPEC.md` and `docs/DATA_CONTRACT.md`.
 The rest of this file is the detailed record behind it.
 
-**Latest:** 4C committed locally as `627a4cc` ("feat: add provisional CR1
+**Latest (uncommitted for review):** the **two-site comparison interface** on
+`milestone-4-site-comparison`, on top of `ca0c996`. It loads Athena and CR1
+from the manifest with strict identity checks and uses one shared scenario:
+arrival, duration, delay, horizon model and UTC time. It shows per-site cards
+with baseline-to-delay changes, both timelines on one UTC axis, an active-site
+selector for the panorama/readouts/chart, a projected locator, and per-site
+sources and limitations. CR1 is labelled "Connecting Ridge CR1 — NASA notional
+study point" and marked "Provisional: sensitive to terrain model" next to its
+metrics in Terrain mode, with the 5 m assessment as a read-only summary. Checks:
+90 vitest tests, production build, and **42/42 headless-Chrome checks**. See "Milestone 4D: two-site
+comparison interface" below, including the **browser review checklist** for the
+human review that is still pending.
+
+**Earlier:** 4C committed locally as `627a4cc` ("feat: add provisional CR1
 dataset and sensitivity evidence"; not pushed). The follow-up **CR1 terrain-
 product assessment** (5 m PGDA Site01 vs 20 m LDEM) is committed locally as "feat: add CR1 5 m terrain-product assessment" (recommendation accepted).
 See "CR1 terrain-product assessment" below. **Recommendation: retain CR1
@@ -32,9 +45,8 @@ full 0.1° terrain horizon with sensitivity, cross-checks and an exported
 checked and numerically converged, but **not robust**. Ignoring terrain within
 300 m, using the 60 m DEM, or moving the observer 100 m each flips thousands of
 the 8 640 Sun steps. Treat CR1 terrain percentages as highly position- and
-resolution-dependent; see "Milestone 4C" below. The manifest now lists both
-sites (Athena first); the frontend is unchanged and still displays only
-`manifest.sites[0]` (Athena). Unscoped batch commands now cover both prepared sites.
+resolution-dependent; see "Milestone 4C" below. The manifest lists both sites
+(Athena first). Unscoped batch commands now cover both prepared sites.
 
 ### What works (verified)
 - **Data:** 60 days of real JPL Horizons Sun/Earth airless apparent az/el of
@@ -49,16 +61,20 @@ sites (Athena first); the frontend is unchanged and still displays only
   an independently implemented pixel sweep on the same DEM agrees; the DEM's
   own source laser shots are consistent with the skyline (see "Milestone 3"
   below). Exported next to the unchanged smooth horizon.
-- **App** (`app/`, React 19 + TS 7 + Vite 8): **Smooth / Terrain selector**
-  (default Terrain); baseline arrival + duration, +1/+3/+7 d slips; comparison
-  table; Sun/Earth/both timelines; **horizon panorama** linked to the cursor;
-  elevation chart with the skyline under each body (terrain mode); one shared
-  cursor; boundary flags (short, expandable); unknown handling; URL state
-  including `horizon=`.
-- **Second site data (milestone 4C, pipeline only):** CR1 60 days of real
-  Horizons Sun/Earth positions (8 641 samples, same coverage/step/conventions as
-  Athena), smooth and terrain horizons, intervals, sources and checks in
-  `app/public/data/connecting-ridge-cr1.json`. Not shown in the app yet.
+- **App** (`app/`, React 19 + TS 7 + Vite 8), **two-site comparison (4D, uncommitted):**
+  - One shared scenario: Smooth / Terrain for all sites (default Terrain),
+    baseline arrival + duration, and +1/+3/+7 d slips relative to the baseline.
+  - A comparison card per site with baseline / delay / "Change: +N d vs baseline".
+  - Both sites' Sun/Earth/both timelines on one UTC axis.
+  - A site selector for the readouts, **horizon panorama** (centred per site)
+    and elevation chart.
+  - A projected south-polar locator, and per-site sources and limitations.
+  - Carried over: one shared cursor, boundary flags, unknown handling.
+  - URL state: `arrival, days, delay, t, horizon, sites, site`. Older Athena links still work.
+- **Second site data (milestone 4C):** CR1 60 days of real Horizons Sun/Earth
+  positions (8 641 samples, same coverage/step/conventions as Athena), smooth and
+  terrain horizons, intervals, sources and checks in
+  `app/public/data/connecting-ridge-cr1.json`; shown in the app since 4D.
 
 ### Key files
 Pipeline (`pipeline/`, Python standard library only; run from the repo root):
@@ -94,9 +110,13 @@ Pipeline (`pipeline/`, Python standard library only; run from the repo root):
 
 App (`app/src/`):
 - `mission.ts` (window, delay, metric logic), `horizon.ts` (profile lookup,
-  mode selection, loader check, step re-classification for tests),
-  `Panorama.tsx`, `Timeline.tsx`, `ElevationChart.tsx`, `App.tsx`, `data.ts`, `axis.ts`.
-- Tests: `mission.test.ts`, `data.test.ts`, `horizon.test.ts`.
+  loader check, step re-classification for tests), `data.ts` (multi-site loader,
+  `checkSites` identity checks), `sites.ts` (per-site profiles, strict
+  one-model-for-all rules, data-derived facts, locator projection),
+  `assessment.ts` (CR1 5 m summary), `urlState.ts`, `Panorama.tsx` (`centerAz`),
+  `Timeline.tsx` (multi-site tracks), `ElevationChart.tsx`, `App.tsx`, `axis.ts`.
+- Tests: `mission.test.ts`, `data.test.ts`, `horizon.test.ts`, `sites.test.ts`,
+  `assessment.test.ts`, `urlState.test.ts`, `app.test.tsx` (server-rendered `Workspace`).
 
 ### Verified conventions (do not change without re-running the checks)
 - **Horizons:** `CENTER='coord@301'`, `COORD_TYPE='GEODETIC'`,
@@ -216,7 +236,7 @@ python pipeline/fetch.py --site im2-athena                           # "0 live r
 python pipeline/crosscheck_metrics.py --site im2-athena              # 12-05 +0 d: sun 43.353..., dark 190.333 h
 python pipeline/crosscheck_metrics.py --site im2-athena --terrain    # 12-05 +0 d: sun 27.232..., earth 67.262..., dark 244.5 h
 python pipeline/compare_altitude.py --site im2-athena                # earth mean 8.041e-04 deg, sun 2.067e-06 deg
-cd app && npm test                                 # 43 passed
+cd app && npm test                                 # 90 passed (7 files)
 cd app && npm run build                            # builds without errors
 # terrain (needs the 3.47 GB LOLA files; fresh clone: fetch first, ~1-2 min at ~50 MB/s):
 python pipeline/fetch_terrain.py --site im2-athena                   # 4 files, sizes = labels, sha256 recorded
@@ -247,6 +267,10 @@ Environment notes (Windows):
 
 ### Next steps
 
+0. Review the two-site interface (uncommitted) with the browser checklist in
+   "Milestone 4D", then commit it. Deployment from a fresh browser session is
+   still untested.
+
 1. (Done) The 5 m assessment is committed; the recommendation to keep CR1 terrain provisional was accepted and terrain research stopped for this milestone.
 2. Decide how to present CR1's provisional terrain result: for example,
    smooth and terrain side by side with a prominent caveat, or a range across
@@ -261,6 +285,147 @@ To regenerate CR1 from the caches (order matters; all inputs cached, no network)
 `export.py` → `validate.py` → `terrain_horizon.py` (~5 min) →
 `horizon_crosscheck.py` (~5 min; RDR boxes cached) → `export.py` →
 `validate.py` → `observer_rounding_check.py`, all with `--site connecting-ridge-cr1`.
+
+## Milestone 4D: two-site comparison interface (2026-11-14)
+
+On `milestone-4-site-comparison` after `ca0c996`; **uncommitted for review**.
+Frontend only: no exported data, pipeline code or Athena output changed (the
+manifest and both site files are byte-identical to `ca0c996`). No 3D, no new
+sites, no custom coordinates, no further terrain experiments.
+
+### What it does
+- **Loading:** every manifest site is loaded (`data.ts`, `checkSites`). The
+  dataset is rejected unless:
+  - IDs are unique and valid, and each manifest `file` is `<id>.json`;
+  - each file's `site.id` and `site.name` equal its entry;
+  - all sites share identical sample times (one coverage, one cursor index).
+- **One shared scenario:** arrival, duration, delay, horizon model and selected
+  UTC time apply to all compared sites. Windows are identical by construction;
+  delays are baseline offsets. Delay limits use the common coverage.
+  Active-site and model changes keep the scenario (state is shared, not per site).
+- **No mixing:** Terrain is offered only when every compared site has a terrain
+  block that passes the loader check. Otherwise every site is shown smooth, with
+  a notice. `strictHorizon` / `strictIntervals` never fall back to smooth data
+  for a terrain request (the old `intervalsFor` fallback is no longer used by the UI).
+- **Cards:** one per compared site, with the model shown, Sun / Earth / both %
+  and longest darkness for the baseline and the delay. The change column is
+  labelled "Change: +N d vs baseline". Each card also has boundary flags, the
+  state at the selected time, and "Show in panorama".
+- **CR1:**
+  - Labelled "Connecting Ridge CR1 — NASA notional study point".
+  - In Terrain mode, "⚠ Provisional: sensitive to terrain model" appears above
+    its metrics, in the panorama area and on its timeline track.
+  - The model is named "20 m LOLA model (LDEM_80S_20M; LDEM_75S_60M beyond its edge)".
+  - The **5 m assessment** is an expandable read-only summary: both
+    observer-height conventions, the pairwise comparisons, the demo-window
+    table, and the "non-statistical illustration" and "not additive" caveats.
+    It is explicitly not a selectable model; no assessment variant is loaded as data.
+- **Timelines:** one SVG, one UTC axis, one labelled track per compared site.
+  **Panorama, readouts, elevation chart and horizon facts:** for the active site
+  (selector). The panorama is centred per site (Athena N, CR1 SE, near each Earth
+  direction), and its axis caption follows the centre.
+- **Locator:** south polar stereographic on the 1737.4 km sphere (0° up, 90° E
+  right, LOLA convention), positions projected, labelled schematic (no terrain).
+  It shows the ~174 km surface distance.
+- **Sources and limitations per site:** coordinate source, Horizons queries
+  and LOLA products from that site's own file, with site-specific limitations
+  either data-derived or from the site's profile (`sites.ts`). Common
+  limitations are listed once, including "no overall ranking". The app never
+  calls either site better.
+- **URL:** `arrival, days, delay, t, horizon, sites, site`. Links without
+  `sites`/`site` (all earlier Athena links) compare both sites with Athena in the
+  panorama. Unknown IDs are reported, never invented.
+- **Leakage guard:** site-specific text lives in per-site profiles or is computed from
+  that site's file. The previous Athena-only strings in the panorama facts
+  (0.0034° rounding effect, "about a quarter", "up to 2°", the
+  `im2-athena_terrain_horizon.json` path, "Athena's actual operating
+  conditions") are now per site.
+
+### Checks observed
+- `npm test`: **90 passed, 7 files** (was 43). New:
+  - `sites.test.ts`: both sites × both models against the independent Python
+    references, for the demo windows (CR1 +0/+1/+3/+7 d, Athena +0 d), to 1e-9.
+    Also the one-model rule, strict no-fallback, profile leakage and locator geometry.
+  - `assessment.test.ts`: every UI number against the committed assessment JSON.
+    The JSON refers to the exported CR1 site and to the sha256 of the 20 m report.
+    CR1's rounding-effect sentence is checked against
+    `connecting-ridge-cr1_observer_rounding_check.json`.
+  - `urlState.test.ts`: parse, restore, old link, unknown IDs, round trip.
+  - `app.test.tsx`: server-rendered `Workspace`, covering reference values in
+    both cards, CR1 label and provisional position, no leakage both ways,
+    active-site switching, identical cards under a switch, URL restoration, the
+    no-mixing fallback, delay limits and the panorama caption.
+  - A mutation check (injecting "CR1" into Athena's profile) made 2 tests fail, as intended.
+- `npm run build`: passed (JS 293 kB, 91 kB gzip; CSS 19 kB).
+- Headless Chrome (DevTools protocol, production build via `vite preview`):
+  **42/42 checks**:
+  - **Load and identity:** default URL state; reference metrics in both cards;
+    CR1 label and provisional placement; 20 m model named; no leakage either
+    way; one timeline SVG with both tracks; locator with both sites; no "best site" claim.
+  - **5 m assessment:** content present (conventions, non-statistical, not
+    selectable); the model buttons are only Smooth / Terrain.
+  - **Active-site switch:** URL `site` changes; arrival/delay/days/t/horizon and
+    cursor index unchanged. The panorama side carries only CR1 text and data
+    tags; the caption reads NW/SE; cards are identical after the switch.
+  - **Mode switch:** both cards switch together (Athena 43.4 %, CR1 100.0 % in
+    smooth); the provisional label is hidden in smooth and returns in terrain;
+    the scenario is preserved.
+  - **Delays:** +7 d then +1 d gives +1 d (not cumulative). At the latest
+    arrival only the baseline fits, and the delay columns disappear.
+  - **Keyboard on the time slider:** ArrowRight/Left ±10 min, Home/End at the
+    window edges, PageUp a larger step; the cards' "At <time>" follows.
+  - **URL restoration:** one site, smooth, +7 d, time; old Athena link; unknown
+    ID notice. Deselecting a site moves the active site; the last site cannot be
+    deselected.
+  - **Layout:** no horizontal page overflow at 1280 and 390 px, light and dark.
+  - **Console:** no errors.
+  - Screenshots were inspected by eye (desktop and narrow, light and dark).
+- Bugs found and fixed during this review:
+  - `Workspace` re-read the URL on every render, losing the unknown-ID notice
+    after the URL was rewritten; the link is now read once.
+  - Athena's card table was clipped on the right at desktop width (header wrap, tighter padding).
+  - Locator latitude and longitude labels overlapped.
+  - The panorama caption still said "north in the middle" for CR1.
+  - A `/favicon.ico` 404 (empty inline icon added).
+- The Python pipeline was not touched: unit tests and validation results are
+  those recorded for `ca0c996` (58 tests, 136/136).
+
+### Known limits of the interface
+- At 390 px the elevation chart's long 0° line label is clipped by the plot.
+  This predates 4D and is cosmetic.
+- Athena's rounding-effect sentence (0.0034°, 2026-12-30 step) is static
+  profile text from the milestone 3 measurement; no committed report holds those
+  numbers, so it is not machine-checked. CR1's is tested against its report.
+- `manifest.dataset_id` is still `m2-athena-…` and is shown in the footer.
+- Not tested: screen readers, Firefox/Safari, real touch devices, keyboard
+  use of the timeline SVG itself (the slider is the keyboard control), and a
+  deployed build from a fresh browser session.
+
+### Browser review checklist (for the human review; not yet done by a person)
+- [ ] Default page: two cards; Athena 27.2 % / 67.3 % / 244.5 h and CR1 72.1 % /
+      25.4 % / 62.8 h at baseline (2026-12-05, 14 d, Terrain). Both show "Delay +3 d" and
+      "Change: +3 d vs baseline".
+- [ ] CR1 card reads "Connecting Ridge CR1 — NASA notional study point" and
+      shows "Provisional: sensitive to terrain model" above its metrics, and "20 m
+      LOLA model". The note disappears in Smooth.
+- [ ] Open "5 m terrain assessment": both observer conventions (0.641 m fixed,
+      1.041 m nominal / 1.9432 km), "not additive", "non-statistical
+      illustration", "not offered as selectable models".
+- [ ] Switch the panorama site Athena ↔ CR1: cards, arrival, delay and time stay the
+      same. The panorama recentres (N vs SE) and its facts and scenarios change to
+      that site, with no other-site text.
+- [ ] Smooth ↔ Terrain changes both cards together, never one alone.
+- [ ] +7 d then +1 d gives +1 d. "Latest arrival without delay" disables all delays.
+- [ ] Drag the timeline and elevation chart; arrow keys / Home / End / Page Up on
+      the slider. Cards' "At …" and readouts follow the one UTC time.
+- [ ] Copy the URL into a new tab: sites, panorama site, model, scenario and time
+      return. An old link such as `?arrival=2026-12-05T00:00Z&days=14&delay=3&horizon=terrain`
+      still works.
+- [ ] Untick a site in "Compared sites"; the remaining one cannot be unticked.
+- [ ] Check at desktop and phone width, in light and dark: no sideways scroll,
+      tables readable, locator labels legible.
+- [ ] Wording: no claim that either site is the better landing site; CR1 never
+      described as an actual or approved landing site.
 
 ## CR1 terrain-product assessment: 5 m PGDA vs 20 m LDEM (2026-11-14)
 
@@ -1183,6 +1348,9 @@ date | check | inputs | expected behavior | observed result | pass/fail
 2026-11-14 | 5 m tile edge (5 m assessment) | 640 edge points; beyond-tile profile | hand-off cannot set the horizon | Δh mean +0.46 m (≤ 0.061°); beyond-tile terrain ≥ 1.46° below | pass
 2026-11-14 | 5 m numerical convergence (5 m assessment) | radial, azimuth variants | converged | ≤ 0.017° and 0 steps (radial halving); 0.003° (azimuth) | pass
 2026-11-14 | 5 m vs 20 m horizon and metrics (5 m assessment) | product, sampling, observer, location, near terrain | report separately | product 0.97° / 321 Sun steps; sampling 0.38° / 78; eye 0.4 m 0.60° / 248; 100 m 3.1–3.8° / 3 079–4 153 | reported; recommendation provisional
+2026-11-14 | Two-site interface: unit/render tests (4D) | 7 vitest files | references, identity, no mixing, no leakage, URL, assessment consistency | 90 passed | pass
+2026-11-14 | Two-site interface: production build (4D) | `npm run build` | no errors | JS 293 kB (91 kB gzip) | pass
+2026-11-14 | Two-site interface: headless Chrome (4D) | production build, 1280/390 px, light/dark | 42 scripted checks + screenshots inspected | 42/42; 5 layout/wording bugs found and fixed first | pass (human review pending)
 2026-11-14 | Regression after 5 m code (5 m assessment) | tests, validate, exports | unchanged | 58 OK; 136/136; Athena 74/74 sha256; both exports byte-identical | pass
 
 Not yet checked: screen readers, Firefox/Safari, real touch hardware,
@@ -1257,9 +1425,9 @@ exported but not shown in the app.
 - [x] Milestone 4B: second point cited, cached coverage planned, surface/observer altitude documented.
 - [x] Milestone 4C: CR1 positions fetched and validated; terrain horizon computed, implementation-checked, sensitivity reported (not robust).
 - [x] CR1 terrain-product assessment (5 m PGDA Site01): recommendation, retain CR1 terrain as provisional.
-- [ ] Second site integrated (frontend).
+- [x] Second site integrated in the frontend (4D, uncommitted; human browser review pending).
 - [x] Date-slip comparison verified (smooth horizon).
-- [ ] Sources and limitations complete (terrain sources/limits added; second site pending).
+- [ ] Sources and limitations complete: per-site sources and limitations shown in the app (4D); awaiting human review.
 - [ ] Deployment tested.
 - [ ] Demo recorded.
 
@@ -1309,6 +1477,12 @@ Record tool/model, task, affected files, and human verification.
   new `observer_rounding_check.py`; 2 tests | pipeline/, data/horizons,
   data/terrain, app/public/data, docs | Human verification: **pending**
   (committed locally as `627a4cc`).
+
+- 2026-11-14 | Claude Code (Claude Opus 5.5) | Milestone 4D two-site interface:
+  `app/src/App.tsx`, `data.ts`, `sites.ts`, `assessment.ts`, `urlState.ts`,
+  `Timeline.tsx`, `Panorama.tsx`, `types.ts`, `styles.css`, `index.html`, tests;
+  README, DATA_CONTRACT, STATUS | Human verification: **pending** (uncommitted;
+  see the browser review checklist).
 
 - 2026-11-14 | Claude Code (Claude Opus 5.5) | CR1 terrain-product assessment:
   `pipeline/pgda.py`, `pipeline/terrain_5m.py`, `pipeline/tests/test_pgda.py`,

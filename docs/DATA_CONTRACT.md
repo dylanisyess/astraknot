@@ -317,3 +317,19 @@ real lunar conditions.
 - `terrain_horizon.Raster.from_files` also accepts `PGDA_<SITE>_5M` and
   `PGDA_<SITE>_5M_B4` (GSFC PGDA GeoTIFFs via `pipeline/pgda.py`; raw files in
   git-ignored `data/raw/pgda/`). These are not referenced by `config.json`, and no exported file uses them.
+
+### 2026-11-14, two-site frontend (no exported-file change)
+- The frontend loads **every** manifest site (previously `sites[0]` only). It
+  rejects the dataset unless IDs are unique and valid, each `file` is
+  `<id>.json`, each file's `site.id` and `site.name` equal its manifest entry,
+  and all sites have identical sample times (one cursor and one coverage).
+- One horizon model applies to all compared sites. Terrain is offered only when
+  every compared site has a terrain block that passes the loader check;
+  otherwise every site is shown with the smooth model (never mixed).
+- URL parameters add `sites=<id>,<id>` (compared sites, manifest order) and
+  `site=<id>` (panorama/readout/chart site). Links without them compare all
+  manifest sites with the first as `site`; unknown IDs are reported, not used.
+- `app/src/types.ts`: the app-internal `Dataset` now holds `sites: SiteEntry[]`
+  (data contract fields unchanged). The CR1 5 m assessment shown in the app is a
+  static summary (`app/src/assessment.ts`) tested against
+  `data/terrain/connecting-ridge-cr1_terrain_5m_assessment.json`; it is not app data.
