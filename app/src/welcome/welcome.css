@@ -1,0 +1,289 @@
+/* Landing screen (first visit and "How to use"). Its typefaces apply here only. */
+
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 600; font-display: swap; src: url("./fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-style: normal; font-weight: 400; font-display: swap; src: url("./fonts/space-grotesk-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-style: normal; font-weight: 500; font-display: swap; src: url("./fonts/space-grotesk-latin-500-normal.woff2") format("woff2"); }
+
+.lp {
+  --lp-bg: #050506;
+  --lp-ink: #efece4;
+  --lp-ink-2: #c2beb3;
+  --lp-muted: #8f8b81;
+  --lp-amber: #e0a43c;
+  /* the Moon: 58% of the height on desktop, never wider than the side text allows */
+  --moon: min(58dvh, 58vw, 780px);
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: radial-gradient(70% 60% at 50% 42%, #0d0d0f 0%, var(--lp-bg) 70%);
+  color: var(--lp-ink);
+  font-family: "Space Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-x: clip;
+}
+.lp-frame { display: contents; }
+.lp a { color: var(--lp-ink); text-decoration-color: rgba(239, 236, 228, 0.35); text-underline-offset: 3px; }
+.lp a:hover { text-decoration-color: var(--lp-amber); }
+.lp :focus-visible { outline: 2px solid var(--lp-amber); outline-offset: 3px; }
+
+/* top bar */
+.lp-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px clamp(16px, 4vw, 64px) 0; position: relative; z-index: 3; }
+.lp-brand { display: flex; align-items: center; gap: 18px; margin: 0; font-size: 13px; font-weight: 500; letter-spacing: 0.24em; text-transform: uppercase; color: var(--lp-ink); }
+.lp-rule { width: 48px; height: 1px; background: rgba(239, 236, 228, 0.45); flex: none; }
+.lp-top-actions { display: flex; align-items: center; gap: 12px; }
+.lp-link { appearance: none; background: none; border: 0; padding: 6px 2px; font: inherit; font-size: 14px; color: var(--lp-ink); cursor: pointer; border-bottom: 1px solid transparent; }
+.lp-link:hover, .lp-link[aria-expanded="true"] { border-bottom-color: var(--lp-amber); }
+.lp-close { appearance: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(239, 236, 228, 0.28); background: transparent; color: var(--lp-ink); font: inherit; cursor: pointer; }
+.lp-close:hover { border-color: rgba(239, 236, 228, 0.6); }
+
+/* About disclosure: a panel under the top bar */
+.lp-about {
+  position: absolute;
+  z-index: 4;
+  top: 64px;
+  right: clamp(16px, 4vw, 64px);
+  width: min(460px, calc(100% - 32px));
+  max-height: min(calc(100% - 96px), calc(100dvh - 88px));
+  overflow: auto;
+  padding: 18px 20px 16px;
+  background: rgba(14, 14, 15, 0.97);
+  border: 1px solid rgba(239, 236, 228, 0.16);
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  color: var(--lp-ink-2);
+  font-size: 13.5px;
+}
+.lp-about-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lp-about h2 { margin: 0; font-size: 15px; font-weight: 500; color: var(--lp-ink); }
+.lp-about h3 { margin: 14px 0 4px; font-size: 11.5px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lp-amber); }
+.lp-about p { margin: 6px 0 0; }
+.lp-about strong { color: var(--lp-ink); font-weight: 500; }
+.lp-about-x { appearance: none; width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(239, 236, 228, 0.2); background: transparent; color: var(--lp-ink-2); cursor: pointer; font: inherit; }
+
+/* hero: the Moon centred; headline left of centre over its outer edge; annotation right */
+.lp-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 16px 10px; min-width: 0; }
+.lp-stage { position: relative; width: 100%; height: var(--moon); }
+.lp-moon { position: absolute; left: 50%; top: 0; width: var(--moon); height: var(--moon); translate: -50% 0; }
+.lp-moon img { display: block; width: 100%; height: 100%; }
+.lp-headline {
+  position: absolute;
+  top: 50%;
+  translate: 0 -54%;
+  /* right edge 0.28 x Moon left of centre: the text overlaps only the darker outer rim */
+  right: calc(50% + var(--moon) * 0.28);
+  margin: 0;
+  font-family: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  font-weight: 600;
+  /* the longer line measures about 5.4 em: the size fills the space left of the Moon, minus the page margin */
+  font-size: clamp(40px, calc((50vw - var(--moon) * 0.28 - clamp(16px, 4vw, 64px)) / 5.5), 140px);
+  line-height: 0.92;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  color: var(--lp-ink);
+  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.7), 0 0 2px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+.lp-annot { position: absolute; top: 44%; left: calc(50% + var(--moon) * 0.5 + 24px); margin: 0; display: flex; align-items: flex-start; gap: 18px; max-width: calc(50% - var(--moon) * 0.5 - 40px); }
+.lp-annot-rule { width: 52px; height: 1px; margin-top: 11px; background: var(--lp-amber); flex: none; }
+.lp-annot-t { display: flex; flex-direction: column; gap: 4px; }
+.lp-annot strong { font-size: 18px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; }
+.lp-annot em { font-size: 15px; color: var(--lp-ink-2); }
+.lp-lead { margin: clamp(14px, 2.4dvh, 26px) 0 0; font-size: clamp(16px, 1.45vw, 21px); color: var(--lp-ink); text-align: center; text-wrap: balance; }
+.lp-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: clamp(14px, 2.2dvh, 22px); }
+.lp-note { margin: 12px 0 0; max-width: 560px; font-size: 12.5px; line-height: 1.45; color: var(--lp-muted); text-align: center; text-wrap: balance; }
+.lp-foot { display: flex; justify-content: space-between; gap: 6px 24px; flex-wrap: wrap; padding: 0 clamp(16px, 4vw, 64px) 16px; font-size: 11.5px; color: var(--lp-muted); }
+
+/* buttons */
+.lp-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-width: 228px;
+  height: 54px;
+  padding: 0 28px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.lp-primary {
+  color: #121212;
+  background: linear-gradient(180deg, #f7f4ec 0%, #e6e1d5 100%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+.lp-primary:hover { background: linear-gradient(180deg, #fffdf7 0%, #efebe1 100%); box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(0, 0, 0, 0.55), 0 14px 36px rgba(0, 0, 0, 0.55), 0 0 0 4px rgba(224, 164, 60, 0.18); }
+.lp-secondary { color: var(--lp-ink); background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(239, 236, 228, 0.34); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.lp-secondary:hover { background: rgba(255, 255, 255, 0.075); border-color: rgba(239, 236, 228, 0.65); }
+.lp-btn:active { translate: 0 1px; }
+.lp-arrow { width: 20px; height: 12px; fill: none; stroke: #9a6414; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.lp-btn:focus-visible { outline: 2px solid var(--lp-amber); outline-offset: 4px; }
+
+.lp-confirm { margin-top: 18px; max-width: 560px; padding: 14px 18px; border: 1px solid rgba(224, 164, 60, 0.45); background: rgba(224, 164, 60, 0.08); border-radius: 12px; color: var(--lp-ink-2); font-size: 13.5px; text-align: center; }
+.lp-confirm p { margin: 0 0 6px; }
+.lp-confirm strong { color: var(--lp-amber); font-weight: 500; }
+.lp-confirm .lp-actions { margin-top: 10px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp-moon { animation: lp-fade 0.9s ease-out both; }
+  .lp-headline, .lp-annot, .lp-lead, .lp-actions { animation: lp-fade 0.6s ease-out 0.15s both; }
+  .lp-primary .lp-arrow { transition: translate 0.18s ease; }
+  .lp-primary:hover .lp-arrow { translate: 3px 0; }
+  @keyframes lp-fade { from { opacity: 0; } to { opacity: 1; } }
+}
+
+/* "How to use": the same screen as a full-viewport modal dialog over the navigator */
+.lp-dialog { position: fixed; inset: 0; z-index: 120; overflow: auto; }
+
+/* narrow screens: headline, Moon, annotation, copy and actions stacked */
+@media (max-width: 860px) {
+  .lp { --moon: min(78vw, 44dvh); }
+  .lp-top { padding-top: 16px; }
+  .lp-brand { gap: 10px; font-size: 11px; letter-spacing: 0.18em; }
+  .lp-rule { width: 22px; }
+  .lp-hero { justify-content: flex-start; padding-top: 18px; }
+  .lp-stage { display: flex; flex-direction: column; align-items: center; height: auto; }
+  .lp-headline { position: static; translate: none; order: -1; margin-bottom: 18px; font-size: clamp(40px, 13vw, 76px); text-align: center; white-space: normal; }
+  .lp-moon { position: relative; left: auto; translate: none; }
+  .lp-annot { position: static; max-width: none; margin-top: 14px; }
+  .lp-annot-rule { width: 28px; }
+  .lp-annot strong { font-size: 15px; }
+  .lp-annot em { font-size: 14px; }
+  .lp-actions { flex-direction: column; align-items: stretch; width: min(100%, 380px); }
+  .lp-btn { width: 100%; }
+  .lp-foot { flex-direction: column; text-align: center; align-items: center; padding-top: 18px; }
+  .lp-about { top: 56px; }
+}
+
+/* top bar entry point */
+.tb-help { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; color: var(--x-text-2); background: transparent; border: 1px solid var(--x-border-2); border-radius: 999px; padding: 2px 10px 2px 4px; cursor: pointer; white-space: nowrap; }
+.tb-help:hover { color: var(--x-text); border-color: var(--x-text-2); }
+.tb-help:focus-visible { outline: 2px solid var(--x-focus); outline-offset: 2px; }
+.tb-help-ic { width: 16px; height: 16px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--x-raise-2); color: var(--x-text); }
+@media (max-width: 760px) {
+  .topbar-meta .tb-badge.tb-utc { display: none; } /* coverage line states UTC; keeps one header row */
+  .tb-help { padding: 4px; }
+  .tb-help-ic { width: 20px; height: 20px; }
+  .tb-help-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* ---------------------------------------------------------------- guide card (inside Explore) */
+.guide-card {
+  position: absolute;
+  z-index: 14;
+  left: calc(12px + 300px + 12px);
+  bottom: calc(var(--timebar-h) + 12px);
+  width: min(600px, calc(100% - 324px - 344px));
+  max-height: calc(100% - var(--timebar-h) - 24px - 60px);
+  overflow: auto;
+  padding: 12px 14px 12px;
+  background: rgba(14, 14, 13, 0.94);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--x-border-2);
+  border-top: 3px solid var(--x-sun);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  color: var(--x-text);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.gd-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gd-count { margin: 0; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--x-muted); }
+.gd-skip { appearance: none; background: none; border: 0; padding: 2px 4px; font: inherit; font-size: 12px; color: var(--x-text-2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.gd-skip:hover { color: var(--x-text); }
+.gd-title { margin: 4px 0 6px; font-size: 15px; font-weight: 650; outline: none; }
+.gd-title:focus { outline: none; } /* programmatic focus target (tabIndex -1), not a control */
+.gd-body p { margin: 0 0 6px; color: var(--x-text-2); }
+.gd-body > :last-child { margin-bottom: 0; }
+.gd-body strong { color: var(--x-text); font-weight: 600; }
+.gd-ctx { font-size: 12px; color: var(--x-muted) !important; }
+.gd-result { color: var(--x-text) !important; padding: 5px 8px; border-left: 2px solid var(--x-sun); background: var(--x-raise); border-radius: 0 4px 4px 0; }
+.gd-note { color: var(--x-caution) !important; }
+.gd-warn { color: var(--x-caution) !important; }
+.gd-hint { font-size: 12px; }
+.gd-action { appearance: none; display: inline-flex; align-items: center; height: 32px; margin: 2px 0 8px; padding: 0 12px; font: inherit; font-size: 12.5px; font-weight: 600; color: #111; background: var(--x-sun); border: 1px solid var(--x-sun); border-radius: 6px; cursor: pointer; }
+.gd-action:hover { filter: brightness(1.08); }
+.gd-action:focus-visible, .gd-btn:focus-visible, .gd-skip:focus-visible { outline: 2px solid var(--x-focus); outline-offset: 2px; }
+.gd-table { width: 100%; border-collapse: collapse; margin: 2px 0 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.gd-table th, .gd-table td { padding: 3px 5px; text-align: right; border-top: 1px solid var(--x-border); white-space: nowrap; }
+.gd-table thead th { border-top: 0; color: var(--x-muted); font-weight: 500; white-space: normal; vertical-align: bottom; font-size: 11px; line-height: 1.25; }
+.gd-table th[scope="row"] { text-align: left; font-weight: 500; color: var(--x-text-2); white-space: normal; }
+.gd-table td { color: var(--x-text); }
+.gd-summary { margin: 0; color: var(--x-text) !important; }
+.gd-nav { display: flex; align-items: center; gap: 6px; }
+.gd-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.gd-row .gd-action { margin: 0; }
+.gd-btn { appearance: none; height: 28px; padding: 0 12px; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--x-text); background: transparent; border: 1px solid var(--x-border-2); border-radius: 6px; cursor: pointer; }
+.gd-btn:hover { background: var(--x-raise-2); }
+.gd-next { background: var(--x-text); color: #111; border-color: var(--x-text); font-weight: 600; }
+.gd-next:hover { background: #fff; }
+
+/* while guiding: the crossing result is in the card, and the legend yields the space */
+.explore[data-guide-step] .scene-legend { display: none; }
+/* step 1, at the start: the three Conditions items, numbered like the card's list */
+.gd-conditions { margin: 0 0 6px; padding-left: 20px; color: var(--x-text-2); }
+.gd-conditions li { margin: 1px 0; }
+.gd-conditions li::marker { color: var(--x-sun); font-weight: 700; }
+.explore[data-guide-hint="conditions"] .status-panel { counter-reset: gd-cond; box-shadow: 0 0 0 2px var(--x-sun), 0 8px 24px rgba(0, 0, 0, 0.35); }
+.explore[data-guide-hint="conditions"] .status-panel .status-group { position: relative; background: rgba(242, 180, 65, 0.07); }
+.explore[data-guide-hint="conditions"] .status-panel .status-group::before {
+  counter-increment: gd-cond;
+  content: counter(gd-cond);
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--x-sun);
+  color: #111;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+/* step 1, after the crossing: press Play, and watch Solar-power potential */
+.gd-callout { display: flex; gap: 8px; align-items: flex-start; padding: 7px 9px; border-radius: 5px; background: rgba(242, 180, 65, 0.12); border: 1px solid rgba(242, 180, 65, 0.45); color: var(--x-text) !important; }
+.gd-play-ic { flex: none; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: var(--x-text); color: #111; font-size: 9px; margin-top: 1px; }
+.gd-done { background: rgba(242, 180, 65, 0.18); }
+.explore[data-guide-hint="play"] .status-panel .group-power,
+.explore[data-guide-hint="done"] .status-panel .group-power { box-shadow: inset 3px 0 0 var(--x-sun); background: rgba(242, 180, 65, 0.07); }
+
+/* the real control the step refers to (the delay button mirrors EXAMPLE.delay in onboarding.ts) */
+.explore[data-guide-step="1"][data-guide-hint="play"] .play-btn,
+.explore[data-guide-step="2"] [data-delay-btn="3"],
+.explore[data-guide-step="3"] .mission-panel .find-windows-btn { outline: 2px solid var(--x-sun); outline-offset: 3px; }
+.explore[data-guide-hint="play"] .play-btn[aria-pressed="false"] { box-shadow: 0 0 0 6px rgba(242, 180, 65, 0.25); }
+@media (prefers-reduced-motion: no-preference) {
+  .explore[data-guide-step="1"][data-guide-hint="play"] .play-btn,
+  .explore[data-guide-step="2"] [data-delay-btn="3"],
+  .explore[data-guide-step="3"] .mission-panel .find-windows-btn { animation: gd-pulse 1.4s ease-in-out 3; }
+  @keyframes gd-pulse { 50% { outline-color: rgba(242, 180, 65, 0.25); } }
+}
+/* the finder drawer (fixed, right, min(470px, 100vw)) is open: the card stays wholly left of it */
+.explore[data-guide-finder="open"] .guide-card { width: max(260px, min(600px, calc(100vw - 324px - 470px - 12px))); }
+@media (max-width: 1000px) {
+  .guide-card { left: calc(12px + 270px + 12px); width: min(600px, calc(100% - 294px - 294px)); }
+}
+@media (max-width: 760px) {
+  .guide-card { position: relative; inset: auto; order: 2; width: auto; max-height: none; margin: 8px 12px 0; }
+  .gd-head { flex-wrap: wrap; }
+  .gd-table { display: block; overflow-x: auto; }
+}
+
+/* guide paused (Analysis, or the example unavailable) */
+.guide-paused { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; padding: 7px 16px; background: #1b1a16; color: var(--x-text); border-bottom: 1px solid rgba(216, 181, 106, 0.4); font-size: 12.5px; }
+.guide-paused p { margin: 0; }
+.gp-actions { display: flex; gap: 8px; }
+.gp-actions button { font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 5px; border: 1px solid var(--x-border-2); background: transparent; color: var(--x-text); cursor: pointer; }
+.gp-actions button:first-child { background: var(--x-text); color: #111; border-color: var(--x-text); }
+.gp-actions button:focus-visible { outline: 2px solid var(--x-focus); outline-offset: 2px; }

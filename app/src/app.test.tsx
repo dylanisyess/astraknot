@@ -57,6 +57,11 @@ describe("two-site comparison render (default terrain, baseline 2026-12-05, +3 d
   const athena = text(block(html, "article", "im2-athena"));
   const cr1 = text(block(html, "article", "connecting-ridge-cr1"));
 
+  it("uses the product name in the header and the Analysis eyebrow", () => {
+    expect(html).toContain('<span class="brand-name">Lunar Landing Site Navigator</span>');
+    expect(text(html)).toContain("Lunar Landing Site Navigator · 2-site comparison");
+    expect(html).not.toContain("Lunar Visibility Navigator");
+  });
   it("shows both cards with their exported reference metrics for identical windows", () => {
     expect(athena).toContain("27.2 %"); // baseline Sun, terrain (pipeline 27.232...)
     expect(athena).toContain("67.3 %"); // baseline Earth

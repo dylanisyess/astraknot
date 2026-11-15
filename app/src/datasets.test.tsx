@@ -49,6 +49,18 @@ describe("dataset selection and legacy scenarios", () => {
     expect(html).toContain("Switch to 120 days / 4 sites");
     expect(html).toContain(`delay=7&amp;ds=${expanded}`);
   });
+  it("current dataset: coverage stays visible; the previous dataset is under Details", () => {
+    const html = renderToStaticMarkup(<DatasetBar ds={{ manifest, catalog, sites: [], times: [], selection: { index, legacyLink: false } }} search="?delay=7" />);
+    const cov = html.slice(0, html.indexOf("<details"));
+    expect(cov).toContain("120 days · 4 sites");
+    expect(cov).toContain("2026-12-01 to 2027-03-31 UTC · 10-minute samples");
+    expect(cov).not.toContain("Open accepted 60-day dataset");
+    const details = html.slice(html.indexOf("<details"));
+    expect(details).toMatch(/<summary[^>]*>Details<\/summary>/);
+    expect(details.indexOf("Previous dataset")).toBeGreaterThan(-1);
+    expect(details.indexOf("Open accepted 60-day dataset")).toBeGreaterThan(details.indexOf("Previous dataset"));
+    expect(details).toContain(`delay=7&amp;ds=${legacy}`);
+  });
   it("loads only the selected version and selected site, including a nested base path", async () => {
     const paths: string[] = [];
     const fetcher = async (input: RequestInfo | URL) => {

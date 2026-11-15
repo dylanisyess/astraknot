@@ -88,6 +88,20 @@ export function terrainModelLabel(site: SiteData): string | null {
   return `${Math.round(pix[near])} m ${family}model (${near}${names.length > 1 ? `; ${names.slice(1).join(", ")} beyond its edge` : ""})`;
 }
 
+/**
+ * Compact form of terrainModelLabel for one-line chips: "20 m LOLA model", or the near product by
+ * name for other sources ("59 m SLDEM2015 model"). The full label stays in Geometry and Details.
+ */
+export function terrainModelShortLabel(site: SiteData): string | null {
+  const t = site.terrain_horizon;
+  if (!t) return null;
+  const pix = t.horizon.resolution.dem_pixel_m;
+  const names = Object.keys(pix);
+  const near = names[0];
+  // other sources by their product family ("sldem2015_512_00n_30n_000_045" -> "SLDEM2015")
+  return `${Math.round(pix[near])} m ${names.every((n) => /^LDEM_/.test(n)) ? "LOLA" : near.split("_")[0].toUpperCase()} model`;
+}
+
 // ------------------------------------------------------------ strict model selection
 
 export interface ModeAvailability {

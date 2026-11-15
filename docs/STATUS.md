@@ -5,6 +5,266 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
+## Onboarding and the Apollo 17 guided example — 2026-11-15, 10:40 Pacific (system clock)
+
+Same branch (`presentation-polish`), on top of the presentation polish below. **Not committed,
+pushed, merged or deployed.** Frontend and one new display asset only: no dataset, site file,
+terrain/render/screening asset, pipeline file, metric, nominal body size or horizon masking
+changed (`git status` shows nothing under `app/public/data`, `app/public/render`,
+`app/public/screening`, `data/` or `pipeline/`).
+
+**Entry behavior** (`onboarding.ts`, `App.tsx`, `main.tsx`). `main.tsx` captures
+`window.location.search` before the app writes the canonical scenario into the URL. The welcome
+screen shows only when that entry has no scenario/dataset parameter (`arrival, days, delay, t,
+horizon, sites, site, view, mission, cam, layer, thr, ds`) and the visitor has not finished or
+skipped it (`localStorage["lvn.onboarded"]`; read/write wrapped, with an in-memory fallback when
+storage throws). Scenario links load directly. "How to use" in the header reopens the same content
+as a modal dialog without touching the scenario; choosing the example there first shows "This loads
+a different scenario" with the current scenario described and "Keep current scenario". Loading the
+example writes its link with `replaceState` and remounts the workspace (reloading the 120-day
+dataset when an old 60-day link was open).
+
+**Example selection, from Apollo 17's own data** (temporary scan with `computeMetrics` /
+`delayOptions` over every 00:00 UTC arrival of a 14-day Terrain mission; scan file deleted).
+Apollo 17 sees Earth for the whole dataset (0 Earth transitions), so every mission has Earth
+100.0 % and no Earth blockage; the example demonstrates sunlight. Modeled sunrises (Terrain, sample
+grid): 2026-12-14 12:20, 2027-01-13 02:20, 2027-02-11 16:40, 2027-03-13 06:20 UTC. Chosen:
+**arrival 2027-01-13 00:00 UTC, 14 days, Terrain, delay +3 d** (an existing option; +3 d alone gives
+a clear change, so no other delay was needed). The arrival is 2 h 20 min before sunrise, so step 1
+has a Sun crossing inside the baseline mission and the +3-day slip runs into the 2027-01-27 06:30 UTC
+sunset. Values from the app's shared code, as displayed by the guide and the Mission comparison:
+
+| Mission | Window (UTC) | Direct sunlight | Earth visible | Sun + Earth | Longest without sunlight | Longest Earth blockage |
+|---|---|---|---|---|---|---|
+| Baseline | 2027-01-13 00:00 → 01-27 00:00 | 99.3 % | 100.0 % | 99.3 % | 2.3 h ⚠ (window start) | none |
+| +3 d | 2027-01-16 00:00 → 01-30 00:00 | 80.5 % | 100.0 % | 80.5 % | 65.5 h ⚠ (window end) | none |
+
+The copy describes it as a hypothetical mission at the historic Apollo 17 landing site with the
+dataset's dates, not a replay of the 1972 mission. No number is written into the copy: the guide
+renders `v.base` / `v.act` and a sentence derived from them (`welcome/Guide.tsx delaySummary`).
+
+**Guide** (`welcome/Guide.tsx`, inside Explore; non-modal card, Back / Next / Exit guide on every
+step, Escape inside it exits). 1: Site overview vs Horizon view in one sentence; "Track the Sun at its
+crossing" runs Explore's own crossing navigation from the mission start (sunrise ≈ 2027-01-13 02:20
+UTC; viewing time 01:20, tracking, 10° field of view), shows the crossing text and points at Play
+(highlighted; no autoplay). 2: arrival vs viewing time; baseline metrics; "Apply a +3-day arrival
+slip" makes the same state change as the +3 d button (also highlighted), moves viewing time into
+the delayed mission and says so; entering step 2 with viewing time outside the mission returns it to
+the mission start and says so. 3: introduces Find arrival windows; opens the existing finder with
+all four dataset sites chosen (inputs only; nothing searched or applied); "Continue exploring" ends
+it. While guiding, the crossing card's text is shown in the guide card, and the scene legend yields
+its place. In Analysis, or if the example site fails, a strip says the guide is paused/cannot
+continue, with Return to Explore / Exit guide. WebGL failure: the card says the 3D view is
+unavailable and the steps still work.
+
+**Welcome image** (`app/public/welcome/moon-relief.webp`, 90,682 bytes, 720 px;
+`app/scripts/render_welcome_moon.py`; metadata `app/src/welcome/moonImage.json`). Orthographic
+shaded relief (centre 8° N, 12° E) from the cached, SHA-verified NASA LRO LOLA LDEM_64 (PDS
+LRO-L-LOLA-4-GDR-V1.0, LOLA Science Team, NASA GSFC; `data/raw/lola/ldem_64/verified-source.json`).
+Relief exaggerated ×10, fixed illustrative light, darker = lower; captioned "not a photograph".
+Usage: NASA's media guidelines say NASA content is generally not subject to US copyright and NASA
+should be acknowledged; the NASA insignia is not used. The Apollo 17 marker is computed in the same
+projection from the site file's coordinate (20.1911° N, 30.7723° E); a test recomputes it in
+TypeScript from the catalog coordinate. It falls on the southeast rim of Mare Serenitatis
+(Taurus-Littrow), checked visually.
+
+Checks personally performed:
+- `npm test` 414/414 (10 new in `onboarding.test.tsx`: entry intent, returning visitor, throwing
+  storage, App welcome vs scenario link, example link, slip effect and derived summary against
+  `computeMetrics`, Sun crossing inside the baseline, guide render of each step from the real
+  scenario, replacement description, marker projection, image hash). `tsc --noEmit`,
+  `npm run build` (notice check passes; existing >500 kB three.js chunk warning), `git diff --check`.
+- Browser (headless Chrome 157, SwiftShader, DevTools protocol; fresh profile per run; dev server
+  4210 and a production preview on 4211; screenshots inspected in-session, not saved):
+
+| Check | Observed |
+|---|---|
+| Fresh root visit, 1280×720 | Welcome page (not a dialog); URL stays empty until a choice. |
+| Explore Apollo 17 | URL becomes the example link (`arrival=2027-01-13T00:00Z&days=14&delay=0&…&sites=apollo17-lm&…&ds=lvn-2026-12-01-120d`); guide step 1; `lvn.onboarded` = 1. |
+| Step 1 action | Viewing time 2027-01-13 01:20 UTC, Horizon view tracking the Sun, card text "Sun center crosses the modeled skyline near 2027-01-13 02:20 UTC (direct sunlight begins). Crossing in 1 h."; Play highlighted, not started; 0 label overlaps; Sun ring and skyline clear above the card. Production build: Play pressed → time advances, status still "blocked" before 02:20. |
+| Step 2 | Baseline row 99.3 / 100.0 / 99.3 % / 2.3 h ⚠ / none; after Apply: URL `delay=3&mission=delayed`, viewing time 2027-01-16 00:00 with the note, +3 d row 80.5 / 100.0 / 80.5 % / 65.5 h ⚠ / none, summary "Direct sunlight falls by 18.8 pp: 99.3 % → 80.5 % …". Mission comparison in the panel shows the same values. |
+| Step 3 | Finder opens with Athena, CR1, Odysseus and Apollo 17 checked, no search run, URL unchanged; with the drawer open the card stays left of it at 1280 (card 324–798 px, drawer from 810). Continue exploring removes the guide. |
+| Skipped steps | Next, Next straight to step 3 works. |
+| Return visit / reload | Root revisited in the same profile → navigator directly (no welcome). Reload during the guide → the example scenario restored, no welcome, guide ended. |
+| Open navigator | Navigator with the default scenario; flag set. |
+| Scenario links | Athena + CR1 120-day link and an old 60-day link (no `ds`) load as requested, no welcome, URL kept. |
+| How to use | Opens a dialog (`aria-modal`, focus on the primary button); Escape and ✕ close it with the URL unchanged; Explore Apollo 17 → confirmation ("Athena, CR1 · arrival 2026-12-05 00:00 UTC · 10 days · delay +1 d · Terrain"), focus on Keep current scenario; Keep → unchanged; Load → example + guide. From the 60-day link, Load switches to the 120-day dataset. |
+| Storage blocked (getter throws) | Welcome shown; Open navigator works; no errors. |
+| No WebGL (`getContext` → null) | Explore's renderer message; guide card states the 3D view is unavailable; step 1 action still navigates to the crossing. |
+| 390×844, reduced motion | Welcome stacked (image, title, buttons full width), document width 390 throughout the guide; card below the scene; Tab → Explore Apollo 17, Enter starts; entrance and highlight animations `none`; header one row (help as "?" icon). |
+| 1600×900 | Welcome and all steps; 0 label overlaps. Analysis during the guide shows the paused strip; Return to Explore resumes step 3. |
+
+**Playback speed (same session, requested by the user).** New 3 h/s option (18 ten-minute samples per second,
+one per tick; `explore/Explore.tsx SPEEDS`), now the default when Play is first pressed (was 6 h/s). The guide's
+"Track the Sun at its crossing" sets 3 h/s (`GUIDE_SPEED`) instead of 10 min/s, and its Play instruction says so;
+the regular Prev/Next crossing controls keep 10 min/s (Sun) and 1 h/s (Earth). Checked: 415/415 tests (speed list,
+default and guide speed updated in `playback.test.tsx`), `tsc`, build; browser: speed menu 10 min/1 h/3 h/6 h/12 h
+with 3 h/s selected on load; guide step 1 keeps 3 h/s, Play from 01:20 reached "Direct sunlight available" by 04:10
+after 1.5 s; regular Next Sun crossing (Apollo 17 default scenario) switched to 10 min/s.
+
+**Landing redesign (same session, requested by the user).** The welcome screen (`welcome/Welcome.tsx`,
+`welcome/welcome.css`; behavior unchanged) is now an editorial composition: top bar with the product name and
+an About disclosure; the Moon centred at `min(58dvh, 58vw, 780px)`; the headline "Choose your next horizon." in
+Barlow Condensed SemiBold left of centre, its right edge 0.28 × Moon left of centre so it overlaps only the
+outer rim; an "Apollo 17 / A historic site. A new mission." annotation to the right (no geographic pin); the
+sentence, two pill buttons (Space Grotesk) and a one-line note ("Hypothetical planning example … arriving
+2027-01-13 UTC (dataset dates); not a reconstruction of the 1972 mission") centred below; a footer with the
+image credit. The long explanation, limitations, sources, image provenance and font licenses moved into About
+(`aria-expanded`/`aria-controls`; Escape closes it and returns focus). Below 860 px the parts stack. "How to
+use" shows the same screen as a full-viewport modal dialog (close control, confirmation unchanged).
+
+- **Moon:** NASA's Scientific Visualization Studio CGI Moon Kit colour map (https://svs.gsfc.nasa.gov/4720/,
+  `lroc_color_poles_4k.tif`, 4096×2048, SHA-256 `918649a7…344f`, adapted by SVS from the LRO LROC WAC
+  Hapke-normalized mosaic at 643/566/415 nm, poles filled from LOLA albedo; credit requested: "NASA's Scientific
+  Visualization Studio"). `app/scripts/render_welcome_moon.py` (rewritten; the LOLA relief image and its
+  Apollo marker were removed) renders a static orthographic near side (0° N, 0° E, north up) with no
+  displacement, a fixed gentle light near the view axis (Lommel-Seeliger/Lambert mix, small ambient floor) and
+  saturation 0.45. Orientation checked visually: Copernicus, Tycho, Mare Crisium on the east limb and Grimaldi
+  on the west. The texture itself is not stored in the repository (URL and hash in `moonImage.json`).
+  Files (`app/public/welcome/`): AVIF 560/960/1400 px = 34,179 / 80,563 / 145,275 bytes; WebP = 35,414 / 82,610 /
+  151,162 bytes; JPEG fallback 960 px = 122,508 bytes; `<picture>` with `sizes` mirroring the CSS. Observed: 1280×720
+  and 390×844 load `moon-560.avif` (dev server); 1920×1080 loads `moon-960.avif` (production preview, 80,863
+  bytes transferred, plus 49.9 kB of fonts).
+- **Fonts:** Barlow Condensed 600 and Space Grotesk 400/500, Latin subsets (WOFF2 from the `@fontsource`
+  5.3.0 packages, 22.3 / 13.4 / 13.3 kB), bundled by Vite from `app/src/welcome/fonts/`; `font-display: swap`
+  with system fallbacks; used only inside `.lp`. Licenses: SIL Open Font License 1.1, Copyright 2017 The Barlow
+  Project Authors and Copyright 2020 The Space Grotesk Project Authors, served as
+  `welcome/fonts/BarlowCondensed-OFL.txt` and `SpaceGrotesk-OFL.txt` and linked from About.
+- **Checks:** 415/415 tests (image hashes and sizes, srcset, credit/projection metadata, About and dialog
+  semantics, OFL files; landing copy), `tsc`, build. Browser (fresh profiles): 1280×720 no scrolling
+  (document height 720), headline 65–523 px and Moon 431–849 px, buttons 559–613 px, both fonts loaded;
+  1920×1080 headline 131 px, centred Moon, no scrolling; 390×844 stacked, width 390, both buttons in the first
+  screen. About toggles `aria-expanded`, Escape closes it with focus back on About. Explore Apollo 17 → the
+  example link and guide step 1; Open navigator → navigator, no guide; return root visit → navigator directly;
+  How to use → dialog with focus on Explore Apollo 17, confirmation with focus on Keep current scenario, Escape
+  → focus back on How to use; scenario links (Athena + CR1; Athena with arrival/days) load as requested.
+  Reduced motion: no animation on the Moon, headline or actions. The navigator's own typography is unchanged.
+
+**Demo follow-up (same session, requested by the user).** Step 1 now begins by naming the three
+Conditions items in the card (1 Solar-power potential, 2 Direct-to-Earth communication window,
+3 Terrain screening) while the Conditions panel is outlined and its three groups carry matching
+numbered badges. After "Track the Sun at its crossing" the card shows a highlighted "Press Play
+(bottom left) to watch the sunrise" instruction (Play and Solar-power potential highlighted;
+playback still starts only when the user presses Play); while playing it reads "Playing…", and once
+the shared status at the viewing time has the Sun visible it confirms "Solar-power potential now
+reads Direct sunlight available. Press Pause, then Next." Horizon-view line labels and cardinal
+letters now also yield to body labels and their selection rings. Checked in the browser at
+1280×720: hint states conditions → play (01:20, paused) → play (01:40, playing) → done (02:50,
+"Direct sunlight available"), 0 label overlaps at the start and after sunrise; 390 px: width 390,
+three badges, Play instruction shown. 414/414 tests (one assertion added: the three items and the
+conditions highlight), `tsc`, build.
+
+Remaining limitations:
+- At 720 px height the step-2 card covers part of the tracked view centre (labels step aside); step 1
+  keeps the Sun clear. The How to use dialog scrolls at 720 px height.
+- Without storage the welcome reappears on every fresh root visit (in-memory flag only); a reload
+  during the guide keeps the scenario but ends the guide.
+- At 390 px the Mission setup panel starts collapsed, so the highlighted +3 d button is not on screen;
+  the card's own button applies it. The highlight selector mirrors `EXAMPLE.delay` (3).
+- The dialog traps focus but does not mark the page behind it `inert`. No screen-reader, real touch
+  or hardware-GPU check.
+- The Moon image is shaded relief of topography, not a photograph or albedo map.
+
+## Presentation polish — 2026-11-15, 10:05 Pacific (system clock)
+
+Bounded presentation change before onboarding. Branch `presentation-polish` from `main` at
+`e56a7de`; working tree was clean before. **Not committed, pushed, merged or deployed.** No
+dataset, pipeline, observer position, scientific calculation or visibility rule changed:
+`git status` shows no change under `app/public`, `data/` or `pipeline/`. The m6 worktree and
+its preview on 4180 were not touched; checks used a dev server on 4210 and a production
+preview on 4211 from this checkout.
+
+Changes (frontend and docs only):
+1. **Name.** "Lunar Landing Site Navigator" in the header, `<title>`, meta description,
+   Analysis eyebrow and README introduction (which notes the former name). Historical
+   records below keep "Lunar Visibility Navigator"; dataset IDs, URLs, storage keys and the
+   npm package name are unchanged. At ≤760 px the name wraps onto two short lines instead
+   of being hidden.
+2. **Overview labels** (`TerrainScene.tsx`, layout only; no direction, marker or geometry
+   moves). Priority: body name/status labels, then "blocked here" titles, then the observer
+   label, then edge chips, "N" and ring labels. A "blocked here" point is now a button: its
+   mark stays on the terrain point, its short title takes the first clear spot of six around
+   it (else only the mark), and the geometry line ("terrain 16 km away rises to …") opens on
+   hover, keyboard focus or click (`aria-expanded`), and is its accessible name and tooltip.
+   A body label moves to the other side of its own marker rather than cover a blocker mark.
+   The observer label tries eight spots, then drops its eye-height line (also in Details),
+   then takes the least-overlapping spot. Horizon-view line labels and cardinal letters hide
+   where a panel or the toolbar would cover them.
+3. **1280×720 layout.** Coverage moved into the header (separate row below 1200 px);
+   inline "Horizon model" and "Arrival delay" rows; Duration and "Find arrival windows" on
+   one row; shortlist count kept for screen readers (the visible "Add site (n more)" states
+   it); short one-line model chip ("Terrain skyline · 20 m LOLA model"; full product names in
+   its tooltip, Geometry and Details); the collapsed mission line drops the duration (equal
+   to the Duration field; kept in the tooltip). The window-edge caveat on the longest period
+   without sunlight shows as a one-line flag when the table is closed and in full with the
+   table (where the value is). The scene legend sits at the bottom centre between the panels,
+   so both panels can use the full stage height. Font sizes unchanged.
+4. **Netlify badge.** Not in the app: no `netlify`/badge code in `app/src` or `app/dist`, no
+   `netlify.toml`, and no Netlify status/deployment on the GitHub commits. Netlify's docs say
+   the "Powered by Netlify" badge is injected by Netlify's edge servers into public Free-plan
+   projects created on or after 2026-08-19, bottom-right, every page (the same script shows the
+   pre-launch toolbar on private projects). **Owner action:** Netlify UI → the project →
+   *Project configuration > General > Powered by Netlify badge* → off → Save (effective on the
+   next request; no redeploy). Nothing in the app touches the badge. The time bar now puts
+   the crossing controls left of the legend, so the bottom-right corner holds no control; on
+   ≤760 px the page has 72 px of extra bottom room so the last controls can scroll clear of it.
+5. **Wording.** "Open accepted 60-day dataset" moved from the coverage line into its
+   **Details** disclosure under "Previous dataset" (Escape and outside click close it; a legacy
+   link still shows "Switch to 120 days / 4 sites" in the line). The catalog's
+   "Provisional limitations: available / None recorded" row is replaced by separate
+   **Capabilities** (five rows) and **Model notes** (provisional caution; site caveats from
+   the site profile and from the documented Apollo 17 mesh-target and Odysseus NAIF-altitude
+   limitations; the site's reality note; a general note on body centres, 10-minute samples,
+   1 m observer, not power/link/landing safety). A site without its own caveat says
+   "No site-specific caveat is recorded in this catalog. That does not mean the terrain model
+   has no limitations."
+
+Checks personally performed:
+- `npm test`: 403/403 after this pass (3 tests added — dataset Details, product name, model
+  notes; one assertion added for the short model label; 2 updated — catalog rows, window-edge
+  caveat). The suite was not run before the changes, so no separate baseline count is claimed. `tsc --noEmit` and `npm run build` (including the
+  third-party notice check) pass; the existing >500 kB lazy three.js chunk warning remains.
+  `git diff --check` clean. Python tests not run (no pipeline change).
+- Browser (headless Chrome 157, SwiftShader, DevTools protocol; screenshots inspected
+  in-session, not saved to the repository). A script compared bounding boxes of all visible
+  scene labels/markers with each other and with the toolbar, panels, legend, event card,
+  stage note and tracking card:
+
+| Check | Observed |
+|---|---|
+| Default Athena scenario, 1280×720, Site overview | Before: Earth label overlapped "Earth blocked here" (and its geometry line). After: 0 overlaps; Earth label above its marker, blocker title right of its mark; click expands the geometry line in place, still 0 overlaps. |
+| Panels, 1280×720 | Mission setup content/visible 670/427 px → 496/496 (Athena), 506/506 (CR1, with provisional badge); Conditions 512/425 → 489/489 (Athena), 494/494 (CR1). No internal scrolling. |
+| CR1, 1280×720 | Crowded centre (observer, Earth label, Earth blocker, rings, N): 0 overlaps after adding diagonal observer spots. |
+| Horizon view, 1280 and 1600 | 0 overlaps; skyline label hidden instead of running under the Conditions panel. |
+| Crossing navigation (production preview) | Next Sun crossing → 2026-12-15 03:30, tracking card and event card shown; 0 overlaps. Playback 2.5 s at 6 h/s: 0 overlaps. Smooth model: 0 overlaps. |
+| 1600×900 | Both camera modes 0 overlaps; panels unscrolled. |
+| Badge corner | Simulated 200×60 badge area at 16 px inset (1280×720, 1600×900, Analysis 1280): only the full-width timeline scrubber reaches it (also keyboard operable); no button or select. The real badge was **not** observed (no deployed URL in the repo). |
+| 390×844 | Document width 390; name wraps to two lines (118 px); coverage on its own row; Details popover within the viewport; collapsed setup keeps Find arrival windows visible. |
+| Keyboard | Focus on the Sun blocker button, then Tab → Earth blocker → Earth marker; Enter toggles `aria-expanded` (false → true); dataset Details closes with Escape, focus on its summary. |
+| Catalog dialog | Each site shows Capabilities then Model notes: Athena none-recorded + reality + general; CR1 provisional + 2 site notes + reality + general; Odysseus and Apollo 17 their documented note + reality + general. |
+| Finder access | Opens from Mission setup at 1280×720 (drawer shown, CR1 active). At 390 px the "Find arrival windows" button is visible in the collapsed setup panel; opening it there was not repeated. |
+
+**Follow-up (same session, requested by the user): default site.** A link that names no
+sites now opens with **Apollo 17 alone** (`urlState.ts` `DEFAULT_SITES`), where the dataset has
+it; the accepted 60-day dataset (no Apollo 17) still opens with its two sites, and every link
+that names `sites` is unchanged. Selection default only: arrival, duration, delay, model and
+time defaults are as before. With Apollo 17 active, two presentation fixes: the model chip
+names the product family ("59 m SLDEM2015 model") instead of the raw file key, and a
+"blocked here" mark that projects under a panel or the toolbar is hidden (not focusable);
+its sight line stays. Checks: 404/404 frontend tests (1 new: default selection), `tsc`,
+build; fresh visit at 1280×720 → URL `sites=apollo17-lm&site=apollo17-lm`, 0 label overlaps,
+panels unscrolled; 390 px width 390, 0 overlaps; Analysis heading "Sun and Earth visibility:
+Apollo 17".
+
+Remaining presentation issues:
+- The actual Netlify badge size was not seen; the corner reserve is based on its documented
+  position only. Turning the badge off (above) removes the question.
+- With "About <site>" open or a delay note shown, Mission setup can still scroll a little at
+  720 px height (user-opened content).
+- Between 1001 and 1199 px the header uses two rows and the legend between the panels wraps
+  to two lines; checked by layout rules only, not by screenshot.
+- Software-GPU headless Chrome only; no screen reader, real touch or hardware GPU check.
+
 ## Release summary — 2026-11-15, 09:20 Pacific (system clock)
 
 Two releases are distinguished. Historical sections below are kept as written; their "not

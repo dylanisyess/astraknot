@@ -11,6 +11,7 @@ import {
   surfaceDistanceKm,
   terrainFacts,
   terrainModelLabel,
+  terrainModelShortLabel,
 } from "./sites";
 import type { HorizonMode, Manifest, SiteData, SiteEntry } from "./types";
 
@@ -115,6 +116,10 @@ describe("site profiles and data-derived facts", () => {
 
   it("model labels and terrain facts come from each file", () => {
     expect(terrainModelLabel(byId["connecting-ridge-cr1"])).toMatch(/^20 m LOLA model \(LDEM_80S_20M; LDEM_75S_60M beyond its edge\)$/);
+    expect(terrainModelShortLabel(byId["connecting-ridge-cr1"])).toBe("20 m LOLA model");
+    const other = structuredClone(byId["connecting-ridge-cr1"]);
+    other.terrain_horizon!.horizon.resolution.dem_pixel_m = { sldem2015_512_00n_30n_000_045: 59.2 } as never;
+    expect(terrainModelShortLabel(other)).toBe("59 m SLDEM2015 model");
     const f = terrainFacts(byId["connecting-ridge-cr1"])!;
     expect(f.nearFieldDominated).toBe(true);
     expect(f.settingDistanceM[0]).toBeCloseTo(50, 6);

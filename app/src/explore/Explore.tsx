@@ -7,10 +7,10 @@
 
 import { Component, type ReactNode, Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { compass, fmtDeg, fmtLat, fmtLonEast, fmtUtc, nearestIndex } from "../data";
-import { type Availability, type DarkRun, type TimeWindow, fmtDuration, fmtOutage, fmtPct, fromUtcDateHour, nextChange, utcDateString, utcHour } from "../mission";
+import { type Availability, type DarkRun, type TimeWindow, fmtDuration, fmtOutage, fmtPct, fromUtcDateHour, nextChange, scenarioWindow, utcDateString, utcHour } from "../mission";
 import type { ReadyScenario, Scenario, SiteView } from "../scenario";
 import { MixedTerrainNotice, SiteChips } from "../SiteCatalog";
-import { terrainModelLabel } from "../sites";
+import { terrainModelLabel, terrainModelShortLabel } from "../sites";
 import { type BodyStatus, NEAR_CROSSING, horizonName, nearCrossingExplanation, signedClearance, unknownText } from "../status";
 import type { HorizonMode } from "../types";
 import type { MissionKey } from "../urlState";
@@ -39,6 +39,8 @@ import { inspect, reproduceCommand, screeningView } from "./slope";
 import { useSlopeAssets } from "./useSlope";
 import { type TrackBody, trackSummary } from "./tracking";
 import { FindWindowsButton } from "../ArrivalFinder";
+import { GuideCard } from "../welcome/Guide";
+import type { GuideStep } from "../onboarding";
 
 const TerrainScene = lazy(() => import("./TerrainScene"));
 
@@ -54,13 +56,16 @@ const OVERVIEW_DIST: Record<string, number> = { "connecting-ridge-cr1": 3000, "i
 export const SPEEDS = [
   { id: "10m", label: "10 min/s", stepsPerSec: 1, perTick: 1 },
   { id: "1h", label: "1 h/s", stepsPerSec: 6, perTick: 1 },
+  { id: "3h", label: "3 h/s", stepsPerSec: 18, perTick: 1 },
   { id: "6h", label: "6 h/s", stepsPerSec: 36, perTick: 1 },
   { id: "12h", label: "12 h/s", stepsPerSec: 72, perTick: 2 },
 ] as const;
 type Speed = (typeof SPEEDS)[number];
 export const speedById = (id: Speed["id"]): Speed => SPEEDS.find((s) => s.id === id)!;
 /** Speed when Play is first pressed. */
-export const DEFAULT_SPEED: Speed = speedById("6h");
+export const DEFAULT_SPEED: Speed = speedById("3h");
+/** Speed the guided example sets for its Sun crossing (the crossing controls keep their own). */
+export const GUIDE_SPEED: Speed = speedById("3h");
 const SUN_R = 0.265;
 const EARTH_R = 0.95;
 
@@ -116,6 +121,22 @@ export interface ExploreProps {
   initialTrack?: TrackBody;
   /** Opens the Arrival Window Finder (App shell). */
   onFindWindows?: () => void;
+  /** Guided example (onboarding): shown as a non-modal card; null/absent when not guiding. */
+  guide?: ExploreGuide | null;
+}
+
+export interface ExploreGuide {
+  step: GuideStep;
+  setStep: (s: GuideStep) => void;
+  exit: () => void;
+  finish: () => void;
+  /** The existing delay option the example demonstrates. */
+  delayDays: number;
+  /** Opens the Arrival Window Finder with example inputs (never applies a result). */
+  openFinder?: () => void;
+  finderOpened: boolean;
+  /** The finder drawer is open now (the card makes room for it). */
+  finderOpen?: boolean;
 }
 
 interface EventMsg {
@@ -141,7 +162,7 @@ export function timelineSpan(domain: TimeWindow, selT: number): TimeWindow {
   return domain;
 }
 
-export default function Explore({ sc, initialFatal, initialInspection, initialTerrainDetails, initialTrack, onFindWindows }: ExploreProps) {
+export default function Explore({ sc, initialFatal, initialInspection, initialTerrainDetails, initialTrack, onFindWindows, guide }: ExploreProps) {
   const camera: CameraMode = sc.cam === "horizon" ? "eye" : "overview";
   const v = sc.activeView;
   const siteId = v.entry.id;
@@ -238,25 +259,28 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
   const msg = evMsg && evMsg.siteId === siteId && evMsg.mode === sc.mode ? evMsg : null;
 
   // ---------------------------------------------------------------- guided horizon crossings
-  const goCrossing = (dir: 1 | -1) => {
+  const goCrossing = (dir: 1 | -1, opts: { body?: "sun" | "earth"; range?: "mission" | "all"; fromT?: number; speed?: Speed } = {}) => {
     sc.setPlaying(false);
-    const name = evBody === "sun" ? "Sun" : "Earth";
-    const range = evRange === "mission" ? win.w : { start: sc.cov.start, end: sc.cov.end };
-    const plan = planCrossing({ intervals: v.intervals, body: evBody, range, selT: sc.selT, anchor: anchor.current, dir, leadMs: EVENT_LEAD_MS[evBody], times: sc.times });
+    const body = opts.body ?? evBody;
+    const inRange = opts.range ?? evRange;
+    const name = body === "sun" ? "Sun" : "Earth";
+    const range = inRange === "mission" ? win.w : { start: sc.cov.start, end: sc.cov.end };
+    const from = opts.fromT ?? sc.selT;
+    const plan = planCrossing({ intervals: v.intervals, body, range, selT: from, anchor: opts.fromT === undefined ? anchor.current : null, dir, leadMs: EVENT_LEAD_MS[body], times: sc.times });
     const base = { siteId, mode: sc.mode };
     if (plan.kind === "none") {
-      const where = evRange === "mission" ? `the ${win.label.toLowerCase()} (${fmtUtc(range.start)} – ${fmtUtc(range.end)})` : "the cached data";
+      const where = inRange === "mission" ? `the ${win.label.toLowerCase()} (${fmtUtc(range.start)} – ${fmtUtc(range.end)})` : "the cached data";
       const endNote = plan.atDataEnd ? ` The data ends ${fmtUtc(sc.cov.end)}; that is not a crossing.` : "";
       setEvMsg({ ...base, kind: "none", text: `No ${dir === 1 ? "later" : "earlier"} ${name} crossing in ${where}.${endNote}` });
       return;
     }
     sc.setSel(nearestIndex(sc.times, plan.targetT));
     anchor.current = plan.anchor;
-    setSpeed(speedById(evBody === "sun" ? "10m" : "1h"));
+    setSpeed(opts.speed ?? speedById(body === "sun" ? "10m" : "1h"));
     // Crossing navigation tracks the event's body. A first engagement frames the crossing
     // (narrower field of view); while already tracking, the user's field of view is kept.
-    if (!track) cmd("fov", evBody === "sun" ? 10 : 18);
-    startTracking(evBody);
+    if (!track) cmd("fov", body === "sun" ? 10 : 18);
+    startTracking(body);
     setEvMsg({ ...base, kind: "event", text: transitionText(plan.x, sc.mode), x: plan.x });
   };
   const jumpToCrossing = () => {
@@ -266,8 +290,41 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
     anchor.current = null;
   };
 
+  // ---------------------------------------------------------------- guided example (onboarding)
+  const [guideNote, setGuideNote] = useState<string | null>(null);
+  /** Step 1: the Sun crossing of the selected mission, found from its start by the crossing navigation. */
+  const guideTrackSun = () => {
+    // body and range are passed explicitly: changing the crossing controls' state would clear the result
+    goCrossing(1, { body: "sun", range: "mission", fromT: win.w.start, speed: GUIDE_SPEED });
+  };
+  /** Changing step pauses playback; entering step 2 brings the viewing time back into the mission. */
+  const guideSetStep = (s: GuideStep) => {
+    if (!guide) return;
+    sc.setPlaying(false);
+    setGuideNote(null);
+    if (s === 2 && (sc.selT < win.w.start || sc.selT >= win.w.end)) {
+      sc.setSel(nearestIndex(sc.times, win.w.start));
+      setGuideNote(`Viewing time was outside the ${win.label.toLowerCase()}; it is back at its start, ${fmtUtc(win.w.start)}.`);
+    }
+    guide.setStep(s);
+  };
+  /** Step 2: the same state change as the Arrival delay button, then viewing time into that mission. */
+  const guideApplyDelay = () => {
+    if (!guide) return;
+    const d = guide.delayDays;
+    const w = scenarioWindow(sc.arrival, d, sc.durationMs);
+    sc.setDelay(d);
+    sc.setMission("delayed");
+    if (sc.selT < w.start || sc.selT >= w.end) {
+      sc.setSel(nearestIndex(sc.times, w.start));
+      setGuideNote(`Viewing time moved to the +${d} d arrival, ${fmtUtc(w.start)}; the baseline arrival is unchanged.`);
+    }
+  };
+  const guideCrossing = msg ? { text: msg.text, until: msg.x ? untilText(sc.selT, msg.x.t) : null } : null;
+
   return (
-    <main className="explore" id="explore" data-site={siteId} data-camera={camera} data-mode={sc.mode} data-tracking={track ?? undefined}>
+    <main className="explore" id="explore" data-site={siteId} data-camera={camera} data-mode={sc.mode} data-tracking={track ?? undefined}
+      data-guide-step={guide ? guide.step : undefined} data-guide-hint={guide && guide.step === 1 ? (msg ? (v.statusSel.sun.visible === true ? "done" : "play") : "conditions") : undefined} data-guide-finder={guide?.finderOpen ? "open" : undefined}>
       <div className="stage">
         {!caps.terrain_3d.available ? (
           <div className="scene-message" role="status" data-testid="no-3d">
@@ -317,7 +374,7 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
                   setTdOpen(true); // inspection results use the terrain detail area
                 }}
                 showRings={terrainActive}
-                layoutKey={`${sc.layer}|${sc.slopeThr}|${tdOpen}|${slopeState.state}|${condOpen}|${setupOpen}`}
+                layoutKey={`${sc.layer}|${sc.slopeThr}|${tdOpen}|${slopeState.state}|${condOpen}|${setupOpen}|${guide?.step ?? 0}|${guideNote ? 1 : 0}|${msg ? 1 : 0}|${sc.effDelay}`}
               />
             </Suspense>
           </SceneBoundary>
@@ -345,10 +402,28 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
             <strong>Smooth model:</strong> status uses the 0° horizontal reference; terrain is context only and hides nothing.
           </p>
         )}
-        {msg && <EventCard msg={msg} selT={sc.selT} onJump={jumpToCrossing} onClose={() => setEvMsg(null)} outsideMission={msg.x ? msg.x.t < win.w.start || msg.x.t >= win.w.end : false} />}
+        {msg && !guide && <EventCard msg={msg} selT={sc.selT} onJump={jumpToCrossing} onClose={() => setEvMsg(null)} outsideMission={msg.x ? msg.x.t < win.w.start || msg.x.t >= win.w.end : false} />}
         <SceneLegend camera={camera} mode={sc.mode} meta={meta} context={contextMeta} />
       </div>
 
+      {guide && (
+        <GuideCard
+          sc={sc}
+          step={guide.step}
+          setStep={guideSetStep}
+          onExit={guide.exit}
+          onFinish={guide.finish}
+          delayDays={guide.delayDays}
+          onTrackSun={guideTrackSun}
+          crossing={guideCrossing}
+          tracking={track === "sun"}
+          fatal={fatal ?? (!caps.terrain_3d.available ? caps.terrain_3d.reason : assetHere.state === "error" ? assetHere.message : null)}
+          onApplyDelay={guideApplyDelay}
+          note={guideNote}
+          onOpenFinder={guide.openFinder}
+          finderOpened={guide.finderOpened}
+        />
+      )}
       <MissionPanel sc={sc} focus={win.key} open={setupOpen} onToggle={() => setSetupOpen((o) => !o)} onFindWindows={onFindWindows} />
       <div className="right-col">
         <ConditionsPanel
@@ -512,7 +587,7 @@ function MissionPanel({ sc, focus, open, onToggle, onFindWindows }: { sc: ReadyS
             <p className="small">{v.profile.kind}.</p>
             <p className="small num">{fmtLat(meta.latitude_deg)}, {fmtLonEast(meta.longitude_deg_east)}</p>
           </details>
-          <div className="ctl">
+          <div className="ctl ctl-inline">
             <span className="ctl-label" id="lbl-model">Horizon model</span>
             <div className="seg" role="radiogroup" aria-labelledby="lbl-model">
               {(["smooth", "terrain"] as const).map((m) => (
@@ -557,7 +632,7 @@ function MissionPanel({ sc, focus, open, onToggle, onFindWindows }: { sc: ReadyS
               </select>
             </label>
           </div>
-          <div className="ctl-row">
+          <div className="ctl-row ctl-row-end">
             <label className="ctl dur">
               <span className="ctl-label">Duration</span>
               <span className="with-unit">
@@ -576,9 +651,9 @@ function MissionPanel({ sc, focus, open, onToggle, onFindWindows }: { sc: ReadyS
                 <span className="unit">days</span>
               </span>
             </label>
+            {onFindWindows && <FindWindowsButton onOpen={onFindWindows} className="tool-btn find-inline" />}
           </div>
-          {onFindWindows && <FindWindowsButton onOpen={onFindWindows} className="tool-btn find-inline" />}
-            <div className="ctl">
+            <div className="ctl ctl-inline">
               <span className="ctl-label" id="lbl-delay">Arrival delay</span>
               <div className="seg" role="radiogroup" aria-labelledby="lbl-delay">
                 {sc.options.map((o) => (
@@ -674,7 +749,7 @@ export function MissionSummary({ sc, focus, setFocus, initialOpen = false }: { s
         <span>{Icon.earth}{pct(active.m.earthPct)}</span>
         <span>Both {pct(active.m.bothPct)}</span>
       </p>
-      <p className="ms-window small" data-field="windows">{active.label}: {shortRange(active.w)} · {fmtDuration(active.w.end - active.w.start)}</p>
+      <p className="ms-window small" data-field="windows" title={`${active.label}: ${shortRange(active.w)} · ${fmtDuration(active.w.end - active.w.start)}`}>{active.label}: {shortRange(active.w)}</p>
       {open && (
         <table className="ms-table">
           <colgroup><col /><col className="ms-num" />{cols.length > 1 && <col className="ms-num" />}</colgroup>
@@ -694,7 +769,10 @@ export function MissionSummary({ sc, focus, setFocus, initialOpen = false }: { s
           </tbody>
         </table>
       )}
-      {edges.length > 0 && (
+      {edges.length > 0 && !open && (
+        <p className="ms-caveat small" data-field="dark-flag">⚠ Longest period without sunlight touches a window edge (see Mission comparison).</p>
+      )}
+      {edges.length > 0 && open && (
         <p className="note small" data-field="dark-note">
           ⚠ The longest period without direct sunlight touches the window {edges.map((x) => `${x.where} (${x.label})`).join(", ")}; it may be longer than shown.
         </p>
@@ -755,8 +833,8 @@ export function ConditionsPanel({ v, st, mode, open, onToggle, onDetails, terrai
         <button type="button" className="icon-btn labelled" onClick={onDetails} aria-haspopup="dialog">{Icon.info}<span>Details</span></button>
         <button type="button" className="icon-btn panel-toggle" aria-expanded={open} onClick={onToggle} aria-label={open ? "Collapse current conditions" : "Expand current conditions"}>{Icon.chevron}</button>
       </div>
-      <p className="model-chip small" data-field="model" data-mode={mode}>
-        {mode === "terrain" ? `Terrain skyline (${terrainModelLabel(v.data) ?? "terrain model"})` : "Smooth model · 0° horizontal reference, terrain ignored"}
+      <p className="model-chip small" data-field="model" data-mode={mode} title={mode === "terrain" ? `Terrain skyline: ${terrainModelLabel(v.data) ?? "terrain model"}. Full model names: Geometry at this time, or Details.` : undefined}>
+        {mode === "terrain" ? `Terrain skyline · ${terrainModelShortLabel(v.data) ?? "terrain model"}` : "Smooth model · 0° horizontal reference, terrain ignored"}
       </p>
       <StatusGroup s={st.sun} kind="power" v={v} mode={mode} />
       <StatusGroup s={st.earth} kind="comms" v={v} mode={mode} />
@@ -1039,18 +1117,7 @@ function TimeBar({ sc, win, speed, setSpeed, evBody, setEvBody, evRange, setEvRa
         </div>
       </div>
       <div className="tb-row tb-foot">
-        {tipSeg ? (
-          <p className="tb-info small" role="status" data-testid="timeline-tip">{segmentText(tipSeg)}</p>
-        ) : (
-        <div className="tb-legend small" aria-label="Timeline legend">
-          <span><i className="lk lk-both" />Sun + Earth</span>
-          <span><i className="lk lk-sun" />Sun only</span>
-          <span><i className="lk lk-earth" />Earth only</span>
-          <span><i className="lk lk-neither" />Neither</span>
-          <span><i className="lk lk-unknown" />Unknown</span>
-          <span className="muted lg-note">Body centers; not a go/no-go.</span>
-        </div>
-        )}
+        {/* crossings first: the bottom-right corner can hold a host badge (see .tb-foot in explore.css) */}
         <div className="xing" role="group" aria-label="Horizon crossings">
           <span className="ctl-label">Horizon crossings</span>
           <div className="seg seg-dark" role="radiogroup" aria-label="Crossing body">
@@ -1067,6 +1134,18 @@ function TimeBar({ sc, win, speed, setSpeed, evBody, setEvBody, evRange, setEvRa
             <option value="all">in all cached data</option>
           </select>
         </div>
+        {tipSeg ? (
+          <p className="tb-info small" role="status" data-testid="timeline-tip">{segmentText(tipSeg)}</p>
+        ) : (
+        <div className="tb-legend small" aria-label="Timeline legend">
+          <span><i className="lk lk-both" />Sun + Earth</span>
+          <span><i className="lk lk-sun" />Sun only</span>
+          <span><i className="lk lk-earth" />Earth only</span>
+          <span><i className="lk lk-neither" />Neither</span>
+          <span><i className="lk lk-unknown" />Unknown</span>
+          <span className="muted lg-note">Body centers; not a go/no-go.</span>
+        </div>
+        )}
       </div>
     </section>
   );

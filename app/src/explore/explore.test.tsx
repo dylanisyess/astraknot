@@ -260,7 +260,17 @@ describe("power and communications framing (milestone 5B)", () => {
     expect(shell("?arrival=2026-12-05T00:00Z&days=14&delay=0&mission=delayed")).toContain('data-active="baseline"');
   });
   it("boundary qualification for the longest period without direct sunlight is kept", () => {
-    expect(text(shell(DEMO))).toContain("The longest period without direct sunlight touches the window start (Baseline), start (Delay +3 d); it may be longer than shown.");
+    // collapsed: a short flag (the value itself is only in the table); expanded: the full qualification
+    const collapsed = text(shell(DEMO));
+    expect(collapsed).toContain("⚠ Longest period without sunlight touches a window edge (see Mission comparison).");
+    expect(collapsed).not.toContain("it may be longer than shown");
+    function Full() {
+      const sc = useScenario(DS, DEMO) as ReadyScenario;
+      return <MissionSummary sc={sc} focus={sc.mission} setFocus={() => {}} initialOpen />;
+    }
+    const full = text(renderToStaticMarkup(<Full />));
+    expect(full).toContain("The longest period without direct sunlight touches the window start (Baseline), start (Delay +3 d); it may be longer than shown.");
+    expect(full).not.toContain("(see Mission comparison)");
   });
 });
 
