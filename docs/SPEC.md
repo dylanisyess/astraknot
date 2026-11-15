@@ -43,9 +43,21 @@ coordinates, frame, nominal height and dates. It selects supported products by
 valid coverage and priority, generates observer/horizon/mesh/slope through shared
 sampling, and rejects insufficient coverage. See
 [COORDINATE_PIPELINE.md](COORDINATE_PIPELINE.md). A custom-coordinate browser UI,
-backend queue and global terrain database are outside this release. The optional
-arrival-window finder remains unimplemented. Browser acceptance is partial and
-must not be inferred from passing data checks or builds.
+backend queue and global terrain database are outside this release. Browser
+acceptance is partial and must not be inferred from passing data checks or builds.
+
+Arrival Window Finder (release 7, feature worktree): a bounded search, opened from
+Mission setup, that evaluates arrivals once per UTC day at one UTC hour for one
+full mission duration over the cached intervals of any chosen site of the current
+dataset (compared or not), with the scenario's single horizon model. It shows the
+best matching arrival per site (or why there is none) and a +1/+3/+7-day delay
+preview for any result. It ranks by one existing metric (default:
+simultaneous Sun + Earth; also Sun, Earth, shortest longest Sun or Earth
+blockage within the mission), shows actual values with boundary warnings and
+optional user limits ("Meets selected limits", never "safe"), exports CSV, and
+changes the scenario only through an explicit "Use this arrival". It is not a
+continuous-time optimum, trajectory optimizer or landing-safety score. Evidence:
+STATUS.md, "Arrival Window Finder".
 
 Site A: IM-2 Athena landing point, 84.7906° S, 29.1957° E (LROC).
 Supported interval (milestone 2): 2026-12-01T00:00Z to 2027-01-30T00:00Z.

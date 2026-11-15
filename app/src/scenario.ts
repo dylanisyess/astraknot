@@ -25,6 +25,7 @@ import { type ModeAvailability, type SiteProfile, modeAvailability, profileFor, 
 import { type SelectedStatus, selectedTimeStatus } from "./status";
 import type { CatalogSite, Dataset, Horizon, HorizonMode, SiteData, SiteEntry } from "./types";
 import { DEFAULT_THRESHOLD_DEG, clampThreshold } from "./explore/slope";
+import { type ScenarioCore, applyResult } from "./finder";
 import { type CamMode, type LayerKey, type MissionKey, type View, DEFAULT_VIEW, type SiteRequest, addBlockedReason, parseUrlState, resolveActive, resolveSites, withSite, withoutSite, writeUrlState } from "./urlState";
 
 export const DEFAULT_ARRIVAL = "2026-12-05T00:00:00Z";
@@ -138,6 +139,17 @@ export interface Scenario {
   activeView: SiteView | null;
   activeSite: SiteData | null;
   horizon: Horizon | null;
+  /**
+   * Arrival Window Finder "Use this arrival" (finder.ts applyResult): pauses playback, makes the
+   * site active (adding it to the comparison under the shortlist rules when it is not compared),
+   * sets the baseline arrival and duration, resets the delay to None with the baseline mission,
+   * and sets the viewing time to the arrival. Model, view, camera and overlay are preserved.
+   * `entry`: the finder's already-checked site file of this dataset, reused instead of loading it
+   * again. Changes nothing and returns the reason when the result does not fit.
+   */
+  applyArrival: (r: { siteId: string; arrival: number; days: number; entry?: SiteEntry }) => { ok: true; added: boolean } | { ok: false; reason: string };
+  /** Increments on every applied finder result (views drop crossing selections and tracking). */
+  applyN: number;
 }
 
 /** A scenario whose active site has a view: what Explore and Analysis render. */
@@ -181,6 +193,7 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
   const entries = selIds.map(readyEntry).filter((e): e is SiteEntry => e !== null);
   const [view, setViewRaw] = useState<View>(init.view ?? DEFAULT_VIEW);
   const [playing, setPlaying] = useState(false);
+  const [applyN, setApplyN] = useState(0);
   const [missionRaw, setMissionRaw] = useState<MissionKey>(() => init.mission ?? ((init.delay ?? 3) > 0 ? "delayed" : "baseline"));
   const [cam, setCam] = useState<CamMode>(init.cam ?? "overview");
   // One overlay state. Default (no explicit preference): steep-area highlights. Only the user changes it.
@@ -291,6 +304,42 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
 
   const addBlocked = (id: string) => addBlockedReason(selIds, id, allIds);
 
+  const applyArrival: Scenario["applyArrival"] = (r) => {
+    const b = arrivalBounds(cov, r.days * DAY_MS);
+    if (!b || !Number.isInteger(r.days) || r.days < 1 || r.days > maxDays || r.arrival < b.earliest || r.arrival > b.latest || snapHour(r.arrival) !== r.arrival) {
+      return { ok: false, reason: "the mission does not fit this dataset's coverage" };
+    }
+    if (r.entry && (r.entry.id !== r.siteId || !ds.catalog.sites.some((c) => c.id === r.siteId))) return { ok: false, reason: "site data does not belong to this dataset" };
+    let next: ScenarioCore;
+    try {
+      next = applyResult(
+        { selIds, active, arrival, days, delay, mission, t: selT, mode, view, cam, layer, thr: slopeThr, playing },
+        r,
+        allIds,
+      );
+    } catch (e) {
+      return { ok: false, reason: e instanceof Error ? e.message : String(e) };
+    }
+    const added = !selIds.includes(r.siteId);
+    if (added) {
+      const entry = r.entry;
+      if (entry && !loads[r.siteId]) {
+        started.current.add(r.siteId);
+        setLoads((m) => ({ ...m, [r.siteId]: { state: "ready", entry } }));
+      }
+      setSelIds(next.selIds);
+    }
+    setPlaying(next.playing);
+    setActiveRaw(next.active);
+    setDaysRaw(next.days);
+    setArrivalRaw(next.arrival);
+    setDelayRaw(next.delay);
+    setMissionRaw(next.mission);
+    setCursorRaw(nearestIndex(times, next.t));
+    setApplyN((n) => n + 1);
+    return { ok: true, added };
+  };
+
   return {
     ds,
     times,
@@ -381,5 +430,7 @@ export function useScenario(ds: Dataset, search?: string): Scenario {
     activeView,
     activeSite,
     horizon,
+    applyArrival,
+    applyN,
   };
 }

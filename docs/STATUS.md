@@ -5,6 +5,183 @@ Record observed results, not assumed progress.
 
 Owner: Dylan (sole developer; all frontend, pipeline, and data work).
 
+## Release summary — 2026-11-15, 09:20 Pacific (system clock)
+
+Two releases are distinguished. Historical sections below are kept as written; their "not
+committed" statements describe the state at the time.
+
+| Release | Git state | Content | Evidence |
+|---|---|---|---|
+| Four-site release (accepted) | `c335ef5`, merged to `main` and `origin/main` as `c0622dc` | Tracking, four-site catalog/shortlist, versioned 120-day data, context terrain, screening for the new sites | Sections "Integration" (04:40) and earlier. Browser acceptance there is partial, as recorded. |
+| Arrival Window Finder release | Branch `milestone-7-arrival-finder` from `c0622dc` (this commit) | Finder, Earth-blockage metric, bounded percentage / minute formatting, per-site best, delay preview, shipped third-party notices | Sections "Arrival Window Finder" (04:50) and "… polish" (09:00); close-out checks below. |
+
+Neither release is deployed. The finder release is frontend only: no dataset, terrain/slope/render
+asset, pipeline file or scientific calculation changed.
+
+Third-party notices (new in this close-out): `app/vite.config.ts` sets
+`build.license` so every build writes `dist/THIRD_PARTY_LICENSES.md` with the installed license
+texts of the bundled packages (react, react-dom, scheduler, three); a small plugin appends the Vite
+core MIT notice (its module-preload helpers are in the bundle). `npm run build` ends with
+`scripts/check-notices.mjs`, which fails unless each installed license text is present. The Analysis
+"Method, sources and limitations" section links the file.
+
+Checks performed during this close-out (finder release, before commit): 394/394 frontend tests,
+`tsc --noEmit`, production build including the notice check, a negative notice check (three.js
+section removed from a built copy → check exits 1; restored → 0), `git diff --check`, and SHA-256 of
+all 29,218 files under `app/public` and `data/` identical to the snapshot taken before any finder
+work. Browser checks were not repeated in the close-out; those recorded in the 04:50 and 09:00
+sections were performed earlier today on the same code, except the notices link and file, which
+were added afterwards (covered by a render test and the build check). The four-site release's
+browser acceptance is inherited from its own sections.
+
+## Arrival Window Finder polish — 2026-11-15, 09:00 Pacific (system clock; deadline 16:00)
+
+Follow-up to a hands-on review of the finder on localhost:4180. Same worktree and branch, HEAD
+`c335ef5`; the finder work below was still uncommitted and was preserved. Not committed,
+pushed, merged or deployed; the main checkout and the servers on 4180/5173/5174 untouched.
+Browser checks used a separate preview on port 4190 (rebuilt `app/dist`, which 4180 also serves).
+
+Changes (frontend only; scientific calculations unchanged):
+1. **Formatting.** Shared `fmtPct` / `fmtOutage` (`mission.ts`) in Finder, Analysis cards and
+   aligned table, and Explore mission summary: "100.0 %" / "0.0 %" only for exact values, otherwise
+   ">99.9 %" / "<0.1 %" when one decimal would hide the difference; blockages under 1 h in
+   minutes. Ranking and limits use unrounded values. CSV: percentages at 6 decimals, hours at 4,
+   plus whole-minute blockage columns.
+2. **Best matching arrival per site** (`finder.ts bestPerSite`) above the full list, under the
+   selected criterion and limits, with global rank. Sites without a match state why: no candidate
+   meets the limits / missing or unknown data / search range not covered / horizon model not
+   available (not searched). The list keeps global ranks ("#8 overall") when filtered to one site.
+3. **Search scope.** Any site of the current dataset can be chosen (marked compared / not
+   compared); the finder loads a not-compared site with the dataset's own checked loader, without
+   touching the comparison. A site without the selected model is listed as not searched only after
+   an explicit acknowledgement; models are never mixed. Applying a not-compared result reads "Add
+   CR1 and use this arrival", adds it under the four-site rule (refused with the reason when full),
+   reuses the finder's checked site file, and says so.
+4. **Delay preview** (`finder.ts delayPreview`, built on `mission.ts delayOptions` +
+   `computeMetrics`): the chosen arrival and +1/+3/+7 d, same site, duration, dataset and model, with
+   the five metrics, boundary warnings and limit verdicts; offsets beyond coverage are shown as
+   unavailable, never shortened. Preview only.
+5. **Drawer.** One-line intro; method details and the application effects moved into disclosures;
+   a one-line results summary with model, duration, UTC hour and spacing, dates, sites and active
+   limits; "Sets delay to None" under every apply button; after a search, focus and scroll move to
+   Results.
+
+Tests personally run: 393/393 frontend tests (19 new on top of the earlier 374), `tsc --noEmit`,
+production build, `git diff --check`. SHA-256 of all 29,218 files under `app/public` and `data/`
+identical to the snapshot taken before any finder work. Python tests not rerun (no pipeline change).
+
+Browser checks personally performed (isolated headless Chrome, SwiftShader, DevTools protocol,
+production preview on 4190; screenshots inspected in-session, not saved to the repository):
+
+| Check | Observed |
+|---|---|
+| Reported rounding case | Athena, Terrain, 14 d, 2027-01-14 00:00: finder Sun ">99.9 %", Sun blockage "10 min ⚠" (was "100.0 %" / "0.2 h"); Analysis card shows the same. Ranked by Sun it sits below the exact 100 % candidate. |
+| Per-site summary | Sites Athena + Apollo compared, all four searched: one best row each (Athena 12-16 #1, Apollo 01-13 #2, Odysseus 12-18 #19, CR1 02-25 #218). With Sun ≥ 100 % and Earth ≥ 100 %: Athena match; CR1, Odysseus, Apollo "No candidate meets the selected limits … Limits were not relaxed." |
+| Scope | All four dataset sites listed with compared / not compared; CR1 and Odysseus files fetched by the finder; comparison chips and URL unchanged by searching. |
+| Delay preview vs Analysis | Athena 2026-12-16, 14 d: chosen 100/100/100 %, none; +1 d 93.3/100.0/93.3 %, 22.7 h ⚠, none; +3 d 79.0/87.9/79.0 %, 70.7 h ⚠, 40.7 h ⚠; +7 d 50.4/60.2/50.4 %, 166.7 h ⚠, 133.7 h. After applying, the Analysis delayed column for +1/+3/+7 d showed identical values (the only difference, "none" vs "None in window", was then aligned to Analysis wording). Unit test compares the same with server-rendered Analysis. |
+| No mutation | URL identical after search, criterion change, site filter, limits and delay preview. |
+| Apply | Not-compared CR1: "Applied: CR1 added to the comparison and selected…", URL `sites` gains CR1, `site`, `arrival`, `delay=0`, `mission=baseline`, `t`; Analysis CR1 card equals the row (26.2 / 28.4 / 25.5 %, 238.5 h ⚠, 240.7 h ⚠). Compared Athena apply also checked. |
+| Reload | Applied scenario restored. |
+| Stale | Editing duration marks results stale and disables every apply ("Stale result: run Find windows again"); restoring the input clears it. |
+| Keyboard | Enter opens (focus on heading); Enter on Find windows runs and moves focus to Results; Enter toggles a delay preview (`aria-expanded` true); Esc closes and returns focus to the opener. |
+| Unknown data | The Odysseus response was patched in browser memory (no file changed): one Terrain interval's Earth state set to null. Affected candidates show Earth "unknown"; an Earth ≥ 0 % limit excluded 31 of them with an explicit note; URL unchanged. |
+| 390 px | Document and drawer width 390, no element beyond the viewport, no nested scroller in the drawer, apply buttons full-width and visible; summary and preview readable. Desktop 1440×900 also inspected. |
+
+Remaining limitations:
+- Daily grid at one UTC hour; not a continuous-time optimum; spacing fixed at 1 day.
+- The "horizon model not available" and "search range not covered" summary states are unit-tested
+  only: every current site has both models and identical coverage.
+- Changes in the delta lines ("+x pp vs current baseline") still use one decimal without bounds.
+- Software-GPU headless Chrome only; no screen reader or hardware GPU. The drawer is non-modal
+  (focus is not trapped).
+
+Git state: 11 modified tracked files (`README.md`, `App.tsx`, `explore/Explore.tsx`,
+`explore/explore.css`, `mission.ts`, `mission.test.ts`, `scenario.ts`, `styles.css`,
+`docs/DATA_CONTRACT.md`, `docs/SPEC.md`, `docs/STATUS.md`) and 4 untracked files
+(`ArrivalFinder.tsx`, `finder.ts`, `finder.test.ts`, `finderApp.test.tsx`); nothing staged.
+
+## Arrival Window Finder — 2026-11-15, 04:50 Pacific (system clock; deadline 16:00)
+
+Worktree `C:/Users/dylan/GitHub/astraknots-m6`, branch `milestone-6-tracking-sites`, HEAD
+`c335ef53409a83da63f25d62b8f2b05f4c1f7eca` (already merged into `main` as `c0622dc`); the
+working tree was clean before this work. Not committed, pushed, merged or deployed. The main
+checkout (deployment worktree, `main` at `c0622dc`) and the servers on 4180/5173/5174 were
+not touched; checks used a separate preview on port 4190.
+
+What it does: "Find arrival windows" (Explore Mission setup, beside Duration; Analysis
+shared scenario) opens a non-modal drawer. Inputs are separate from the scenario:
+compared sites (or only the active site), duration (from the scenario), earliest/latest
+arrival date, UTC hour (from the scenario's arrival), fixed 1-day spacing (labelled with
+the required "Checks arrivals daily at HH:00 UTC…" text), ranking criterion (default
+simultaneous Sun + Earth) and optional limits (off by default). Search, ranking, limits and
+the site filter never change the scenario; only "Use this arrival" does.
+
+Implementation (frontend only; no data, terrain, ephemeris or pipeline change):
+- `app/src/mission.ts`: shared `longestBlockedRun` now computes both longest darkness
+  (unchanged results) and the new `longestEarthBlock`, with the same boundary flags;
+  `compare` adds `earthBlockHours`. Analysis cards gain a "Longest Earth blockage" row.
+- `app/src/finder.ts` (pure): valid arrival limits for duration + hour inside the common
+  end-exclusive coverage, daily candidate grid, input checks that explain problems with the
+  valid range (never clamp), site/model compatibility (no Smooth/Terrain mix), evaluation via
+  `computeMetrics` only, deterministic ranking (metric, earlier arrival, site ID), unknown
+  data never ranked or passing a limit (reported separately), limit outcomes
+  (pass/fail/unknown; "Meets selected limits"), staleness key, `applyResult`, CSV.
+- `app/src/scenario.ts`: `applyArrival` (pauses playback; sets active site, baseline
+  arrival and duration, delay None, baseline mission, viewing time = arrival; keeps sites,
+  model, view, camera, overlay, threshold) and `applyN`, which Explore uses to clear
+  crossing selections and stop tracking. The URL updates through the existing effect.
+- `app/src/ArrivalFinder.tsx`, styles in `styles.css`/`explore.css`; drawer mounted on first
+  open and kept hidden after closing so inputs/results survive; results are marked stale
+  (apply disabled) when dataset, model, searched sites or search inputs change. Ranking and
+  limits re-sort the stored rows immediately (no re-evaluation).
+
+Measured search time (production preview, headless Chrome, this machine): four sites,
+Terrain, 120-day dataset. 14 d at 00:00: 428 candidates evaluated in 1–2 ms, 12 ms from
+click to painted results; 1 d: 480 candidates, 21 ms; 30 d at 12:00: 360, 21 ms; 120 d: 4
+candidates, 14 ms. Each site has only 9–21 merged intervals, so no worker or chunking was
+added; a generation counter still prevents an abandoned search from replacing results.
+
+Tests personally run: 374/374 frontend tests (31 new: 23 in `finder.test.ts`, 4 Earth-blockage
+tests in `mission.test.ts`, 4 in `finderApp.test.tsx`), `tsc --noEmit`, production build,
+`git diff --check`. Synthetic expectations were calculated by hand (documented in the test).
+`app/public` and `data/` SHA-256 of all 29,218 files identical before and after. Python tests
+were not rerun (no pipeline file changed).
+
+Browser checks personally performed (isolated headless Chrome, SwiftShader, DevTools
+protocol, against `localhost:4190`; screenshots inspected in-session, not saved to the repo):
+
+| Check | Result |
+|---|---|
+| Four-site search | Pass. 428 candidates, top 10 shown, "Show 10 more" → 20, site filter (Apollo 17 only), ranked together otherwise. |
+| Active-site search | Pass. Toggling marks results stale and disables apply; rerun gives 107 Athena-only rows. |
+| All ranking options | Pass. Sun, Earth, both, shortest Sun blockage, shortest Earth blockage each reorder; ties earlier-first. |
+| Limits and no match | Pass. Sun ≥ 90 % + Earth blockage ≤ 24 h → 10 rows, all "Meets selected limits". CR1-only with strict limits: explicit no-match message, limits not relaxed, opt-in list with failed limits named. Invalid limit (100.5 %) explained. |
+| Boundary dates | Pass. Latest 2027-03-18 at 00:00 rejected with valid range 2026-12-01 to 2027-03-17; at 12:00 the range is to 03-16. Exact endpoint 03-17 00:00 → 03-31 00:00 evaluated for all four sites. 120 d gives exactly 2026-12-01. |
+| Search without mutation | Pass. URL (arrival, days, delay 3, t, site, mission, cam, layer, thr) identical after every search, ranking, filter and limit change. |
+| Apply, then Analysis | Pass. Apollo 17 10 d 06:00 and CR1 14 d (keyboard): playback paused, tracking and crossing card cleared, camera (Horizon view) and overlay/threshold kept, delay 0, mission baseline, t = arrival. Analysis active card equals the row: CR1 72.1 % / 25.4 % / 6.7 %, 62.8 h ⚠ and 250.5 h ⚠ with both boundary notes. |
+| URL reload | Pass. Applied scenario restored; reopening the finder starts from it (10 d, 06:00, valid range to 2027-03-20). |
+| Stale on model change | Pass. Switching to Smooth marks results stale and disables apply. |
+| CSV download | Pass. File `arrival-windows_lvn-2026-12-01-120d_terrain_14d_2026-12-01_to_2027-03-17_00Z.csv`, 107 rows + header; first row equals the first UI row (26.2 / 28.4 / 25.5 %, 238.5 h / 240.7 h, fails, provisional). |
+| Narrow 390×844 | Pass. Drawer full width, document width 390, no horizontal scroll; Explore collapsed setup still shows the button. |
+| Keyboard | Pass. Enter opens (focus to heading), Tab order through the form, Enter runs the search, Enter on "Use this arrival" applies (focus moved to the confirmation), Esc closes and returns focus to the opener. Found and fixed: after a keyboard apply, focus fell to the page body and Esc did not close. |
+| Legacy 60-day dataset | Pass. Two sites, 94 candidates, range to 2027-01-16. |
+
+Remaining limitations:
+- Daily grid at one UTC hour only; not a continuous-time optimum. Spacing is fixed at 1 day.
+- Percentages display at one decimal like Analysis, so a value of 99.95 % reads "100.0 %"
+  while a ≥ 100 % limit fails; the failed-limit text then shows three decimals.
+- Blockage values are within the mission window; a ⚠ run may continue outside it (the full
+  extent appears in Analysis, not in the drawer).
+- The Smooth/Terrain-incompatibility path is unit-tested only: every current site has both
+  models, so it could not be exercised in the browser.
+- Software-GPU headless Chrome only; no screen-reader or hardware-GPU check. Focus is not
+  trapped (non-modal drawer by design).
+
+Git state after this work: 7 modified tracked files (`App.tsx`, `explore/Explore.tsx`,
+`explore/explore.css`, `mission.ts`, `mission.test.ts`, `scenario.ts`, `styles.css`) plus
+`README.md`, `docs/SPEC.md`, `docs/DATA_CONTRACT.md`, `docs/STATUS.md`; 4 untracked files
+(`ArrivalFinder.tsx`, `finder.ts`, `finder.test.ts`, `finderApp.test.tsx`); nothing staged.
+
 ## Integration — 2026-11-15, approximately 04:40 Pacific
 
 At the user's request, the full candidate (31 modified + 231 new files; nothing excluded

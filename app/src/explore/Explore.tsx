@@ -7,7 +7,7 @@
 
 import { Component, type ReactNode, Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { compass, fmtDeg, fmtLat, fmtLonEast, fmtUtc, nearestIndex } from "../data";
-import { type Availability, type DarkRun, type TimeWindow, fmtDuration, fmtHours, fromUtcDateHour, nextChange, utcDateString, utcHour } from "../mission";
+import { type Availability, type DarkRun, type TimeWindow, fmtDuration, fmtOutage, fmtPct, fromUtcDateHour, nextChange, utcDateString, utcHour } from "../mission";
 import type { ReadyScenario, Scenario, SiteView } from "../scenario";
 import { MixedTerrainNotice, SiteChips } from "../SiteCatalog";
 import { terrainModelLabel } from "../sites";
@@ -38,6 +38,7 @@ import { ScreeningRow, TerrainDetails } from "./TerrainScreening";
 import { inspect, reproduceCommand, screeningView } from "./slope";
 import { useSlopeAssets } from "./useSlope";
 import { type TrackBody, trackSummary } from "./tracking";
+import { FindWindowsButton } from "../ArrivalFinder";
 
 const TerrainScene = lazy(() => import("./TerrainScene"));
 
@@ -104,6 +105,8 @@ export interface ExploreProps {
   initialFatal?: string;
   /** For tests: start tracking a body (Horizon view). */
   initialTrack?: TrackBody;
+  /** Opens the Arrival Window Finder (App shell). */
+  onFindWindows?: () => void;
 }
 
 interface EventMsg {
@@ -129,7 +132,7 @@ export function timelineSpan(domain: TimeWindow, selT: number): TimeWindow {
   return domain;
 }
 
-export default function Explore({ sc, initialFatal, initialInspection, initialTerrainDetails, initialTrack }: ExploreProps) {
+export default function Explore({ sc, initialFatal, initialInspection, initialTerrainDetails, initialTrack, onFindWindows }: ExploreProps) {
   const camera: CameraMode = sc.cam === "horizon" ? "eye" : "overview";
   const v = sc.activeView;
   const siteId = v.entry.id;
@@ -194,7 +197,11 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
   useEffect(() => {
     setEvMsg(null);
     anchor.current = null;
-  }, [siteId, sc.mode, sc.arrival, sc.days, sc.effDelay, sc.mission, evBody, evRange]);
+  }, [siteId, sc.mode, sc.arrival, sc.days, sc.effDelay, sc.mission, evBody, evRange, sc.applyN]);
+  // An applied Arrival Window Finder result stops body tracking (the camera mode is kept).
+  useEffect(() => {
+    if (sc.applyN) setTrackRaw(null);
+  }, [sc.applyN]);
 
   const cmd = (kind: CameraCommand["kind"], fov?: number) => setCommand((c) => ({ kind, n: (c?.n ?? 0) + 1, fov }));
   /** Track a body: enter the Horizon view and keep its modeled direction centred. Switching body is immediate. */
@@ -333,7 +340,7 @@ export default function Explore({ sc, initialFatal, initialInspection, initialTe
         <SceneLegend camera={camera} mode={sc.mode} meta={meta} context={contextMeta} />
       </div>
 
-      <MissionPanel sc={sc} focus={win.key} open={setupOpen} onToggle={() => setSetupOpen((o) => !o)} />
+      <MissionPanel sc={sc} focus={win.key} open={setupOpen} onToggle={() => setSetupOpen((o) => !o)} onFindWindows={onFindWindows} />
       <div className="right-col">
         <ConditionsPanel
           v={v}
@@ -466,7 +473,7 @@ function useSessionFlag(key: string): [boolean, (v: boolean) => void] {
   ];
 }
 
-function MissionPanel({ sc, focus, open, onToggle }: { sc: ReadyScenario; focus: MissionKey; open: boolean; onToggle: () => void }) {
+function MissionPanel({ sc, focus, open, onToggle, onFindWindows }: { sc: ReadyScenario; focus: MissionKey; open: boolean; onToggle: () => void; onFindWindows?: () => void }) {
   const [aboutOpen, setAboutOpen] = useSessionFlag(ABOUT_KEY);
   const v = sc.activeView;
   const meta = v.data.site;
@@ -561,6 +568,7 @@ function MissionPanel({ sc, focus, open, onToggle }: { sc: ReadyScenario; focus:
               </span>
             </label>
           </div>
+          {onFindWindows && <FindWindowsButton onOpen={onFindWindows} className="tool-btn find-inline" />}
             <div className="ctl">
               <span className="ctl-label" id="lbl-delay">Arrival delay</span>
               <div className="seg" role="radiogroup" aria-labelledby="lbl-delay">
@@ -594,18 +602,23 @@ function MissionPanel({ sc, focus, open, onToggle }: { sc: ReadyScenario; focus:
           <MissionSummary sc={sc} focus={focus} setFocus={sc.setMission} />
         </div>
       )}
+      {onFindWindows && !open && (
+        <div className="panel-finder">
+          <FindWindowsButton onOpen={onFindWindows} className="tool-btn" />
+        </div>
+      )}
     </section>
   );
 }
 
 function pct(a: Availability<number>) {
-  return a.ok ? `${a.value.toFixed(1)} %` : "unavailable";
+  return a.ok ? fmtPct(a.value) : "unavailable";
 }
 
 function darkText(m: Availability<DarkRun | null>) {
   if (!m.ok) return "unavailable";
   if (!m.value) return "none";
-  return `${fmtHours(m.value.durationMs)}${m.value.touchesStart || m.value.touchesEnd ? " ⚠" : ""}`;
+  return `${fmtOutage(m.value.durationMs)}${m.value.touchesStart || m.value.touchesEnd ? " ⚠" : ""}`;
 }
 
 /** Where the longest period without direct sunlight touches the window (same flags as Analysis), or null. */

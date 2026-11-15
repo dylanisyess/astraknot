@@ -497,3 +497,29 @@ reproducibility, acceptance and known accuracy/rendering limits.
   visible surface. A missing or refused context asset leaves the detailed mesh as before.
 - No existing file changed: detailed meshes, slope assets, site exports and prepared
   bundles (and their fingerprints) are unchanged.
+
+### 2026-11-15, Arrival Window Finder (frontend only; no exported-file change)
+- Selected-window metrics add `longestEarthBlock` (`app/src/mission.ts`): the longest
+  continuous run with `earth_visible: false` inside the window. It is computed by the same
+  function as the longest darkness (`longestBlockedRun`), so both bodies share one rule set:
+  clipped to the window, a null interval breaks a run and makes the metric unavailable,
+  adjacent false intervals join regardless of the other body, ties go to the earliest run,
+  window-edge contact is flagged and the run's full extent in the data is reported.
+  Analysis cards show it as "Longest Earth blockage". Longest darkness is unchanged.
+- The finder (`app/src/finder.ts`) evaluates candidate windows only with `computeMetrics`.
+  A candidate exists only when `[arrival, arrival + duration)` lies inside the common
+  end-exclusive coverage of every searched site; candidates are never shortened. An
+  unavailable metric (unknown state or incomplete coverage) cannot rank or pass a limit.
+- CSV export (client-side, no server): one row per evaluated candidate, with dataset ID,
+  search bounds, spacing, UTC hour, site identity/coordinates/nominal observer height,
+  horizon model, sampling, all five metrics in % or hours, boundary/coverage flags, limit
+  outcomes and the provisional designation. Values are those shown in the interface.
+- Display (Finder, Analysis, Explore; no data change): percentages use one decimal, but
+  "100.0 %" and "0.0 %" only for exactly complete or zero availability; a value that one decimal
+  would round to them is shown as ">99.9 %" or "<0.1 %". Blockages shorter than one hour are shown
+  in minutes. Ranking, limits and the CSV use unrounded values; the CSV writes percentages with 6
+  decimals, hours with 4, and whole-minute columns `longest_*_blockage_within_mission_min`.
+- The finder may search any site of the loaded dataset (loaded with the same checked loader);
+  applying a result for a site outside the comparison adds it under the existing shortlist rules.
+  The delay preview evaluates the chosen arrival and +1/+3/+7 d with `delayOptions` and
+  `computeMetrics` (same coverage rule as the scenario's delays).
