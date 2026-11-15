@@ -1,5 +1,5 @@
 {
-  "dataset_id": "m2-athena-2026-12-01-60d",
+  "dataset_id": "lvn-2026-12-01-60d",
   "coverage_start_utc": "2026-12-01T00:00:00Z",
   "coverage_end_utc": "2027-01-30T00:00:00Z",
   "sample_step_seconds": 600,
@@ -42,7 +42,7 @@
       "horizons_altitude_reference": "Height above the Horizons reference body for the Moon: a 1737.4 km sphere (response header 'Center radii'), the same reference as LOLA heights. Submitted 2026-11-14 (milestone 4C).",
       "altitude_conversion_note": "horizons_site_altitude_km = (surface_elevation_m + observer_height_above_surface_m) / 1000 = (1941.8 m + 1 m) / 1000 = 1.9428 km. Both heights are relative to the same 1737.4 km sphere, so no datum conversion is needed. Rounding: the bilinear LDEM_80S_20M surface is 1941.8206 m; it was rounded to 0.1 m (1941.8 m) before forming the Horizons altitude, so the submitted point is 0.9794 m above the interpolated surface (nominal 1 m, 0.0206 m lower). The terrain horizon uses the same submitted point (r = 1737.4 km + 1942.8 m), so Sun/Earth directions and skyline refer to one observer. No absolute vertical accuracy of the surface value is claimed; no local LOLA RDR shot consistency check was made at the site point; the nearest 20 m DEM pixel has no LOLA shot (interpolated height). Horizons echo (all 12 responses): Center geodetic 222.6, -89.468, 1.9428 exactly; Center cylindric Dxy 16.14983 km and Dz -1739.268 km equal the submitted point rounded to the printed 5 and 3 decimals, so |r| (177 mm above 1737.4 + 1.9428 km as printed) confirms the radius only to about +/-0.5 m, the printed precision of Dz near the pole.",
       "horizon_model": "smooth",
-      "preparation_status": "positions fetched and terrain horizon computed in milestone 4C; frontend still single-site"
+      "preparation_status": "positions fetched and terrain horizon computed in milestone 4C; shown in the two-site app since milestone 4D (merged in PR #2)"
     }
   ],
   "terrain": {

@@ -161,3 +161,84 @@ describe("URL restoration and model consistency", () => {
     expect(t).not.toContain("Change: +7 d vs baseline");
   });
 });
+
+describe("selected-time status is consistent across cards, readouts and panorama", () => {
+  // Athena terrain, Earth at 2026-12-09 14:00 UTC: the step is visible at its midpoint while the
+  // center is 0.00012 deg below the skyline at 14:00 itself (science review disagreement case).
+  const html = render("?arrival=2026-12-05T00:00Z&days=14&delay=3&horizon=terrain&t=2026-12-09T14:00:00Z");
+  const t = text(html);
+
+  it("the card keeps the interval state and adds the shared qualifier", () => {
+    const card = text(block(html, "article", "im2-athena"));
+    expect(card).toMatch(/At 2026-12-09 14:00 UTC: Sun Not visible , Earth Visible \(near estimated crossing\)/);
+    expect(text(block(html, "article", "connecting-ridge-cr1"))).not.toContain("near estimated crossing");
+  });
+
+  it("readouts and panorama show the same explanation, with the true clearance", () => {
+    const why =
+      "Near estimated crossing: the 10-minute step 2026-12-09 14:00 UTC–14:10 is classified visible at its midpoint (14:05 UTC), " +
+      "but at 14:00 UTC the Earth’s center is 0.00012° below the skyline.";
+    expect(t.split(why).length - 1).toBe(2); // once in the readouts, once in the panorama summary
+    expect(html).toContain('data-field="clearance">−0.00012°');
+    expect(html).toContain("visible · near estimated crossing · −0.00012° vs skyline");
+    expect(html).toContain("marker-near-ring");
+    expect(html).toMatch(/data-body="earth" data-state="below" data-visible="true" data-near="true"/);
+  });
+
+  it("an ordinary time has no qualifier anywhere", () => {
+    const plain = render("?arrival=2026-12-05T00:00Z&days=14&delay=3&horizon=terrain&t=2026-12-09T15:00:00Z");
+    // (the method text and panorama caption explain the term; no status element uses it)
+    expect(plain).not.toContain("marker-near-ring");
+    expect(plain).not.toContain("data-near=");
+    expect(plain).not.toContain("state-near");
+    expect(plain).not.toContain("(near estimated crossing)");
+    expect(plain).not.toContain("Near estimated crossing: the 10-minute step");
+  });
+
+  it("CR1 Sun and smooth-mode cases use the same wording", () => {
+    const cr1 = render("?arrival=2026-12-20T00:00Z&days=14&delay=0&horizon=terrain&site=connecting-ridge-cr1&t=2026-12-24T00:00:00Z");
+    expect(text(block(cr1, "article", "connecting-ridge-cr1"))).toContain("Sun Visible (near estimated crossing)");
+    expect(text(cr1)).toContain("but at 00:00 UTC the Sun’s center is 0.0015° below the skyline");
+    const smooth = render("?arrival=2026-12-05T00:00Z&days=14&delay=3&horizon=smooth&t=2026-12-11T05:00:00Z");
+    expect(text(smooth)).toContain("but at 05:00 UTC the Earth’s center is 0.00005° below the 0° horizon");
+  });
+
+  it("the final sample of the data is Unknown everywhere, with the reason", () => {
+    const end = text(render("?arrival=2027-01-16T00:00Z&days=14&delay=0&horizon=terrain&t=2027-01-30T00:00:00Z"));
+    expect(end).toContain("At 2027-01-30 00:00 UTC: Sun Unknown , Earth Unknown");
+    expect(end).toContain("Unknown: final sample of the data (no 10-minute step starts here).");
+    expect(end).toMatch(/Earth: final sample of the data \(no 10-minute step starts here\); center [\d.]+° (above|below) the skyline/);
+  });
+});
+
+describe("scientific wording", () => {
+  const t = text(render("?horizon=terrain"));
+  it("states that visibility uses the centers of both the Sun and Earth", () => {
+    expect(t).toContain("Visibility uses the center of both the Sun and Earth. Part of either disk may remain visible when its center is hidden");
+    expect(t).toContain("This applies to both the Sun and Earth: part of either disk can still be above the skyline when its center is hidden.");
+    expect(t).not.toContain("no partial-disk Sun");
+  });
+  it("describes 10 minutes as sampling and reporting resolution, not guaranteed accuracy", () => {
+    expect(t).toContain("10 minutes is the sampling and reporting resolution, not a guaranteed accuracy of event times.");
+    expect(t).not.toContain("10-minute resolution)");
+  });
+  it("keeps CR1 provisional and the coordinate-frame limitation", () => {
+    expect(t).toContain("Provisional: sensitive to terrain model");
+    expect(t).toContain("the lunar ME/DE421 frame is assumed");
+  });
+  it("shows a site-neutral dataset identifier", () => {
+    expect(t).toMatch(/Dataset lvn-2026-12-01-60d/);
+    expect(t).not.toContain("m2-athena-2026");
+  });
+});
+
+describe("panorama cardinal directions", () => {
+  // Azimuth increases to the right (E right of N, as when facing north); ticks run edge to edge.
+  const ticks = (h: string) => [...h.matchAll(/class="tick(?: tick-major)?" x="[\d.]+" y="[\d.]+" text-anchor="middle">([A-Z]+)</g)].map((m) => m[1]);
+  it("Athena (north centred): S, SW, W, NW, N, NE, E, SE, S", () => {
+    expect(ticks(render("?horizon=terrain"))).toEqual(["S", "SW", "W", "NW", "N", "NE", "E", "SE", "S"]);
+  });
+  it("CR1 (south-east centred): NW, N, NE, E, SE, S, SW, W, NW", () => {
+    expect(ticks(render("?horizon=terrain&site=connecting-ridge-cr1"))).toEqual(["NW", "N", "NE", "E", "SE", "S", "SW", "W", "NW"]);
+  });
+});

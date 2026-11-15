@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { compass, fmtDeg, fmtUtc } from "./data";
 import { horizonAt, norm360 } from "./horizon";
+import { type SelectedStatus, NEAR_CROSSING, clearancePhrase, clearanceText, nearCrossingExplanation, signedClearance, unknownText } from "./status";
 import type { Horizon, HorizonMode, Sample, TerrainHorizonBlock } from "./types";
 
 interface Props {
@@ -12,7 +13,8 @@ interface Props {
   /** Inclusive index range for the faint Sun/Earth tracks (the plotted mission windows). */
   i0: number;
   i1: number;
-  selected: number;
+  /** Shared selected-time status of this site and mode (status.ts); markers and labels come from it. */
+  status: SelectedStatus;
   selectedTime: number;
   /** Azimuth shown in the middle of the panorama (multiple of 45; default 0 = north). */
   centerAz?: number;
@@ -28,7 +30,7 @@ const BODIES: { key: Body; label: string }[] = [
 // Sites choose a centre near their Earth direction so Earth is not split at the panorama's edges.
 const TICK_NAMES: Record<number, string> = { 0: "N", 45: "NE", 90: "E", 135: "SE", 180: "S", 225: "SW", 270: "W", 315: "NW" };
 
-export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, selected, selectedTime, centerAz = 0 }: Props) {
+export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, status, selectedTime, centerAz = 0 }: Props) {
   const toU = (az: number) => norm360(az - centerAz + 180); // 0..360, 180 = centerAz
   const fromU = (u: number) => norm360(u + centerAz - 180);
   const TICKS = Array.from({ length: 9 }, (_, k) => norm360(centerAz + 180 + 45 * k));
@@ -115,24 +117,26 @@ export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, selec
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [samples, i0, i1, width, yLo, yHi, centerAz]);
 
-  const s = samples[selected];
+  // Markers sit at each center's true position at the selected time (status.geometry);
+  // the visible / not-visible words come from the shared status (the 10-minute step's
+  // midpoint classification), so they always match the cards, readouts and timeline.
   const markers = BODIES.map(({ key, label }) => {
-    const az = key === "sun" ? s.sun_azimuth_deg : s.earth_azimuth_deg;
-    const el = key === "sun" ? s.sun_elevation_deg : s.earth_elevation_deg;
-    if (az === null || el === null) return { key, label, az, el, hz: null, state: "unknown" as const };
-    const hz = horizonAt(horizon, az);
-    const state = hz === null ? ("unknown" as const) : el > hz ? ("above" as const) : ("below" as const);
-    return { key, label, az, el, hz, state };
+    const st = status[key];
+    const g = st.geometry;
+    return { key, label, st, az: g.azimuthDeg, el: g.elevationDeg, hz: g.horizonDeg, side: g.side ?? ("unknown" as const) };
   });
 
   const blockedWord = mode === "terrain" ? "hidden by terrain" : "below the 0° horizon";
+  const stateWord = (m: (typeof markers)[number]) =>
+    m.st.visible === null ? "state unknown" : m.st.visible ? "visible" : blockedWord;
   const markerText = (m: (typeof markers)[number]) => {
-    if (m.az === null || m.el === null) return `${m.label}: position unavailable`;
-    if (m.state === "unknown") return `${m.label}: horizon unknown in this direction`;
-    const d = m.el - (m.hz as number);
-    return m.state === "above"
-      ? `${m.label} visible, ${fmtDeg(Math.abs(d), 2)} above the ${mode === "terrain" ? "skyline" : "0° line"}`
-      : `${m.label} ${blockedWord}, ${fmtDeg(Math.abs(d), 2)} below the ${mode === "terrain" ? "skyline" : "0° line"}`;
+    if (m.az === null || m.el === null)
+      return `${m.label}: ${m.st.unknownReason === "outside-coverage" ? unknownText("outside-coverage") : "position unavailable"}`;
+    if (m.hz === null) return `${m.label}: horizon unknown in this direction`;
+    const where = clearanceText(m.st.geometry, mode);
+    if (m.st.visible === null) return `${m.label}: ${unknownText(m.st.unknownReason!)}; ${where}`;
+    if (m.st.nearCrossing) return `${m.label} ${stateWord(m)} (${NEAR_CROSSING.toLowerCase()}); at this time its center is ${clearancePhrase(m.st.geometry, mode)}`;
+    return `${m.label} ${stateWord(m)}, ${where}`;
   };
 
   // Label placement: right of the marker unless near the right edge; separate overlapping labels.
@@ -256,9 +260,10 @@ export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, selec
         {placed.map((p) => {
           if (!p) return null;
           const { m, mx, my, below, above } = p;
-          const cls = `marker marker-${m.key} marker-${m.state}`;
+          const cls = `marker marker-${m.key} marker-${m.side}${m.st.nearCrossing ? " marker-near" : ""}`;
           return (
             <g key={m.key} className={cls}>
+              {m.st.nearCrossing && !below && !above && <circle cx={mx} cy={my} r={10.5} className="marker-near-ring" />}
               {below || above ? (
                 <path
                   d={below ? `M${mx - 6},${my - 5}L${mx + 6},${my - 5}L${mx},${my + 4}Z` : `M${mx - 6},${my + 5}L${mx + 6},${my + 5}L${mx},${my - 4}Z`}
@@ -273,13 +278,14 @@ export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, selec
         {placed.map((p) => {
           if (!p) return null;
           const { m, lx, ly, anchor, below, above } = p;
-          const d = m.hz === null || m.el === null ? null : m.el - m.hz;
+          const vs = `${signedClearance(m.st.geometry)} vs ${mode === "terrain" ? "skyline" : "0°"}`;
+          const word = m.st.visible === null ? "unknown" : m.st.visible ? "visible" : mode === "terrain" ? "hidden by terrain" : "below horizon";
           const line2 =
-            m.state === "unknown"
+            m.side === "unknown"
               ? "horizon unknown here"
-              : m.state === "above"
-                ? `visible · ${fmtDeg(d, 2)} vs skyline`
-                : `${mode === "terrain" ? "hidden by terrain" : "below horizon"} · ${fmtDeg(d, 2)}`;
+              : m.st.nearCrossing
+                ? `${word} · near estimated crossing · ${vs}`
+                : `${word} · ${vs}`;
           return (
             <text key={m.key} className="marker-label" x={lx} y={ly} textAnchor={anchor as "start" | "end"}>
               <tspan className="marker-name">
@@ -310,24 +316,30 @@ export function Panorama({ width, mode, horizon, terrain, samples, i0, i1, selec
         </div>
       )}
       <ul className="pano-summary" aria-live="polite">
-        {markers.map((m) => (
-          <li key={m.key} data-body={m.key} data-state={m.state}>
-            <span className={`swatch swatch-${m.key}`} aria-hidden="true" /> {markerText(m)}
-            {m.az !== null && m.el !== null && (
-              <span className="muted">
-                {" "}
-                (az {fmtDeg(m.az, 1)} {compass(m.az)}, elevation {fmtDeg(m.el, 2)}, {mode} horizon there {fmtDeg(m.hz, 2)})
-              </span>
-            )}
-          </li>
-        ))}
+        {markers.map((m) => {
+          const why = nearCrossingExplanation(m.st, m.label, mode);
+          return (
+            <li key={m.key} data-body={m.key} data-state={m.side} data-visible={String(m.st.visible)} data-near={m.st.nearCrossing ? "true" : undefined}>
+              <span className={`swatch swatch-${m.key}`} aria-hidden="true" /> {markerText(m)}
+              {m.az !== null && m.el !== null && (
+                <span className="muted">
+                  {" "}
+                  (az {fmtDeg(m.az, 1)} {compass(m.az)}, elevation {fmtDeg(m.el, 2)}, {mode} horizon there {fmtDeg(m.hz, 2)})
+                </span>
+              )}
+              {why && <span className="near-note small"> {why}</span>}
+            </li>
+          );
+        })}
       </ul>
       <p className="muted small">
         Horizontal axis: azimuth ({TICK_NAMES[norm360(centerAz + 180)]} at both edges, {TICK_NAMES[norm360(centerAz)]} in the middle). Vertical axis: elevation angle, stretched about{" "}
-        {Math.round(exaggeration)}× relative to azimuth. Markers are the body centers at the selected time; hollow markers are
-        below the {mode === "terrain" ? "skyline" : "0° line"}, and arrows mark bodies outside the view. Faint lines are each
-        body’s path through the plotted windows. Timeline states use the 10-minute midpoint rule, so near a crossing the
-        marker and the timeline may differ by one step.
+        {Math.round(exaggeration)}× relative to azimuth. Markers are the body centers at their computed positions at the selected
+        time; hollow markers are below the {mode === "terrain" ? "skyline" : "0° line"}, and arrows mark bodies outside the view.
+        Visibility refers to each body’s center, so part of a disk can show above the horizon while its center is hidden. Faint
+        lines are each body’s path through the plotted windows. The visible / hidden words match the cards and timeline: they
+        are the state of the 10-minute step starting at this time, classified at its midpoint. If the center at this exact
+        time is on the other side of the horizon, the label says “near estimated crossing” and the marker gets a dashed ring.
       </p>
     </div>
   );
